@@ -95,6 +95,18 @@ const SAMPLE_VENDORS = [
   { id:6, name:"Pine Barrens Print Co.",  category:"Art & Prints",          homeZip:"08055", radius:25, emoji:"🎨", tags:["NJ-inspired","Photography","Custom framing"], price:"$80–$180/day", matchScore:79, description:"Photography and art prints celebrating New Jersey's landscapes.", insurance:false },
 ];
 
+
+// ─── Sample Opportunities ─────────────────────────────────────────────────────
+const SAMPLE_OPPS = [
+  { id:1, eventName:"Collingswood Spring Pop-Up Market", eventType:"Pop-Up Market", zip:"08107", date:"2026-04-12", startTime:"10:00", endTime:"16:00", boothFee:"$50/vendor", spots:20, categoriesNeeded:["Food & Beverage","Jewelry & Accessories","Art & Prints","Candles & Home Decor"], contactName:"Maria Lopez", contactEmail:"maria@collmarkets.com", contactPhone:"(856) 555-0101", fbLink:"https://facebook.com/events/", deadline:"2026-04-01", notes:"Outdoor market in Knight Park. Tables not provided. Electric available for 5 spots.", source:"Facebook Group" },
+  { id:2, eventName:"Haddonfield Summer Artisan Fair", eventType:"Community Festival", zip:"08033", date:"2026-06-07", startTime:"09:00", endTime:"17:00", boothFee:"Free (vendors keep all sales)", spots:35, categoriesNeeded:["Art & Prints","Crafts & Handmade","Jewelry & Accessories","Plants & Floral"], contactName:"Haddonfield Events Committee", contactEmail:"events@haddonfield.com", contactPhone:"(856) 555-0202", fbLink:"https://facebook.com/events/", deadline:"2026-05-15", notes:"Annual summer fair on Kings Highway. High foot traffic. Tents required.", source:"Facebook Group" },
+  { id:3, eventName:"Voorhees Wellness & Self-Care Expo", eventType:"Pop-Up Market", zip:"08043", date:"2026-03-29", startTime:"11:00", endTime:"15:00", boothFee:"$75/vendor", spots:12, categoriesNeeded:["Health & Wellness","Beauty & Skincare","Candles & Home Decor","Plants & Floral"], contactName:"Jasmine Reed", contactEmail:"jasmine@wellnessexpo.com", contactPhone:"(856) 555-0303", fbLink:"https://facebook.com/events/", deadline:"2026-03-20", notes:"Indoor venue. Tables provided. Insured vendors preferred.", source:"Host Submitted" },
+];
+
+function fmtDate(d){ if(!d) return ""; const dt=new Date(d+"T12:00:00"); return dt.toLocaleDateString("en-US",{weekday:"short",month:"long",day:"numeric",year:"numeric"}); }
+function fmtTime(t){ if(!t) return ""; const [h,m]=t.split(":"); const hr=parseInt(h); return `${hr%12||12}:${m} ${hr>=12?"PM":"AM"}`; }
+function isUrgent(d){ if(!d) return false; return (new Date(d+"T12:00:00")-new Date())/86400000<=7; }
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
@@ -228,7 +240,10 @@ const styles = `
   .status-active { background: #d4f4e0; color: #1a6b3a; }
   .status-pending { background: #fdf4dc; color: #7a5a10; }
   .info-box { background: #fdf9f5; border: 1px solid #e8ddd0; border-left: 3px solid #e8c97a; border-radius: 6px; padding: 14px 18px; font-size: 14px; color: #7a6a5a; margin-bottom: 20px; }
-  @media (max-width: 640px) {
+  .nav-group { display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,.1); padding-left: 12px; margin-left: 4px; }
+  .nav-group-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #e8c97a; padding: 2px 6px; margin-bottom: 2px; font-weight: 600; }
+  .nav-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
+    @media (max-width: 640px) {
     .nav { padding: 14px 20px; }
     .nav-tabs { gap: 2px; }
     .nav-tab { padding: 6px 12px; font-size: 12px; }
@@ -657,57 +672,229 @@ function PricingPage({ setTab }) {
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
-function AdminPage() {
+function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[] }) {
   return (
     <div className="section" style={{ maxWidth:1000 }}>
       <div className="section-title">Admin Dashboard</div>
       <p className="section-sub">Manage vendors, hosts, and bookings across South Jersey.</p>
       <div className="admin-grid">
-        <div className="admin-stat"><div className="admin-stat-num">47</div><div className="admin-stat-label">Active Vendors</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">12</div><div className="admin-stat-label">Pending Review</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">23</div><div className="admin-stat-label">Events This Month</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">$1,840</div><div className="admin-stat-label">Monthly Revenue</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">8</div><div className="admin-stat-label">Managed Bookings</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Opportunities</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{vendorSubs.length}</div><div className="admin-stat-label">Vendor Submissions</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{SAMPLE_VENDORS.length}</div><div className="admin-stat-label">Active Vendors</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">$0</div><div className="admin-stat-label">Monthly Revenue</div></div>
       </div>
-      <h3 style={{ fontFamily:'Playfair Display', fontSize:20, marginBottom:16, marginTop:40 }}>Recent Vendor Submissions</h3>
-      <table className="admin-table">
-        <thead><tr><th>Business</th><th>Category</th><th>Home Zip</th><th>Travel Radius</th><th>Insurance</th><th>Status</th></tr></thead>
-        <tbody>
-          {SAMPLE_VENDORS.map(v=>(
-            <tr key={v.id}>
-              <td><strong>{v.name}</strong></td><td>{v.category}</td><td>{v.homeZip}</td><td>{v.radius} miles</td>
-              <td>{v.insurance?'✅ Yes':'—'}</td>
-              <td><span className={`status-pill ${v.id<4?'status-active':'status-pending'}`}>{v.id<4?'Active':'Pending'}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <h3 style={{ fontFamily:'Playfair Display', fontSize:20, marginBottom:16, marginTop:40 }}>Recent Host Requests</h3>
-      <table className="admin-table">
-        <thead><tr><th>Event</th><th>Type</th><th>Event Zip</th><th>Vendors Needed</th><th>Service</th><th>Status</th></tr></thead>
-        <tbody>
-          <tr><td><strong>Collingswood Spring Pop-Up</strong></td><td>Pop-Up Market</td><td>08107</td><td>15</td><td>Managed</td><td><span className="status-pill status-active">Active</span></td></tr>
-          <tr><td><strong>Haddonfield Art Walk</strong></td><td>Community Festival</td><td>08033</td><td>25</td><td>Self-Serve</td><td><span className="status-pill status-active">Active</span></td></tr>
-          <tr><td><strong>Voorhees Corporate Fair</strong></td><td>Corporate Event</td><td>08043</td><td>8</td><td>Managed</td><td><span className="status-pill status-pending">Matching</span></td></tr>
-        </tbody>
-      </table>
+      <AdminPostForm onPost={opp=>setOpps(prev=>[{...opp, source:opp.source||"Admin"}, ...prev])} />
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Opportunities</h3>
+      {opps.length===0
+        ? <div className="empty-state"><div className="big">&#128221;</div><p>No opportunities posted yet.</p></div>
+        : <table className="admin-table">
+            <thead><tr><th>Event</th><th>Type</th><th>Zip</th><th>Date</th><th>Source</th><th>Status</th></tr></thead>
+            <tbody>
+              {opps.map(o=>(
+                <tr key={o.id}>
+                  <td><strong>{o.eventName}</strong></td><td>{o.eventType}</td><td>{o.zip}</td>
+                  <td>{fmtDate(o.date)}</td><td>{o.source}</td>
+                  <td><span className="status-pill status-active">Live</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+      }
+      {vendorSubs.length>0 && (
+        <>
+          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Recent Vendor Submissions</h3>
+          <table className="admin-table">
+            <thead><tr><th>Business</th><th>Owner</th><th>Home Zip</th><th>Radius</th><th>Categories</th><th>Status</th></tr></thead>
+            <tbody>
+              {vendorSubs.map((v,i)=>(
+                <tr key={i}>
+                  <td><strong>{v.businessName}</strong></td><td>{v.ownerName}</td>
+                  <td>{v.homeZip}</td><td>{v.radius} mi</td>
+                  <td>{(v.categories||[]).join(", ")||"—"}</td>
+                  <td><span className="status-pill status-pending">Review</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
+
+// ─── Opportunities Page ───────────────────────────────────────────────────────
+function OpportunitiesPage({ opps }) {
+  const [filterType, setFilterType] = useState("");
+  const [filterCat, setFilterCat] = useState("");
+  const [myZip, setMyZip] = useState("");
+  const [saved, setSaved] = useState([]);
+  const zipOk = myZip.length===5 && isKnownZip(myZip);
+
+  const list = opps
+    .filter(o => !filterType || o.eventType===filterType)
+    .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
+    .map(o => {
+      const dist = zipOk ? distanceMiles(myZip, o.zip) : null;
+      return {...o, dist};
+    })
+    .sort((a,b) => {
+      if (a.dist!==null && b.dist!==null) return a.dist - b.dist;
+      return 0;
+    });
+
+  return (
+    <>
+      <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"48px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 60% 80% at 50% 50%,rgba(232,201,122,.08),transparent)" }} />
+        <h2 style={{ fontFamily:"Playfair Display,serif", fontSize:36, color:"#fff", marginBottom:8, position:"relative" }}>
+          Vendor <em style={{ color:"#e8c97a", fontStyle:"italic" }}>Opportunities</em>
+        </h2>
+        <p style={{ color:"#a89a8a", fontSize:16, maxWidth:520, margin:"0 auto", position:"relative" }}>
+          Events, pop-ups, and markets across South Jersey actively looking for vendors.
+        </p>
+      </div>
+      <div className="section" style={{ maxWidth:1100, paddingTop:40 }}>
+        <div className="match-filters">
+          <div className="match-filter-group" style={{ maxWidth:200 }}>
+            <label>My Zip Code</label>
+            <input placeholder="e.g. 08003" value={myZip} maxLength={5}
+              onChange={e => setMyZip(e.target.value.replace(/\D/g,"").slice(0,5))} />
+            {myZip.length===5 && (
+              <div className={`zip-feedback ${zipOk?"zip-ok":"zip-warn"}`}>
+                {zipOk ? "\u2713 Sorted by distance to you" : "\u26a0 Zip unverified"}
+              </div>
+            )}
+          </div>
+          <div className="match-filter-group">
+            <label>Event Type</label>
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
+              <option value="">All Types</option>
+              {EVENT_TYPES.map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="match-filter-group">
+            <label>Category Needed</label>
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
+              <option value="">All Categories</option>
+              {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="results-header">
+          <div className="results-count"><strong>{list.length}</strong> opportunities available</div>
+          <div style={{ fontSize:13, color:"#a89a8a" }}>Updated regularly</div>
+        </div>
+        {list.length===0
+          ? <div className="empty-state"><div className="big">\ud83d\udce5</div><p>No opportunities match your filters.</p></div>
+          : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
+            {list.map(opp => (
+              <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden", transition:"all 0.2s" }}>
+                <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"20px 24px" }}>
+                  <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{opp.eventName}</div>
+                  <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
+                </div>
+                <div style={{ padding:"20px 24px" }}>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)} – {fmtTime(opp.endTime)}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Booth Fee</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.boothFee}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots} available</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Contact</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.contactName}</div></div>
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                    {opp.categoriesNeeded.map(c=><span key={c} style={{ background:"#f5f0ea", border:"1px solid #e8ddd0", padding:"3px 10px", borderRadius:20, fontSize:11, color:"#5a4a3a" }}>{c}</span>)}
+                  </div>
+                  {opp.notes && <div style={{ fontSize:13, color:"#7a6a5a", lineHeight:1.6, marginBottom:14, padding:12, background:"#fdf9f5", borderRadius:6, borderLeft:"3px solid #e8c97a" }}>{opp.notes}</div>}
+                  <div style={{ fontSize:13, color:"#7a6a5a", marginBottom:14 }}><strong style={{ color:"#1a1410" }}>Contact:</strong> {opp.contactEmail}{opp.contactPhone ? ` · ${opp.contactPhone}` : ""}</div>
+                  {opp.deadline && (
+                    <div style={{ display:"inline-block", background:isUrgent(opp.deadline)?"#fde8e8":"#fff3cd", border:`1px solid ${isUrgent(opp.deadline)?"#f5a0a0":"#ffd966"}`, color:isUrgent(opp.deadline)?"#8b0000":"#7a5a10", fontSize:12, fontWeight:600, padding:"4px 12px", borderRadius:20, marginBottom:14 }}>
+                      {isUrgent(opp.deadline)?"\ud83d\udd25 Deadline soon: ":"Apply by: "}{fmtDate(opp.deadline)}
+                    </div>
+                  )}
+                  <div style={{ display:"flex", gap:10 }}>
+                    {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
+                    <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
+                      {saved.includes(opp.id)?"\u2713 Saved":"Save"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ─── Admin Post Form ──────────────────────────────────────────────────────────
+function AdminPostForm({ onPost }) {
+  const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", source:"Facebook Group" };
+  const [form, setForm] = useState(blank);
+  const [posted, setPosted] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const submit = () => {
+    if (!form.eventName||!form.eventType||!form.zip||!form.date) { alert("Please fill in Event Name, Type, Zip Code, and Date."); return; }
+    onPost({...form, id:Date.now(), spots:parseInt(form.spots)||0});
+    setForm(blank); setPosted(true); setTimeout(()=>setPosted(false),4000);
+  };
+
+  return (
+    <div style={{ background:"#fff", border:"2px solid #e8c97a", borderRadius:12, padding:32, marginBottom:40 }}>
+      <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, marginBottom:6, display:"flex", alignItems:"center", gap:10 }}>
+        Post New Opportunity
+        <span style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20 }}>Admin Only</span>
+      </div>
+      <p style={{ color:"#7a6a5a", fontSize:14, marginBottom:24 }}>Post events from Facebook or approved hosts — they go live immediately on the Opportunities board.</p>
+      {posted && <div style={{ background:"#d4f4e0", border:"1px solid #b8e8c8", borderRadius:8, padding:"12px 16px", marginBottom:20, color:"#1a6b3a", fontWeight:600 }}>\u2713 Posted! Now live on the Opportunities board.</div>}
+      <div className="form-grid">
+        <div className="form-group full"><label>Event Name *</label><input placeholder="e.g. Collingswood Spring Pop-Up Market" value={form.eventName} onChange={e=>set("eventName",e.target.value)} /></div>
+        <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set("eventType",e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+        <div className="form-group"><label>Source</label><select value={form.source} onChange={e=>set("source",e.target.value)}><option>Facebook Group</option><option>Facebook Event</option><option>Host Submitted</option><option>Instagram</option><option>Email Tip</option><option>Other</option></select></div>
+        <ZipInput label="Event Zip Code *" value={form.zip} onChange={v=>set("zip",v)} hint="5-digit zip where the event takes place" />
+        <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
+        <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set("startTime",e.target.value)} /></div>
+        <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set("endTime",e.target.value)} /></div>
+        <div className="form-group"><label>Booth Fee</label><input placeholder="e.g. $50/vendor or Free" value={form.boothFee} onChange={e=>set("boothFee",e.target.value)} /></div>
+        <div className="form-group"><label>Spots Available</label><input type="number" placeholder="e.g. 20" value={form.spots} onChange={e=>set("spots",e.target.value)} /></div>
+        <div className="form-group"><label>Application Deadline</label><input type="date" value={form.deadline} onChange={e=>set("deadline",e.target.value)} /></div>
+        <div className="form-group"><label>Facebook / Event Link</label><input placeholder="https://facebook.com/events/..." value={form.fbLink} onChange={e=>set("fbLink",e.target.value)} /></div>
+        <div className="form-group"><label>Host Contact Name</label><input placeholder="Who vendors should contact" value={form.contactName} onChange={e=>set("contactName",e.target.value)} /></div>
+        <div className="form-group"><label>Host Contact Email</label><input type="email" placeholder="host@email.com" value={form.contactEmail} onChange={e=>set("contactEmail",e.target.value)} /></div>
+        <div className="form-group"><label>Host Contact Phone</label><input placeholder="(856) 555-0000" value={form.contactPhone} onChange={e=>set("contactPhone",e.target.value)} /></div>
+        <div className="form-group full">
+          <CheckboxGroup label="Vendor Categories Needed" options={CATEGORIES} selected={form.categoriesNeeded} onChange={v=>set("categoriesNeeded",v)} />
+        </div>
+        <div className="form-group full"><label>Notes for Vendors</label><textarea placeholder="Tables provided? Tents required? Electric available? Insured vendors only?" value={form.notes} onChange={e=>set("notes",e.target.value)} /></div>
+      </div>
+      <div style={{ marginTop:24 }}>
+        <button className="btn-submit" onClick={submit}>Post to Opportunities Board</button>
+      </div>
     </div>
   );
 }
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState('home');
+  const [tab, setTab] = useState("home");
   const [vendorSuccess, setVendorSuccess] = useState(false);
   const [hostSuccess,   setHostSuccess]   = useState(false);
+  const [opps, setOpps] = useState(SAMPLE_OPPS);
+  const [vendorSubs, setVendorSubs] = useState([]);
 
   const handleVendorSubmit = form => {
     if (!form.businessName || !form.email || form.categories.length===0) {
-      alert('Please fill in Business Name, Email, and at least one Category.');
+      alert("Please fill in Business Name, Email, and at least one Category.");
       return;
     }
+    setVendorSubs(v => [form, ...v]);
     setVendorSuccess(true);
-    window.scrollTo({top:0, behavior:'smooth'});
+    window.scrollTo({top:0, behavior:"smooth"});
   };
 
   const handleHostSubmit = form => {
@@ -727,21 +914,52 @@ export default function App() {
         <nav className="nav">
           <div className="nav-logo">SJ<span>Vendor</span>Match</div>
           <div className="nav-tabs">
-            {[['home','Home'],['vendor','Vendors'],['host','Hosts'],['matches','Browse'],['pricing','Pricing'],['admin','Admin']].map(([id,label])=>(
-              <button key={id} className={`nav-tab${tab===id?' active':''}`} onClick={()=>{setTab(id);window.scrollTo({top:0});}}>{label}</button>
-            ))}
+            <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
+            <div className="nav-group">
+              <div className="nav-group-label">&#128717; Vendors</div>
+              <div className="nav-group-items">
+                <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
+                <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
+                <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
+              </div>
+            </div>
+            <div className="nav-group">
+              <div className="nav-group-label">&#127918; Hosts</div>
+              <div className="nav-group-items">
+                <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
+              </div>
+            </div>
+            <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
+            <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>
           </div>
         </nav>
 
         {tab==='home' && (
           <>
             <div className="hero">
-              <div className="hero-eyebrow">South Jersey's Vendor Network</div>
+              <div className="hero-eyebrow">South Jersey's Vendor Matching Platform</div>
               <h1>Connect. Vend. <em>Thrive.</em></h1>
-              <p>The smarter way to match South Jersey's best small vendors with events, pop-ups, markets, and hosts who need them.</p>
-              <div className="hero-btns">
-                <button className="btn-primary" onClick={()=>setTab('vendor')}>Join as a Vendor</button>
-                <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
+              <p>The only platform built exclusively for South Jersey vendors and event hosts — matched by zip code and travel radius.</p>
+              <div style={{ display:"flex", gap:16, justifyContent:"center", alignItems:"stretch", maxWidth:900, margin:"0 auto", flexWrap:"wrap", position:"relative" }}>
+                <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
+                  <div style={{ fontSize:11, letterSpacing:"3px", textTransform:"uppercase", color:"#e8c97a", marginBottom:8 }}>&#128717; For Vendors</div>
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:26, color:"#fff", marginBottom:8 }}>Find Events Near You</div>
+                  <div style={{ color:"#a89a8a", fontSize:14, lineHeight:1.6, marginBottom:20 }}>Enter your home zip, set your travel radius, and get matched with events that come to you.</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <button className="btn-primary" onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as a Vendor</button>
+                    <button className="btn-outline" onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Browse Opportunities</button>
+                  </div>
+                  <div style={{ marginTop:14, fontSize:12, color:"#e8c97a", fontWeight:600 }}>First 3 months free — no credit card required</div>
+                </div>
+                <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
+                  <div style={{ fontSize:11, letterSpacing:"3px", textTransform:"uppercase", color:"#e8c97a", marginBottom:8 }}>&#127918; For Event Hosts</div>
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:26, color:"#fff", marginBottom:8 }}>Find Vendors for Your Event</div>
+                  <div style={{ color:"#a89a8a", fontSize:14, lineHeight:1.6, marginBottom:20 }}>Enter your event zip code and we instantly match vendors within their travel range.</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                    <button className="btn-primary" onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Your Event</button>
+                    <button className="btn-outline" onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Search Vendors</button>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="stats-bar">
@@ -810,9 +1028,10 @@ export default function App() {
           </div>
         )}
 
-        {tab==='matches' && <MatchesPage />}
-        {tab==='pricing' && <PricingPage setTab={setTab} />}
-        {tab==='admin'   && <AdminPage />}
+        {tab==="matches"      && <MatchesPage />}
+        {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
+        {tab==="pricing"       && <PricingPage setTab={setTab} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
       </div>
     </>
   );
