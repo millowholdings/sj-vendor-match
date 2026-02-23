@@ -185,6 +185,15 @@ const styles = `
     position: relative;
   }
   .hero-btns { display: flex; gap: 16px; justify-content: center; position: relative; flex-wrap: wrap; }
+.hero-split { display: flex; gap: 0; justify-content: center; align-items: stretch; position: relative; max-width: 860px; margin: 0 auto; flex-wrap: wrap; }
+.hero-side { flex: 1; min-width: 280px; padding: 36px 40px; text-align: left; }
+.hero-side-label { font-size: 12px; letter-spacing: 3px; text-transform: uppercase; color: #e8c97a; margin-bottom: 10px; }
+.hero-side-title { font-family: 'Playfair Display', serif; font-size: 28px; color: #fff; margin-bottom: 10px; }
+.hero-side-desc { color: #a89a8a; font-size: 15px; line-height: 1.6; margin-bottom: 24px; }
+.hero-side-btns { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
+.hero-side-btns .btn-primary, .hero-side-btns .btn-outline { width: 100%; text-align: center; }
+.hero-divider { width: 1px; background: #ffffff15; margin: 20px 0; flex-shrink: 0; }
+@media (max-width: 640px) { .hero-side { padding: 24px 20px; } .hero-divider { width: 100%; height: 1px; margin: 0 20px; } }
   .btn-primary {
     background: #e8c97a;
     color: #1a1410;
@@ -1578,15 +1587,32 @@ export default function App() {
         {tab === 'home' && (
           <>
             <div className="hero">
-              <div className="hero-eyebrow">South Jersey's Vendor Network</div>
-              <h1>Connect. Vend. <em>Thrive.</em></h1>
-              <p>The smarter way to match South Jersey's best small vendors with events, pop-ups, markets, and hosts who need them.</p>
-              <div className="hero-btns">
-                <button className="btn-primary" onClick={() => setTab('vendor')}>Join as a Vendor</button>
-                <button className="btn-outline" onClick={() => setTab('host')}>Post Your Event</button>
-              </div>
-            </div>
-            <div className="stats-bar">
+  <div className="hero-eyebrow">South Jersey's Vendor Network</div>
+  <h1>Connect. Vend. <em>Thrive.</em></h1>
+  <p>South Jersey's marketplace connecting small vendors with events, pop-ups, and hosts who need them.</p>
+  <div className="hero-split">
+    <div className="hero-side">
+      <div className="hero-side-label">🛍️ For Vendors</div>
+      <div className="hero-side-title">Grow your business</div>
+      <p className="hero-side-desc">Get matched with events and pop-ups across South Jersey. First 3 months free.</p>
+      <div className="hero-side-btns">
+        <button className="btn-primary" onClick={() => setTab('vendor')}>Join as a Vendor</button>
+        <button className="btn-outline" onClick={() => setTab('opportunities')}>Browse Opportunities</button>
+      </div>
+    </div>
+    <div className="hero-divider"></div>
+    <div className="hero-side">
+      <div className="hero-side-label">🎪 For Event Hosts</div>
+      <div className="hero-side-title">Find your vendors</div>
+      <p className="hero-side-desc">Post your event and get matched with the perfect South Jersey vendors instantly.</p>
+      <div className="hero-side-btns">
+        <button className="btn-primary" onClick={() => setTab('host')}>Post Your Event</button>
+        <button className="btn-outline" onClick={() => setTab('matches')}>Search Vendors</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div className="stats-bar">
               <div className="stat"><div className="stat-num">47+</div><div className="stat-label">Active Vendors</div></div>
               <div className="stat"><div className="stat-num">20</div><div className="stat-label">SJ Towns Covered</div></div>
               <div className="stat"><div className="stat-num">12</div><div className="stat-label">Categories</div></div>
