@@ -376,9 +376,9 @@ function VendorForm({ onSubmit }) {
     businessName:'', ownerName:'', email:'', phone:'',
     homeZip:'', radius:20,
     categories:[], subcategories:[],
-    description:'', website:'',
+    description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
     eventTypes:[],
-    priceMin:75, priceMax:300,
+    priceMax:300,
     setupTime:30, tableSize:'6ft', needsElectric:false,
     yearsActive:''
   });
@@ -397,7 +397,11 @@ function VendorForm({ onSubmit }) {
         <ZipInput label="Home Base Zip Code *" value={form.homeZip} onChange={v=>set('homeZip',v)} hint="Your primary location — used to calculate travel distance to events" />
         <div className="form-group"><label>Years in Business</label><input placeholder="e.g. 3" value={form.yearsActive} onChange={e=>set('yearsActive',e.target.value)} /></div>
         <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special..." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
-        <div className="form-group full"><label>Website / Instagram / Social Link</label><input placeholder="https://instagram.com/yourbusiness" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
+        <div className="form-group"><label>Website URL</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
+        <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
+        <div className="form-group"><label>Instagram</label><input placeholder="https://instagram.com/yourbusiness" value={form.instagram} onChange={e=>set('instagram',e.target.value)} /></div>
+        <div className="form-group"><label>TikTok</label><input placeholder="https://tiktok.com/@yourbusiness" value={form.tiktok} onChange={e=>set('tiktok',e.target.value)} /></div>
+        <div className="form-group"><label>Other Social / Link</label><input placeholder="Etsy, Pinterest, etc." value={form.otherSocial} onChange={e=>set('otherSocial',e.target.value)} /></div>
       </div>
 
       <hr className="form-divider" />
@@ -429,8 +433,7 @@ function VendorForm({ onSubmit }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Daily Booth Fee — Min (${form.priceMin})</label><input type="range" min={25} max={500} step={25} value={form.priceMin} onChange={e=>set('priceMin',+e.target.value)} /></div>
-        <div className="form-group"><label>Daily Booth Fee — Max (${form.priceMax})</label><input type="range" min={25} max={1000} step={25} value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)} /><div className="range-display">${form.priceMin} – ${form.priceMax}/day</div></div>
+        <div className="form-group"><label>Daily Booth Fee (${form.priceMax})</label><input type="range" min={25} max={1000} step={25} value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)} /><div className="range-display">${form.priceMax}/day</div></div>
         <div className="form-group"><label>Setup Time Needed ({form.setupTime} min)</label><input type="range" min={10} max={120} step={5} value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)} /></div>
         <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
         <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
