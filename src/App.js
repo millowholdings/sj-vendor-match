@@ -924,7 +924,6 @@ export default function App() {
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
-                <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
               </div>
             </div>
             <div className="nav-group">
@@ -958,10 +957,9 @@ export default function App() {
                 <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
                   <div style={{ fontSize:11, letterSpacing:"3px", textTransform:"uppercase", color:"#e8c97a", marginBottom:8 }}>&#127918; For Event Hosts</div>
                   <div style={{ fontFamily:"Playfair Display,serif", fontSize:26, color:"#fff", marginBottom:8 }}>Find Vendors for Your Event</div>
-                  <div style={{ color:"#a89a8a", fontSize:14, lineHeight:1.6, marginBottom:20 }}>Enter your event zip code and we instantly match vendors within their travel range.</div>
+                  <div style={{ color:"#a89a8a", fontSize:14, lineHeight:1.6, marginBottom:20 }}>Enter your event zip code and we instantly match and deliver a curated vendor list — you book directly.</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     <button className="btn-primary" onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Your Event</button>
-                    <button className="btn-outline" onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Search Vendors</button>
                   </div>
                 </div>
               </div>
@@ -988,7 +986,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <div style={{ marginTop:48 }}><button className="btn-submit" onClick={()=>setTab('matches')}>Browse Vendors →</button></div>
+              <div style={{ marginTop:48, display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap" }}><button className="btn-submit" onClick={()=>setTab('vendor')}>Join as a Vendor →</button><button className="btn-submit" style={{ background:'#e8c97a', color:'#1a1410' }} onClick={()=>setTab('host')}>Post Your Event →</button></div>
             </div>
           </>
         )}
