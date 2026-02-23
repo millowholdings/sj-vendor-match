@@ -152,7 +152,7 @@ const styles = `
   .pricing-features { list-style: none; }
   .pricing-features li { font-size: 14px; padding: 6px 0; border-bottom: 1px solid #f0e8dc; display: flex; align-items: center; gap: 8px; }
   .pricing-card.featured .pricing-features li { border-color: #2d2118; color: #c8b898; }
-  .pricing-features li::before { content: "\2713"; color: #e8c97a; font-weight: 700; flex-shrink: 0; }
+  .pricing-features li::before { content: "✓"; color: #e8c97a; font-weight: 700; flex-shrink: 0; }
   .form-card { background: #fff; border: 1px solid #e8ddd0; border-radius: 12px; padding: 48px; box-shadow: 0 4px 40px #1a141008; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
   .form-group { display: flex; flex-direction: column; gap: 6px; }
@@ -786,7 +786,7 @@ function OpportunitiesPage({ opps }) {
           <div style={{ fontSize:13, color:"#a89a8a" }}>Updated regularly</div>
         </div>
         {list.length===0
-          ? <div className="empty-state"><div className="big">\ud83d\udce5</div><p>No opportunities match your filters.</p></div>
+          ? <div className="empty-state"><div className="big">📭</div><p>No opportunities match your filters.</p></div>
           : (
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
             {list.map(opp => (
@@ -812,7 +812,7 @@ function OpportunitiesPage({ opps }) {
                   <div style={{ fontSize:13, color:"#7a6a5a", marginBottom:14 }}><strong style={{ color:"#1a1410" }}>Contact:</strong> {opp.contactEmail}{opp.contactPhone ? ` · ${opp.contactPhone}` : ""}</div>
                   {opp.deadline && (
                     <div style={{ display:"inline-block", background:isUrgent(opp.deadline)?"#fde8e8":"#fff3cd", border:`1px solid ${isUrgent(opp.deadline)?"#f5a0a0":"#ffd966"}`, color:isUrgent(opp.deadline)?"#8b0000":"#7a5a10", fontSize:12, fontWeight:600, padding:"4px 12px", borderRadius:20, marginBottom:14 }}>
-                      {isUrgent(opp.deadline)?"\ud83d\udd25 Deadline soon: ":"Apply by: "}{fmtDate(opp.deadline)}
+                      {isUrgent(opp.deadline)?"🔥 Deadline soon: ":"Apply by: "}{fmtDate(opp.deadline)}
                     </div>
                   )}
                   <div style={{ display:"flex", gap:10 }}>
