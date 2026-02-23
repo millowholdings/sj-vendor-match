@@ -749,14 +749,13 @@ function isUrgent(deadline) {
 function VendorForm({ onSubmit }) {
   const [form, setForm] = useState({
     businessName: '', ownerName: '', email: '', phone: '',
-    town: '', category: '', subcategory: '', description: '', website: '',
+town: '', categories: [], subcategories: [], description: '', website: '',
     eventTypes: [], towns: [], priceMin: 75, priceMax: 300,
     setupTime: 30, tableSize: '6ft', needsElectric: false,
     yearsActive: ''
   });
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }));
-  const subcats = form.category ? SUBCATEGORIES[form.category] || [] : [];
 
   return (
     <div className="form-card">
@@ -1569,7 +1568,7 @@ export default function App() {
   const [opportunities, setOpportunities] = useState(SAMPLE_OPPORTUNITIES);
 
   const handleVendorSubmit = (form) => {
-    if (!form.businessName || !form.email || !form.category) {
+ if (!form.businessName || !form.email || form.categories.length === 0) {
       alert('Please fill in Business Name, Email, and Category to continue.');
       return;
     }
