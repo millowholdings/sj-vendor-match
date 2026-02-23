@@ -782,27 +782,45 @@ function VendorForm({ onSubmit }) {
           <label>Phone Number</label>
           <input placeholder="(609) 555-0000" value={form.phone} onChange={e => set('phone', e.target.value)} />
         </div>
-        <div className="form-group">
-          <label>Main Category *</label>
-          <select value={form.category} onChange={e => { set('category', e.target.value); set('subcategory', ''); }}>
-            <option value="">Select a category...</option>
-            {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-          </select>
+    <div className="form-group full">
+  <label>Categories * (select all that apply)</label>
+  <CheckboxGroup options={CATEGORIES} selected={form.categories} onChange={v => {
+    set('categories', v);
+    set('subcategories', form.subcategories.filter(s =>
+      v.some(cat => SUBCATEGORIES[cat]?.includes(s))
+    ));
+  }} />
+</div>
+{form.categories.length > 0 && (
+  <div className="form-group full">
+    <label>Subcategories (select all that apply)</label>
+    {form.categories.map(cat => (
+      <div key={cat} style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#e8c97a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1 }}>
+          {cat}
         </div>
-        <div className="form-group">
-          <label>Subcategory {form.category ? '*' : ''}</label>
-          <select value={form.subcategory} onChange={e => set('subcategory', e.target.value)} disabled={!form.category}>
-            <option value="">{form.category ? 'Select subcategory...' : 'Choose a category first'}</option>
-            {subcats.map(s => <option key={s}>{s}</option>)}
-          </select>
+        <CheckboxGroup
+          options={SUBCATEGORIES[cat] || []}
+          selected={form.subcategories}
+          onChange={v => {
+            const otherSubs = form.subcategories.filter(s => !SUBCATEGORIES[cat]?.includes(s));
+            set('subcategories', [...otherSubs, ...v]);
+          }}
+        />
+      </div>
+    ))}
+    {form.subcategories.length > 0 && (
+      <div className="subcategory-section" style={{ marginTop: 16 }}>
+        <div className="subcategory-label">✓ Selected subcategories:</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+          {form.subcategories.map(s => (
+            <span key={s} style={{ background: '#fdf4dc', border: '1px solid #e8c97a', borderRadius: 20, padding: '3px 12px', fontSize: 13, color: '#7a5a10' }}>{s}</span>
+          ))}
         </div>
-        {form.category && form.subcategory && (
-          <div className="form-group full">
-            <div className="subcategory-section">
-              <div className="subcategory-label">✓ Selected: {form.category} → {form.subcategory}</div>
-              <div style={{ fontSize: 13, color: '#7a6a5a' }}>Your profile will appear in both the main category and subcategory searches.</div>
-            </div>
-          </div>
+      </div>
+    )}
+  </div>
+)}
         )}
         <div className="form-group">
           <label>Home Base Town</label>
