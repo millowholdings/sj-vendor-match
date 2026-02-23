@@ -1583,7 +1583,7 @@ export default function App() {
               <p>The smarter way to match South Jersey's best small vendors with events, pop-ups, markets, and hosts who need them.</p>
               <div className="hero-btns">
                 <button className="btn-primary" onClick={() => setTab('vendor')}>Join as a Vendor</button>
-                <button className="btn-outline" onClick={() => setTab('opportunities')}>Browse Opportunities</button>
+                <button className="btn-outline" onClick={() => setTab('host')}>Post Your Event</button>
               </div>
             </div>
             <div className="stats-bar">
