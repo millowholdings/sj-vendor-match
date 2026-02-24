@@ -998,7 +998,7 @@ export default function App() {
           <>
             <div className="hero">
               <div className="hero-eyebrow">South Jersey's Vendor Matching Platform</div>
-              <h1>Connect. Vend. <em>Thrive.</em></h1>
+              <h1>Connect. Grow. <em>Thrive.</em></h1>
               <p>The only platform built exclusively for South Jersey vendors and event hosts — matched by zip code and travel radius.</p>
               <div style={{ display:"flex", gap:16, justifyContent:"center", alignItems:"stretch", maxWidth:900, margin:"0 auto", flexWrap:"wrap", position:"relative" }}>
                 <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
