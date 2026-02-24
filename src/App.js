@@ -244,15 +244,71 @@ const styles = `
   .nav-group { display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,.1); padding-left: 12px; margin-left: 4px; }
   .nav-group-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #e8c97a; padding: 2px 6px; margin-bottom: 2px; font-weight: 600; }
   .nav-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
-    @media (max-width: 640px) {
-    .nav { padding: 14px 20px; }
-    .nav-tabs { gap: 2px; }
-    .nav-tab { padding: 6px 12px; font-size: 12px; }
-    .hero { padding: 60px 20px; }
-    .section { padding: 50px 20px; }
-    .form-card { padding: 28px 18px; }
+    .ometa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) {
+    .nav { padding: 10px 16px; gap: 6px; }
+    .nav-logo { font-size: 18px; }
+    .nav-tabs { gap: 2px; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; flex-wrap: nowrap; }
+    .nav-tab { padding: 6px 10px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
+    .nav-group { padding-left: 8px; margin-left: 2px; }
+    .nav-group-label { font-size: 9px; padding: 1px 4px; }
+    .nav-group-items { gap: 2px; }
+    .hero { padding: 40px 16px 32px; }
+    .hero h1 { font-size: 32px; }
+    .hero > p { font-size: 15px; margin-bottom: 28px; }
+    .hero-split { flex-direction: column; gap: 12px; }
+    .hero-side { min-width: unset; padding: 20px; }
+    .hero-side-title { font-size: 20px; }
+    .stats-bar { gap: 16px; padding: 16px; justify-content: space-around; }
+    .stat-num { font-size: 20px; }
+    .stat-label { font-size: 10px; }
+    .section { padding: 32px 16px; }
+    .section-title { font-size: 26px; }
+    .section-sub { font-size: 14px; }
+    .form-card { padding: 20px 14px; }
     .form-grid { grid-template-columns: 1fr; }
-    .stats-bar { gap: 30px; }
+    .form-section-title { font-size: 17px; }
+    .checkbox-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+    .checkbox-item { padding: 6px 10px; font-size: 13px; }
+    .radius-group { gap: 6px; }
+    .radius-btn { padding: 6px 12px; font-size: 13px; }
+    .btn-submit { padding: 14px 28px; font-size: 15px; width: 100%; }
+    .match-filters { flex-direction: column; padding: 16px; gap: 12px; }
+    .match-filter-group { min-width: unset; width: 100%; }
+    .results-header { flex-direction: column; gap: 4px; }
+    .vendor-grid { grid-template-columns: 1fr; gap: 14px; }
+    .vendor-card-top { height: 80px; font-size: 28px; }
+    .vendor-card-body { padding: 14px; }
+    .vendor-name { font-size: 16px; }
+    .admin-grid { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .admin-table { font-size: 12px; }
+    .admin-table th, .admin-table td { padding: 8px 10px; }
+    .pricing-grid { grid-template-columns: 1fr; }
+    .subcat-block { padding: 14px; }
+    .form-submit { margin-top: 20px; }
+    .info-box { font-size: 13px; padding: 10px 14px; }
+    .upload-zone { padding: 20px; }
+    .range-display { font-size: 16px; }
+    .btn-select-all { padding: 5px 12px; font-size: 11px; }
+    .checkbox-section-header { gap: 6px; }
+    .selected-tags { gap: 4px; }
+    .sel-tag { font-size: 11px; padding: 2px 8px; }
+    .empty-state { padding: 40px 16px; }
+    .empty-state .big { font-size: 36px; }
+    .success-banner { padding: 28px 20px; }
+    .success-banner h2 { font-size: 22px; }
+    .success-icon { font-size: 36px; }
+  }
+    .ometa-grid { grid-template-columns: 1fr; }
+    .service-grid { grid-template-columns: 1fr; }
+      @media (max-width: 480px) {
+    .nav-logo { font-size: 16px; }
+    .hero h1 { font-size: 26px; }
+    .stats-bar { flex-direction: row; flex-wrap: wrap; gap: 12px; padding: 12px; }
+    .stat { min-width: 40%; text-align: center; }
+    .admin-grid { grid-template-columns: 1fr; }
+    .hero-side-btns button { font-size: 13px; padding: 11px 16px; }
   }
 `;
 
@@ -500,7 +556,7 @@ function HostForm({ onSubmit }) {
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Service Level</h3>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+      <div className="service-grid">
         <label className={`checkbox-item${!form.managedBooking?' checked':''}`} style={{ flexDirection:'column', alignItems:'flex-start', padding:20, cursor:'pointer' }} onClick={()=>set('managedBooking',false)}>
           <div style={{ fontWeight:600, marginBottom:4 }}>Self-Serve Matching</div>
           <div style={{ fontSize:13, color:'#7a6a5a' }}>Get a curated list of matched vendors. You reach out and book directly.</div>
@@ -801,7 +857,7 @@ function OpportunitiesPage({ opps }) {
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
                 </div>
                 <div style={{ padding:"20px 24px" }}>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:16 }}>
+                  <div className="ometa-grid">
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)} – {fmtTime(opp.endTime)}</div></div>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
@@ -930,6 +986,7 @@ export default function App() {
               <div className="nav-group-label">&#127918; Hosts</div>
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
+                <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
               </div>
             </div>
             <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
