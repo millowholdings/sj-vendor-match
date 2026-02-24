@@ -1017,6 +1017,7 @@ export default function App() {
                   <div style={{ color:"#a89a8a", fontSize:14, lineHeight:1.6, marginBottom:20 }}>Enter your event zip code and we instantly match and deliver a curated vendor list — you book directly.</div>
                   <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     <button className="btn-primary" onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Your Event</button>
+                    <button className="btn-outline" onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
                   </div>
                 </div>
               </div>
