@@ -437,7 +437,7 @@ function VendorForm({ onSubmit, setTab }) {
     categories:[], subcategories:[],
     description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
     eventTypes:[],
-    priceMax:300,
+    priceMax:0,
     hasMinPurchase:false, minPurchaseAmt:25,
     chargesPrivateFee:false, privateEventFee:150,
     setupTime:30, tableSize:'6ft', needsElectric:false,
