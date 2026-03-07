@@ -677,7 +677,7 @@ function HostForm({ onSubmit, setTab }) {
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, isPaidHost, setTab }) {
   return (
     <div className="vendor-card">
       <div className="vendor-card-top">
@@ -685,7 +685,14 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         <div className="match-score">{v.matchScore}% match</div>
       </div>
       <div className="vendor-card-body">
-        <div className="vendor-name">{v.name}</div>
+        {isPaidHost ? (
+          <div className="vendor-name">{v.name}</div>
+        ) : (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
+            <div className="vendor-name" style={{filter:'blur(5px)',userSelect:'none',letterSpacing:2}}>{'█'.repeat((v.name||'').length)}</div>
+            <span style={{fontSize:10,background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:10,padding:'1px 7px',fontWeight:700,whiteSpace:'nowrap'}}>🔒 Unlock</span>
+          </div>
+        )}
         <div className="vendor-category">{v.category}</div>
         <div className="vendor-tags">
           {v.tags.map(t=><span key={t} className="vendor-tag">{t}</span>)}
@@ -693,8 +700,8 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         </div>
         <p style={{ fontSize:13, color:'#7a6a5a', lineHeight:1.5, marginBottom:10 }}>{v.description}</p>
         <div className="vendor-meta">
-          <div className="vendor-price">{v.price}</div>
-          <div className="vendor-location">📍 {v.homeZip} · travels {v.radius}mi</div>
+          <div className="vendor-price">{isPaidHost ? v.price : <span style={{filter:'blur(4px)',userSelect:'none'}}>$███–$███/day</span>}</div>
+          <div className="vendor-location">📍 {isPaidHost ? v.homeZip : '█████'} · travels {v.radius}mi</div>
         </div>
         <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:8}}>
           {v.hasMinPurchase && <span className="vendor-tag" style={{background:'#fff3cd',color:'#7a5a10',borderColor:'#ffd966'}}>Min purchase: ${v.minPurchaseAmt}</span>}
@@ -708,6 +715,14 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         )}
         {(() => {
           const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+          if (!isPaidHost) return (
+            <div style={{marginTop:10}}>
+              <button onClick={()=>setTab('pricing')} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                🔓 Unlock Vendor Info — View Plans
+              </button>
+              <div style={{fontSize:11,color:'#a89a8a',textAlign:'center',marginTop:5}}>Category, tags &amp; range visible. Name, price &amp; contact unlocked after signup.</div>
+            </div>
+          );
           return (
             <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}}>
               {hostEvent && sendBookingRequest && (
@@ -749,7 +764,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab }) {
+function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, isPaidHost, setHostPaid }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterPrivate, setFilterPrivate] = useState('no');
@@ -779,6 +794,26 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
     <div className="section" style={{ maxWidth:1060 }}>
       <div className="section-title">Vendor Directory</div>
       <p className="section-sub">Browse all active South Jersey vendors. Enter your event zip code to see who can travel to you.</p>
+      {!isPaidHost && (
+        <div style={{background:'#1a1410',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+          <div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#e8c97a',marginBottom:3}}>🔒 You're browsing in preview mode</div>
+            <div style={{fontSize:13,color:'#a89a8a'}}>Vendor names, pricing &amp; contact info are hidden. Unlock everything — Pay nothing until your first booking!</div>
+          </div>
+          <button onClick={()=>setTab('pricing')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>🔓 View Plans</button>
+        </div>
+      )}
+      {isPaidHost && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'10px 20px',marginBottom:20,fontSize:13,color:'#1a6b3a',fontWeight:600}}>
+          ✅ Full access — vendor names, pricing &amp; contact info are visible.
+        </div>
+      )}
+      <div style={{marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
+        <span style={{fontSize:12,color:'#a89a8a'}}>Demo:</span>
+        <button onClick={()=>setHostPaid(p=>!p)} style={{background:isPaidHost?'#1a6b3a':'#7a6a5a',color:'#fff',border:'none',borderRadius:20,padding:'4px 14px',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          {isPaidHost?'✅ Paid Host (click to preview unpaid)':'🔒 Unpaid Preview (click to simulate paid)'}
+        </button>
+      </div>
       <div className="match-filters">
         <div className="match-filter-group" style={{ maxWidth:200 }}>
           <label>Event Zip Code</label>
@@ -832,7 +867,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}</div>
       }
 
       {flagged.length>0 && (
@@ -842,7 +877,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are in range but may have minimum purchase or private event fee requirements that don't match your filters.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.75 }}>
-            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}
+            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}
           </div>
         </>
       )}
@@ -853,7 +888,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are beyond their stated travel radius for zip {hostZip}.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.5 }}>
-            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}
+            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}
           </div>
         </>
       )}
@@ -1124,6 +1159,7 @@ export default function App() {
   const [vendorSuccess, setVendorSuccess] = useState(false);
   const [hostSuccess,   setHostSuccess]   = useState(false);
   const [hostEvent,     setHostEvent]     = useState(null);
+  const [hostPaid,      setHostPaid]      = useState(false);
   const [opps, setOpps] = useState(SAMPLE_OPPS);
   const [vendorSubs, setVendorSubs] = useState([]);
   const [conversations, setConversations] = useState([]);
@@ -1325,7 +1361,7 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} />}
+        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} />}
         {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
