@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -430,6 +430,7 @@ function UploadZone({ label, hint }) {
 
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
 function VendorForm({ onSubmit }) {
+  const [tosAgreed, setTosAgreed] = useState(false);
   const [form, setForm] = useState({
     businessName:'', ownerName:'', email:'', phone:'',
     homeZip:'', radius:20,
@@ -524,7 +525,11 @@ function VendorForm({ onSubmit }) {
       </div>
 
       <div className="form-submit">
-        <button className="btn-submit" onClick={()=>onSubmit(form)}>Submit Vendor Profile →</button>
+        <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
+          <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
+          <span>I agree to the <button type="button" onClick={()=>window.open('#tos','_blank')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of SJVendorMatch within 12 months is prohibited and subject to a finder's fee.</span>
+        </label>
+        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. Monthly fee: <strong style={{ color:'#1a1410' }}>$15/month</strong></p>
       </div>
     </div>
@@ -533,6 +538,7 @@ function VendorForm({ onSubmit }) {
 
 // ─── Host Form ────────────────────────────────────────────────────────────────
 function HostForm({ onSubmit }) {
+  const [tosAgreed, setTosAgreed] = useState(false);
   const [form, setForm] = useState({
     orgName:'', contactName:'', email:'', phone:'',
     eventName:'', eventType:'', eventZip:'', address:'',
@@ -632,14 +638,18 @@ function HostForm({ onSubmit }) {
         <textarea placeholder="Anything else vendors or our team should know..." value={form.notes} onChange={e=>set('notes',e.target.value)} />
       </div>
       <div className="form-submit">
-        <button className="btn-submit" onClick={()=>onSubmit(form)}>Find My Vendors →</button>
+        <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
+          <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
+          <span>I agree to the <button type="button" onClick={()=>window.open('#tos','_blank')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of SJVendorMatch within 12 months without a finder's fee.</span>
+        </label>
+        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
     </div>
   );
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage }) {
   return (
     <div className="vendor-card">
       <div className="vendor-card-top">
@@ -668,16 +678,19 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange }) {
             ? <div className="vendor-no-match">✗ {v.dist!==null?`${v.dist.toFixed(1)} mi away`:'distance unknown'} — outside travel range</div>
             : <div className="vendor-distance">✓ {v.dist!==null?`${v.dist.toFixed(1)} mi from your event`:'within range (zip unverified)'}</div>
         )}
-        <button className="contact-btn" onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])} style={contacted.includes(v.id)?{background:'#1a6b3a',color:'#fff'}:{}}>
-          {contacted.includes(v.id)?'✓ Request Sent':'Request Contact Info'}
-        </button>
+        <div style={{display:'flex',gap:8,marginTop:10}}>
+          {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a'}} onClick={()=>openMessage(v)}>💬 Message Vendor</button>}
+          <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5'}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
+            {contacted.includes(v.id)?'✓ Saved':'Save'}
+          </button>
+        </div>
       </div>
     </div>
   );
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage() {
+function MatchesPage({ openMessage }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [hostZip, setHostZip] = useState('');
@@ -767,7 +780,7 @@ function MatchesPage() {
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are in range but may have minimum purchase or private event fee requirements that don't match your filters.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.75 }}>
-            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} />)}
+            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} />)}
           </div>
         </>
       )}
@@ -1049,6 +1062,25 @@ export default function App() {
   const [hostSuccess,   setHostSuccess]   = useState(false);
   const [opps, setOpps] = useState(SAMPLE_OPPS);
   const [vendorSubs, setVendorSubs] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [activeConvoId, setActiveConvoId] = useState(null);
+  const [tosTab, setTosTab] = useState(null); // 'vendor' | 'host'
+
+  const openMessage = (vendor) => {
+    const existing = conversations.find(c => c.vendorId === vendor.id);
+    if (existing) { setActiveConvoId(existing.id); setTab("messages"); return; }
+    const newConvo = {
+      id: Date.now(), vendorId: vendor.id, vendorName: vendor.name,
+      vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
+      hostName: "You (Host)", status: "active",
+      messages: [{
+        id: 1, from: "system", text: `Conversation started with ${vendor.name}. All communications are protected under the SJVendorMatch Non-Circumvention Agreement. Direct booking outside this platform within 12 months is prohibited.`, ts: new Date().toISOString()
+      }]
+    };
+    setConversations(c => [newConvo, ...c]);
+    setActiveConvoId(newConvo.id);
+    setTab("messages");
+  };
 
   const handleVendorSubmit = form => {
     if (!form.businessName || !form.email || form.categories.length===0) {
@@ -1090,9 +1122,13 @@ export default function App() {
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
                 <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
+                <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
+                  Messages{conversations.length>0?` (${conversations.length})`:""}
+                </button>
               </div>
             </div>
             <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
+            <button className={`nav-tab${tab==="tos"?" active":""}`} onClick={()=>{setTab("tos");window.scrollTo({top:0});}}>Terms</button>
             <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>
           </div>
         </nav>
@@ -1191,11 +1227,224 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage />}
+        {tab==="matches"      && <MatchesPage openMessage={openMessage} />}
         {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
+        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} />}
+        {tab==="tos"           && <TosPage tosTab={tosTab} setTosTab={setTosTab} setTab={setTab} />}
       </div>
     </>
+  );
+}
+
+// ─── Messages Page ────────────────────────────────────────────────────────────
+function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId }) {
+  const [draft, setDraft] = useState('');
+  const [senderName, setSenderName] = useState('');
+  const messagesEndRef = useRef(null);
+
+  const activeConvo = conversations.find(c => c.id === activeConvoId);
+
+  useEffect(() => {
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [activeConvo?.messages?.length]);
+
+  const sendMessage = () => {
+    if (!draft.trim()) return;
+    if (!senderName.trim()) { alert('Please enter your name before sending.'); return; }
+    setConversations(convos => convos.map(c => {
+      if (c.id !== activeConvoId) return c;
+      return {
+        ...c,
+        messages: [...c.messages, {
+          id: Date.now(), from: 'host', senderName, text: draft.trim(),
+          ts: new Date().toISOString()
+        }]
+      };
+    }));
+    setDraft('');
+  };
+
+  const fmtTs = ts => {
+    const d = new Date(ts);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
+
+  return (
+    <div style={{ display:'flex', height:'calc(100vh - 64px)', background:'#f5f0ea', overflow:'hidden' }}>
+
+      {/* Sidebar */}
+      <div style={{ width:280, minWidth:220, background:'#1a1410', display:'flex', flexDirection:'column', borderRight:'1px solid #2d2118', flexShrink:0 }}>
+        <div style={{ padding:'20px 16px 12px', borderBottom:'1px solid #2d2118' }}>
+          <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#e8c97a', marginBottom:4 }}>Messages</div>
+          <div style={{ fontSize:12, color:'#7a6a5a' }}>{conversations.length} conversation{conversations.length!==1?'s':''}</div>
+        </div>
+        <div style={{ flex:1, overflowY:'auto' }}>
+          {conversations.length === 0 && (
+            <div style={{ padding:24, color:'#7a6a5a', fontSize:13, textAlign:'center', lineHeight:1.6 }}>
+              No conversations yet.<br/>Browse vendors and click<br/>"Message Vendor" to start.
+            </div>
+          )}
+          {conversations.map(c => (
+            <div key={c.id}
+              onClick={() => setActiveConvoId(c.id)}
+              style={{ padding:'14px 16px', cursor:'pointer', borderBottom:'1px solid #2d2118',
+                background: c.id === activeConvoId ? '#2d2118' : 'transparent',
+                transition:'background 0.15s' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+                <span style={{ fontSize:22 }}>{c.vendorEmoji}</span>
+                <div>
+                  <div style={{ fontSize:14, fontWeight:600, color:'#fff' }}>{c.vendorName}</div>
+                  <div style={{ fontSize:11, color:'#7a6a5a', textTransform:'uppercase', letterSpacing:1 }}>{c.vendorCategory}</div>
+                </div>
+              </div>
+              <div style={{ fontSize:12, color:'#a89a8a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {c.messages[c.messages.length - 1]?.text?.slice(0, 50)}...
+              </div>
+              <div style={{ fontSize:11, color:'#4a3a28', marginTop:4 }}>
+                {c.status === 'active' ? '🟢 Active' : c.status === 'booked' ? '✅ Booked' : '⏸ Pending'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Chat area */}
+      {!activeConvo ? (
+        <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:12, color:'#a89a8a' }}>
+          <div style={{ fontSize:48 }}>💬</div>
+          <div style={{ fontFamily:'Playfair Display,serif', fontSize:22, color:'#1a1410' }}>Select a conversation</div>
+          <div style={{ fontSize:14 }}>Choose a vendor from the left to view your messages</div>
+        </div>
+      ) : (
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+          {/* Chat header */}
+          <div style={{ background:'#fff', borderBottom:'1px solid #e8ddd0', padding:'14px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+              <span style={{ fontSize:28 }}>{activeConvo.vendorEmoji}</span>
+              <div>
+                <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410' }}>{activeConvo.vendorName}</div>
+                <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
+              </div>
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              {['active','pending','booked'].map(s => (
+                <button key={s} onClick={() => setConversations(cs => cs.map(c => c.id===activeConvoId ? {...c,status:s} : c))}
+                  style={{ background: activeConvo.status===s ? '#e8c97a' : '#f5f0ea', border:'1px solid #e0d5c5',
+                    borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer',
+                    fontFamily:'DM Sans,sans-serif', color: activeConvo.status===s ? '#1a1410' : '#7a6a5a', textTransform:'capitalize' }}>
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ToS notice banner */}
+          <div style={{ background:'#fdf4dc', borderBottom:'1px solid #ffd966', padding:'8px 24px', fontSize:12, color:'#7a5a10', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+            🔒 <strong>Protected by SJVendorMatch Non-Circumvention Agreement.</strong> Direct booking outside this platform within 12 months is prohibited and subject to a finder's fee.
+          </div>
+
+          {/* Messages */}
+          <div style={{ flex:1, overflowY:'auto', padding:24, display:'flex', flexDirection:'column', gap:12 }}>
+            {activeConvo.messages.map(msg => (
+              <div key={msg.id} style={{
+                display:'flex',
+                flexDirection: msg.from==='system' ? 'column' : msg.from==='host' ? 'flex-end' : 'flex-start',
+                alignItems: msg.from==='system' ? 'center' : undefined
+              }}>
+                {msg.from === 'system' && (
+                  <div style={{ background:'#f5f0ea', border:'1px solid #e8ddd0', borderRadius:8, padding:'8px 16px', fontSize:12, color:'#7a6a5a', maxWidth:480, textAlign:'center' }}>
+                    {msg.text}
+                  </div>
+                )}
+                {msg.from !== 'system' && (
+                  <div style={{ maxWidth:'70%' }}>
+                    <div style={{ fontSize:11, color:'#a89a8a', marginBottom:3, textAlign: msg.from==='host' ? 'right' : 'left' }}>
+                      {msg.senderName || (msg.from==='vendor' ? activeConvo.vendorName : 'You')} · {fmtTs(msg.ts)}
+                    </div>
+                    <div style={{
+                      background: msg.from==='host' ? '#1a1410' : '#fff',
+                      color: msg.from==='host' ? '#e8c97a' : '#1a1410',
+                      border: '1px solid ' + (msg.from==='host' ? '#1a1410' : '#e8ddd0'),
+                      borderRadius: msg.from==='host' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                      padding:'10px 14px', fontSize:14, lineHeight:1.6
+                    }}>
+                      {msg.text}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
+
+          {/* Input area */}
+          <div style={{ background:'#fff', borderTop:'1px solid #e8ddd0', padding:16, flexShrink:0 }}>
+            <div style={{ display:'flex', gap:8, marginBottom:8, alignItems:'center' }}>
+              <div style={{ fontSize:12, color:'#7a6a5a', whiteSpace:'nowrap' }}>Sending as:</div>
+              <input value={senderName} onChange={e=>setSenderName(e.target.value)}
+                placeholder="Your name" maxLength={50}
+                style={{ flex:1, border:'1px solid #e0d5c5', borderRadius:6, padding:'6px 10px', fontSize:13, fontFamily:'DM Sans,sans-serif', background:'#fdf9f5', outline:'none' }} />
+            </div>
+            <div style={{ display:'flex', gap:8 }}>
+              <textarea value={draft} onChange={e=>setDraft(e.target.value)}
+                onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }}}
+                placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                rows={2}
+                style={{ flex:1, border:'1.5px solid #e0d5c5', borderRadius:8, padding:'10px 14px', fontSize:14, fontFamily:'DM Sans,sans-serif', resize:'none', outline:'none', background:'#fdf9f5' }} />
+              <button onClick={sendMessage}
+                style={{ background:'#1a1410', color:'#e8c97a', border:'none', borderRadius:8, padding:'0 20px', fontSize:20, cursor:'pointer', flexShrink:0 }}>
+                ➤
+              </button>
+            </div>
+            <div style={{ fontSize:11, color:'#a89a8a', marginTop:6 }}>
+              💡 Keep all booking conversations here to stay protected under the Non-Circumvention Agreement.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Terms of Service Page ───────────────────────────────────────────────────
+function TosPage({ setTab }) {
+  return (
+    <div className="section" style={{ maxWidth:860 }}>
+      <div className="section-title">Terms of Service</div>
+      <p className="section-sub">SJVendorMatch Platform Agreement — effective upon registration</p>
+
+      {[
+        { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on SJVendorMatch, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and SJVendorMatch." },
+        { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through SJVendorMatch — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through SJVendorMatch, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. SJVendorMatch reserves the right to remove violating users from the platform permanently." },
+        { title: "3. Vendor Responsibilities", body: "Vendors agree to: (a) provide accurate information about their business, products, pricing, insurance status, and availability; (b) honor commitments made through in-app messaging and booking; (c) maintain current and valid certificates of insurance where applicable; (d) conduct all platform communications through the in-app messaging system; (e) pay the applicable monthly subscription fee to maintain an active listing." },
+        { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
+        { title: "5. In-App Messaging & Communication", body: "SJVendorMatch provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. SJVendorMatch does not read private messages but may access them if a dispute is filed." },
+        { title: "6. Privacy & Data Protection", body: "SJVendorMatch collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
+        { title: "7. Fees & Subscriptions", body: "Vendor listings are free for the first 3 months. After the free trial, a subscription fee of $15/month (Basic) or $35/month (Featured) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. SJVendorMatch reserves the right to modify pricing with 30 days notice." },
+        { title: "8. Limitation of Liability", body: "SJVendorMatch is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to SJVendorMatch in the 3 months preceding any claim." },
+        { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to SJVendorMatch at support@sjvendormatch.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against SJVendorMatch itself." },
+        { title: "10. Modifications & Termination", body: "SJVendorMatch reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
+      ].map(({ title, body }) => (
+        <div key={title} style={{ marginBottom:28 }}>
+          <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410', marginBottom:8 }}>{title}</div>
+          {body.split('\n\n').map((para, i) => (
+            <p key={i} style={{ fontSize:14, color:'#5a4a3a', lineHeight:1.8, marginBottom:8 }}>{para}</p>
+          ))}
+        </div>
+      ))}
+
+      <div style={{ background:'#1a1410', borderRadius:10, padding:'28px 32px', marginTop:32, textAlign:'center' }}>
+        <div style={{ fontFamily:'Playfair Display,serif', fontSize:20, color:'#e8c97a', marginBottom:8 }}>Questions about our Terms?</div>
+        <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@sjvendormatch.com</p>
+        <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+          <button className="btn-primary" onClick={()=>setTab('vendor')}>Join as a Vendor</button>
+          <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
+        </div>
+      </div>
+    </div>
   );
 }
