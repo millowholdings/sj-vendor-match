@@ -1154,13 +1154,12 @@ export default function App() {
       notes: eventDetails.notes || '',
       categoriesNeeded: eventDetails.vendorCategories || [],
       subcategoriesNeeded: eventDetails.vendorSubcategories || [],
-      status: 'pending', // pending | accepted | declined | cancelled
+      status: 'pending',
       sentAt: new Date().toISOString(),
       respondedAt: null,
       vendorMessage: '',
     };
     setBookingRequests(r => [req, ...r]);
-    // Also open a conversation thread
     openMessage(vendor);
   };
 
