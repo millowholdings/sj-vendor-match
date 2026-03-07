@@ -429,7 +429,7 @@ function UploadZone({ label, hint }) {
 }
 
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
-function VendorForm({ onSubmit }) {
+function VendorForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [form, setForm] = useState({
     businessName:'', ownerName:'', email:'', phone:'',
@@ -555,7 +555,7 @@ function VendorForm({ onSubmit }) {
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>window.open('#tos','_blank')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of SJVendorMatch within 12 months is prohibited and subject to a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of SJVendorMatch within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. Monthly fee: <strong style={{ color:'#1a1410' }}>$15/month</strong></p>
@@ -565,7 +565,7 @@ function VendorForm({ onSubmit }) {
 }
 
 // ─── Host Form ────────────────────────────────────────────────────────────────
-function HostForm({ onSubmit }) {
+function HostForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [form, setForm] = useState({
     orgName:'', contactName:'', email:'', phone:'',
@@ -668,7 +668,7 @@ function HostForm({ onSubmit }) {
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>window.open('#tos','_blank')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of SJVendorMatch within 12 months without a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of SJVendorMatch within 12 months without a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
@@ -1234,7 +1234,7 @@ export default function App() {
               <>
                 <div className="section-title">Vendor Registration</div>
                 <p className="section-sub">Join South Jersey's growing vendor community and get matched with events near you.</p>
-                <VendorForm onSubmit={handleVendorSubmit} />
+                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} />
               </>
             )}
           </div>
@@ -1252,7 +1252,7 @@ export default function App() {
               <>
                 <div className="section-title">Host an Event</div>
                 <p className="section-sub">Tell us about your event and we'll find the perfect vendors for you.</p>
-                <HostForm onSubmit={handleHostSubmit} />
+                <HostForm onSubmit={handleHostSubmit} setTab={setTab} />
               </>
             )}
           </div>
