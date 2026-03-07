@@ -693,9 +693,12 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
 function MatchesPage({ openMessage }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
+  const [filterPrivate, setFilterPrivate] = useState('no');
+  const [hostMinCover, setHostMinCover] = useState(0);
   const [hostZip, setHostZip] = useState('');
   const [contacted, setContacted] = useState([]);
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
+  const isPrivate = filterPrivate === 'yes';
 
   const enriched = SAMPLE_VENDORS
     .filter(v => !filterCategory  || v.category === filterCategory)
