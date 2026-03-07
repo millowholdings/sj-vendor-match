@@ -494,7 +494,24 @@ function VendorForm({ onSubmit }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Daily Booth Fee (${form.priceMax})</label><input type="range" min={25} max={1000} step={25} value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)} /><div className="range-display">${form.priceMax}/day</div></div>
+        <div className="form-group"><label>Daily Booth Fee</label>
+          <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
+            <option value={0}>Free / No fee</option>
+            <option value={25}>$25/day</option>
+            <option value={50}>$50/day</option>
+            <option value={75}>$75/day</option>
+            <option value={100}>$100/day</option>
+            <option value={125}>$125/day</option>
+            <option value={150}>$150/day</option>
+            <option value={200}>$200/day</option>
+            <option value={250}>$250/day</option>
+            <option value={300}>$300/day</option>
+            <option value={400}>$400/day</option>
+            <option value={500}>$500/day</option>
+            <option value={750}>$750/day</option>
+            <option value={1000}>$1,000/day</option>
+          </select>
+        </div>
         <div className="form-group">
           <label>Minimum Purchase Requirement?</label>
           <select value={form.hasMinPurchase?'yes':'no'} onChange={e=>set('hasMinPurchase',e.target.value==='yes')}>
@@ -511,7 +528,18 @@ function VendorForm({ onSubmit }) {
           </select>
           {form.chargesPrivateFee && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Private event fee</div><select value={form.privateEventFee} onChange={e=>set('privateEventFee',+e.target.value)}>{[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
         </div>
-        <div className="form-group"><label>Setup Time Needed ({form.setupTime} min)</label><input type="range" min={10} max={120} step={5} value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)} /></div>
+        <div className="form-group"><label>Setup Time Needed</label>
+          <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
+            <option value={10}>10 minutes</option>
+            <option value={15}>15 minutes</option>
+            <option value={20}>20 minutes</option>
+            <option value={30}>30 minutes</option>
+            <option value={45}>45 minutes</option>
+            <option value={60}>1 hour</option>
+            <option value={90}>1.5 hours</option>
+            <option value={120}>2 hours</option>
+          </select>
+        </div>
         <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
         <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
       </div>
