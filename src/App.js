@@ -558,7 +558,7 @@ function VendorForm({ onSubmit, setTab }) {
           <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of SJVendorMatch within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
-        <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. Monthly fee: <strong style={{ color:'#1a1410' }}>$15/month</strong></p>
+        <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. <strong style={{ color:'#e8c97a' }}>Pay nothing until your first booking!!</strong> Then just $10/month or $100/year.</p>
       </div>
     </div>
   );
@@ -597,7 +597,7 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
         <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
         <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
-        <div className="form-group"><label>Number of Vendor Spots ({form.vendorCount})</label><input type="range" min={1} max={50} value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)} /><div className="range-display">{form.vendorCount} vendors</div></div>
+        <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
         <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
         <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
         <div className="form-group"><label>Vendor Booth Fee Offered</label><select value={form.budget} onChange={e=>set('budget',e.target.value)}><option value="">Select...</option><option>Free (vendor keeps all sales)</option><option>$25–$50/vendor</option><option>$50–$100/vendor</option><option>$100–$200/vendor</option><option>$200+/vendor</option></select></div>
@@ -677,7 +677,7 @@ function HostForm({ onSubmit, setTab }) {
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent }) {
   return (
     <div className="vendor-card">
       <div className="vendor-card-top">
@@ -706,19 +706,50 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             ? <div className="vendor-no-match">✗ {v.dist!==null?`${v.dist.toFixed(1)} mi away`:'distance unknown'} — outside travel range</div>
             : <div className="vendor-distance">✓ {v.dist!==null?`${v.dist.toFixed(1)} mi from your event`:'within range (zip unverified)'}</div>
         )}
-        <div style={{display:'flex',gap:8,marginTop:10}}>
-          {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a'}} onClick={()=>openMessage(v)}>💬 Message Vendor</button>}
-          <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5'}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
-            {contacted.includes(v.id)?'✓ Saved':'Save'}
-          </button>
-        </div>
+        {(() => {
+          const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+          return (
+            <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}}>
+              {hostEvent && sendBookingRequest && (
+                req ? (
+                  <div style={{
+                    padding:'8px 12px', borderRadius:8, fontSize:13, fontWeight:600, textAlign:'center',
+                    background: req.status==='accepted'?'#d4f4e0': req.status==='declined'?'#fdecea':'#fdf4dc',
+                    color: req.status==='accepted'?'#1a6b3a': req.status==='declined'?'#8b1a1a':'#7a5a10',
+                    border: '1px solid ' + (req.status==='accepted'?'#b8e8c8': req.status==='declined'?'#f5c6c6':'#ffd966')
+                  }}>
+                    {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
+                    {req.status==='accepted' && '✅ Booking Accepted! Check Messages.'}
+                    {req.status==='declined' && '❌ Vendor Declined — Try Another Vendor'}
+                    {req.status==='cancelled' && '↩ Request Cancelled'}
+                  </div>
+                ) : (
+                  <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
+                    📋 Request to Book
+                  </button>
+                )
+              )}
+              {!hostEvent && sendBookingRequest && (
+                <div style={{fontSize:12,color:'#a89a8a',textAlign:'center',padding:'6px 0'}}>
+                  <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:12,fontFamily:'DM Sans,sans-serif'}} onClick={()=>setTab('host')}>Post your event first</button> to request bookings
+                </div>
+              )}
+              <div style={{display:'flex',gap:6}}>
+                {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a',fontSize:12}} onClick={()=>openMessage(v)}>💬 Message</button>}
+                <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
+                  {contacted.includes(v.id)?'✓ Saved':'Save'}
+                </button>
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ openMessage }) {
+function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterPrivate, setFilterPrivate] = useState('no');
@@ -801,7 +832,7 @@ function MatchesPage({ openMessage }) {
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}</div>
       }
 
       {flagged.length>0 && (
@@ -811,7 +842,7 @@ function MatchesPage({ openMessage }) {
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are in range but may have minimum purchase or private event fee requirements that don't match your filters.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.75 }}>
-            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} />)}
+            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}
           </div>
         </>
       )}
@@ -822,7 +853,7 @@ function MatchesPage({ openMessage }) {
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are beyond their stated travel radius for zip {hostZip}.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.5 }}>
-            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange />)}
+            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} />)}
           </div>
         </>
       )}
@@ -836,17 +867,18 @@ function PricingPage({ setTab }) {
     <div className="section" style={{ maxWidth:1000 }}>
       <div className="section-title">Simple, Transparent Pricing</div>
       <p className="section-sub">Whether you're a vendor looking for consistent leads or a host planning an event, we have a plan for you.</p>
-      <h3 style={{ fontSize:13, marginBottom:20, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR VENDORS</h3>
+      <h3 style={{ fontSize:13, marginBottom:8, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR VENDORS</h3>
+      <div className="info-box" style={{ marginBottom:20 }}>🎉 <strong>Pay nothing until your first booking!!</strong> After that, just $10/month or $100/year — cancel anytime.</div>
       <div className="pricing-grid" style={{ marginBottom:48 }}>
         <div className="pricing-card">
           <div className="pricing-type">Vendor</div><div className="pricing-name">Basic Listing</div>
-          <div className="pricing-price">$15</div><div className="pricing-period">per month</div>
+          <div className="pricing-price">$10</div><div className="pricing-period">per month — or $100/year</div>
           <ul className="pricing-features"><li>Profile in vendor directory</li><li>Photo gallery (up to 6)</li><li>Insurance & doc uploads</li><li>Matched to events in your radius</li><li>Lead notifications by email</li></ul>
         </div>
         <div className="pricing-card featured">
           <div className="pricing-badge">MOST POPULAR</div>
           <div className="pricing-type">Vendor</div><div className="pricing-name">Featured</div>
-          <div className="pricing-price">$35</div><div className="pricing-period">per month</div>
+          <div className="pricing-price">$25</div><div className="pricing-period">per month — or $250/year</div>
           <ul className="pricing-features"><li>Everything in Basic</li><li>Top placement in search results</li><li>Featured on homepage</li><li>Priority match notifications</li><li>Social media feature (monthly)</li></ul>
         </div>
       </div>
@@ -1091,11 +1123,46 @@ export default function App() {
   const [tab, setTab] = useState("home");
   const [vendorSuccess, setVendorSuccess] = useState(false);
   const [hostSuccess,   setHostSuccess]   = useState(false);
+  const [hostEvent,     setHostEvent]     = useState(null);
   const [opps, setOpps] = useState(SAMPLE_OPPS);
   const [vendorSubs, setVendorSubs] = useState([]);
   const [conversations, setConversations] = useState([]);
   const [activeConvoId, setActiveConvoId] = useState(null);
-  const [tosTab, setTosTab] = useState(null); // 'vendor' | 'host'
+  const [tosTab, setTosTab] = useState(null);
+  const [bookingRequests, setBookingRequests] = useState([]);
+  const [bookingModal, setBookingModal] = useState(null); // { vendor }
+
+  const sendBookingRequest = (vendor, eventDetails) => {
+    const req = {
+      id: Date.now(),
+      vendorId: vendor.id,
+      vendorName: vendor.name,
+      vendorEmoji: vendor.emoji,
+      vendorCategory: vendor.category,
+      hostName: eventDetails.contactName || 'Host',
+      hostEmail: eventDetails.email || '',
+      eventName: eventDetails.eventName || '',
+      eventType: eventDetails.eventType || '',
+      eventZip: eventDetails.eventZip || '',
+      eventDate: eventDetails.date || '',
+      startTime: eventDetails.startTime || '',
+      endTime: eventDetails.endTime || '',
+      address: eventDetails.address || '',
+      attendance: eventDetails.expectedAttendance || '',
+      vendorCount: eventDetails.vendorCount || '',
+      budget: eventDetails.budget || '',
+      notes: eventDetails.notes || '',
+      categoriesNeeded: eventDetails.vendorCategories || [],
+      subcategoriesNeeded: eventDetails.vendorSubcategories || [],
+      status: 'pending', // pending | accepted | declined | cancelled
+      sentAt: new Date().toISOString(),
+      respondedAt: null,
+      vendorMessage: '',
+    };
+    setBookingRequests(r => [req, ...r]);
+    // Also open a conversation thread
+    openMessage(vendor);
+  };
 
   const openMessage = (vendor) => {
     const existing = conversations.find(c => c.vendorId === vendor.id);
@@ -1128,6 +1195,7 @@ export default function App() {
       alert('Please fill in Contact Name, Email, and Event Type.');
       return;
     }
+    setHostEvent(form);
     setHostSuccess(true);
     setTab('matches');
     window.scrollTo({top:0, behavior:'smooth'});
@@ -1179,7 +1247,7 @@ export default function App() {
                     <button className="btn-primary" onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as a Vendor</button>
                     <button className="btn-outline" onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Browse Opportunities</button>
                   </div>
-                  <div style={{ marginTop:14, fontSize:12, color:"#e8c97a", fontWeight:600 }}>First 3 months free — no credit card required</div>
+                  <div style={{ marginTop:14, fontSize:12, color:"#e8c97a", fontWeight:600 }}>Pay nothing until your first booking!!</div>
                 </div>
                 <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
                   <div style={{ fontSize:11, letterSpacing:"3px", textTransform:"uppercase", color:"#e8c97a", marginBottom:8 }}>&#127918; For Event Hosts</div>
@@ -1258,11 +1326,11 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage openMessage={openMessage} />}
+        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} />}
         {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
-        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} />}
+        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage tosTab={tosTab} setTosTab={setTosTab} setTab={setTab} />}
       </div>
     </>
@@ -1270,7 +1338,7 @@ export default function App() {
 }
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
-function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId }) {
+function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests }) {
   const [draft, setDraft] = useState('');
   const [senderName, setSenderName] = useState('');
   const messagesEndRef = useRef(null);
@@ -1303,8 +1371,43 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
+  const respondToBooking = (reqId, status, vendorMsg='') => {
+    setBookingRequests(reqs => reqs.map(r =>
+      r.id === reqId ? {...r, status, vendorMessage: vendorMsg, respondedAt: new Date().toISOString()} : r
+    ));
+    // Add system message to conversation thread
+    const req = bookingRequests.find(r => r.id === reqId);
+    if (req) {
+      setConversations(convos => convos.map(c => {
+        if (c.vendorId !== req.vendorId) return c;
+        const msg = status === 'accepted'
+          ? `✅ Booking accepted! ${vendorMsg ? 'Vendor note: ' + vendorMsg : ''} The host will be in touch to confirm details. You're all set for ${req.eventName || 'the event'}!`
+          : `❌ Booking declined. ${vendorMsg ? 'Reason: ' + vendorMsg : 'The vendor is unavailable for this date.'} We recommend messaging other vendors.`;
+        return {...c, status: status==='accepted'?'booked':'active', messages: [...c.messages, {id:Date.now(), from:'system', text: msg, ts:new Date().toISOString()}]};
+      }));
+    }
+  };
+
+  const pendingRequests = (bookingRequests||[]).filter(r => r.status === 'pending');
+
   return (
-    <div style={{ display:'flex', height:'calc(100vh - 64px)', background:'#f5f0ea', overflow:'hidden' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 64px)', background:'#f5f0ea', overflow:'hidden' }}>
+
+      {/* Booking Requests Panel */}
+      {(bookingRequests||[]).length > 0 && (
+        <div style={{ background:'#1a1410', borderBottom:'2px solid #c8a84b', padding:'12px 20px', flexShrink:0, overflowX:'auto' }}>
+          <div style={{ fontSize:12, color:'#c8a84b', fontWeight:700, letterSpacing:1, textTransform:'uppercase', marginBottom:8 }}>
+            Booking Requests {pendingRequests.length > 0 && <span style={{background:'#c8a84b',color:'#1a1410',borderRadius:10,padding:'1px 7px',marginLeft:6}}>{pendingRequests.length} pending</span>}
+          </div>
+          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+            {(bookingRequests||[]).map(req => (
+              <BookingRequestCard key={req.id} req={req} respondToBooking={respondToBooking} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
       {/* Sidebar */}
       <div style={{ width:280, minWidth:220, background:'#1a1410', display:'flex', flexDirection:'column', borderRight:'1px solid #2d2118', flexShrink:0 }}>
@@ -1437,6 +1540,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
@@ -1455,7 +1559,7 @@ function TosPage({ setTab }) {
         { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
         { title: "5. In-App Messaging & Communication", body: "SJVendorMatch provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. SJVendorMatch does not read private messages but may access them if a dispute is filed." },
         { title: "6. Privacy & Data Protection", body: "SJVendorMatch collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
-        { title: "7. Fees & Subscriptions", body: "Vendor listings are free for the first 3 months. After the free trial, a subscription fee of $15/month (Basic) or $35/month (Featured) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. SJVendorMatch reserves the right to modify pricing with 30 days notice." },
+        { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $10/month or $100/year (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. SJVendorMatch reserves the right to modify pricing with 30 days notice." },
         { title: "8. Limitation of Liability", body: "SJVendorMatch is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to SJVendorMatch in the 3 months preceding any claim." },
         { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to SJVendorMatch at support@sjvendormatch.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against SJVendorMatch itself." },
         { title: "10. Modifications & Termination", body: "SJVendorMatch reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
@@ -1476,6 +1580,102 @@ function TosPage({ setTab }) {
           <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Booking Request Card ─────────────────────────────────────────────────────
+function BookingRequestCard({ req, respondToBooking }) {
+  const [expanded, setExpanded] = useState(false);
+  const [vendorMsg, setVendorMsg] = useState('');
+  const [responding, setResponding] = useState(null); // 'accept' | 'decline'
+
+  const statusColors = {
+    pending:  { bg:'#fdf4dc', color:'#7a5a10', border:'#ffd966', label:'⏳ Pending' },
+    accepted: { bg:'#d4f4e0', color:'#1a6b3a', border:'#b8e8c8', label:'✅ Accepted' },
+    declined: { bg:'#fdecea', color:'#8b1a1a', border:'#f5c6c6', label:'❌ Declined' },
+    cancelled:{ bg:'#f0f0f0', color:'#7a7a7a', border:'#d0d0d0', label:'↩ Cancelled' },
+  };
+  const sc = statusColors[req.status] || statusColors.pending;
+
+  return (
+    <div style={{ background:'#2d2118', borderRadius:10, border:'1px solid #3d3020', minWidth:240, maxWidth:320, padding:'12px 14px', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:6 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <span style={{ fontSize:20 }}>{req.vendorEmoji}</span>
+          <div>
+            <div style={{ fontSize:13, fontWeight:700, color:'#fff' }}>{req.vendorName}</div>
+            <div style={{ fontSize:11, color:'#7a6a5a' }}>{req.vendorCategory}</div>
+          </div>
+        </div>
+        <span style={{ background:sc.bg, color:sc.color, border:'1px solid '+sc.border, borderRadius:10, padding:'2px 8px', fontSize:11, fontWeight:600 }}>{sc.label}</span>
+      </div>
+
+      <div style={{ fontSize:12, color:'#a89a8a', marginBottom:6 }}>
+        {req.eventName && <span>📅 {req.eventName}</span>}
+        {req.eventDate && <span style={{marginLeft:8}}>· {req.eventDate}</span>}
+      </div>
+
+      <button onClick={()=>setExpanded(e=>!e)} style={{ background:'none', border:'none', color:'#c8a84b', fontSize:12, cursor:'pointer', padding:0, fontFamily:'DM Sans,sans-serif', textDecoration:'underline' }}>
+        {expanded ? 'Hide details ▲' : 'View event details ▼'}
+      </button>
+
+      {expanded && (
+        <div style={{ marginTop:10, fontSize:12, color:'#d0c8b8', lineHeight:1.8, borderTop:'1px solid #3d3020', paddingTop:10 }}>
+          {req.hostName    && <div><strong style={{color:'#c8a84b'}}>Host:</strong> {req.hostName}</div>}
+          {req.hostEmail   && <div><strong style={{color:'#c8a84b'}}>Email:</strong> {req.hostEmail}</div>}
+          {req.eventType   && <div><strong style={{color:'#c8a84b'}}>Event type:</strong> {req.eventType}</div>}
+          {req.address     && <div><strong style={{color:'#c8a84b'}}>Location:</strong> {req.address}</div>}
+          {req.eventZip    && <div><strong style={{color:'#c8a84b'}}>Zip:</strong> {req.eventZip}</div>}
+          {req.startTime   && <div><strong style={{color:'#c8a84b'}}>Time:</strong> {req.startTime}{req.endTime?' – '+req.endTime:''}</div>}
+          {req.attendance  && <div><strong style={{color:'#c8a84b'}}>Expected attendance:</strong> {req.attendance}</div>}
+          {req.vendorCount && <div><strong style={{color:'#c8a84b'}}>Vendor spots:</strong> {req.vendorCount}</div>}
+          {req.budget      && <div><strong style={{color:'#c8a84b'}}>Budget:</strong> {req.budget}</div>}
+          {req.categoriesNeeded?.length > 0 && <div><strong style={{color:'#c8a84b'}}>Categories needed:</strong> {req.categoriesNeeded.join(', ')}</div>}
+          {req.notes       && <div><strong style={{color:'#c8a84b'}}>Notes:</strong> {req.notes}</div>}
+        </div>
+      )}
+
+      {req.status === 'pending' && (
+        <div style={{ marginTop:10 }}>
+          {!responding ? (
+            <div style={{ display:'flex', gap:6 }}>
+              <button onClick={()=>setResponding('accept')} style={{ flex:1, background:'#1a6b3a', color:'#fff', border:'none', borderRadius:6, padding:'7px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>✓ Accept</button>
+              <button onClick={()=>setResponding('decline')} style={{ flex:1, background:'#8b1a1a', color:'#fff', border:'none', borderRadius:6, padding:'7px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>✗ Decline</button>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize:12, color:'#a89a8a', marginBottom:6 }}>
+                {responding==='accept' ? '✅ Add a message for the host (optional):' : '❌ Reason for declining (optional):'}
+              </div>
+              <textarea value={vendorMsg} onChange={e=>setVendorMsg(e.target.value)}
+                placeholder={responding==='accept' ? "E.g. Looking forward to it! I'll arrive 30 min early to set up." : "E.g. Already booked on this date. Try reaching out for a future event!"}
+                rows={2} style={{ width:'100%', border:'1px solid #3d3020', borderRadius:6, padding:'7px 9px', fontSize:12, fontFamily:'DM Sans,sans-serif', background:'#1a1410', color:'#e0d0b0', resize:'none', boxSizing:'border-box', outline:'none' }} />
+              <div style={{ display:'flex', gap:6, marginTop:6 }}>
+                <button onClick={()=>{ respondToBooking(req.id, responding==='accept'?'accepted':'declined', vendorMsg); setResponding(null); }}
+                  style={{ flex:2, background: responding==='accept'?'#1a6b3a':'#8b1a1a', color:'#fff', border:'none', borderRadius:6, padding:'7px 0', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>
+                  {responding==='accept'?'Confirm Acceptance':'Confirm Decline'}
+                </button>
+                <button onClick={()=>setResponding(null)} style={{ flex:1, background:'#3d3020', color:'#a89a8a', border:'none', borderRadius:6, padding:'7px 0', fontSize:12, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {req.status === 'accepted' && (
+        <div style={{ marginTop:8, fontSize:12, color:'#7ab88a', lineHeight:1.6 }}>
+          {req.vendorMessage && <div style={{fontStyle:'italic', marginBottom:4}}>"{req.vendorMessage}"</div>}
+          <div>📩 Host notified via Messages. Finalize details through the chat.</div>
+        </div>
+      )}
+
+      {req.status === 'declined' && (
+        <div style={{ marginTop:8, fontSize:12, color:'#c08080', lineHeight:1.6 }}>
+          {req.vendorMessage && <div style={{fontStyle:'italic', marginBottom:4}}>"{req.vendorMessage}"</div>}
+          <div>💬 Host was notified. They can message other vendors.</div>
+        </div>
+      )}
     </div>
   );
 }
