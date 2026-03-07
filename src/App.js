@@ -801,7 +801,7 @@ function MatchesPage({ openMessage }) {
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} />)}</div>
       }
 
       {flagged.length>0 && (
