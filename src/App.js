@@ -571,6 +571,7 @@ function HostForm({ onSubmit, setTab }) {
     orgName:'', contactName:'', email:'', phone:'',
     eventName:'', eventType:'', eventZip:'', address:'',
     date:'', startTime:'', endTime:'',
+    isRecurring:false, recurrenceFrequency:'weekly', recurrenceDay:'Saturday', recurrenceWeekInterval:1, recurrenceMonthType:'dayofweek', recurrenceMonthWeek:'1st', recurrenceMonthDay:'Saturday', recurrenceEndType:'never', recurrenceEndDate:'', recurrenceCount:4, recurrenceNotes:'',
     expectedAttendance:'', indoorOutdoor:'outdoor',
     vendorCategories:[], vendorSubcategories:[], vendorCount:5,
     electricAvailable:true, tableProvided:false,
@@ -595,6 +596,140 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} onChange={e=>set('date',e.target.value)} /></div>
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
+        <div className="form-group full">
+          <label>Recurring Event?</label>
+          <select value={form.isRecurring?'yes':'no'} onChange={e=>set('isRecurring',e.target.value==='yes')}>
+            <option value="no">No — one-time event</option>
+            <option value="yes">Yes — this event repeats</option>
+          </select>
+        </div>
+        {form.isRecurring && (
+          <div className="form-group full" style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'18px 20px',marginTop:4}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:14}}>Recurrence Settings</div>
+            <div className="form-grid" style={{gap:12}}>
+
+              <div className="form-group">
+                <label>Repeats</label>
+                <select value={form.recurrenceFrequency} onChange={e=>set('recurrenceFrequency',e.target.value)}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="biweekly">Every 2 Weeks</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="custom">Custom interval</option>
+                </select>
+              </div>
+
+              {form.recurrenceFrequency === 'weekly' && (
+                <div className="form-group">
+                  <label>Day of Week</label>
+                  <select value={form.recurrenceDay} onChange={e=>set('recurrenceDay',e.target.value)}>
+                    {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=><option key={d}>{d}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {form.recurrenceFrequency === 'biweekly' && (
+                <div className="form-group">
+                  <label>Day of Week</label>
+                  <select value={form.recurrenceDay} onChange={e=>set('recurrenceDay',e.target.value)}>
+                    {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=><option key={d}>{d}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {form.recurrenceFrequency === 'custom' && (
+                <div className="form-group">
+                  <label>Repeat Every</label>
+                  <select value={form.recurrenceWeekInterval} onChange={e=>set('recurrenceWeekInterval',+e.target.value)}>
+                    {[1,2,3,4,6,8,12].map(n=><option key={n} value={n}>Every {n} week{n>1?'s':''}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {form.recurrenceFrequency === 'monthly' && (<>
+                <div className="form-group">
+                  <label>Monthly Type</label>
+                  <select value={form.recurrenceMonthType} onChange={e=>set('recurrenceMonthType',e.target.value)}>
+                    <option value="dayofweek">By day of week (e.g. 1st Saturday)</option>
+                    <option value="dateofmonth">By date (e.g. 15th of each month)</option>
+                    <option value="lastday">Last day of month</option>
+                    <option value="lastweekday">Last weekday of month</option>
+                  </select>
+                </div>
+                {form.recurrenceMonthType === 'dayofweek' && (<>
+                  <div className="form-group">
+                    <label>Which Week</label>
+                    <select value={form.recurrenceMonthWeek} onChange={e=>set('recurrenceMonthWeek',e.target.value)}>
+                      {['1st','2nd','3rd','4th','Last'].map(w=><option key={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Day of Week</label>
+                    <select value={form.recurrenceMonthDay} onChange={e=>set('recurrenceMonthDay',e.target.value)}>
+                      {['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'].map(d=><option key={d}>{d}</option>)}
+                    </select>
+                  </div>
+                </>)}
+                {form.recurrenceMonthType === 'dateofmonth' && (
+                  <div className="form-group">
+                    <label>Day of Month</label>
+                    <select value={form.recurrenceMonthWeek} onChange={e=>set('recurrenceMonthWeek',e.target.value)}>
+                      {Array.from({length:28},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}{['st','nd','rd'][((n%10)-1)]||'th'}</option>)}
+                    </select>
+                  </div>
+                )}
+              </>)}
+
+              <div className="form-group">
+                <label>Ends</label>
+                <select value={form.recurrenceEndType} onChange={e=>set('recurrenceEndType',e.target.value)}>
+                  <option value="never">Never (ongoing)</option>
+                  <option value="after">After a number of occurrences</option>
+                  <option value="ondate">On a specific date</option>
+                </select>
+              </div>
+
+              {form.recurrenceEndType === 'after' && (
+                <div className="form-group">
+                  <label>Number of Occurrences</label>
+                  <select value={form.recurrenceCount} onChange={e=>set('recurrenceCount',+e.target.value)}>
+                    {[2,3,4,5,6,8,10,12,16,20,24,26,52].map(n=><option key={n} value={n}>{n} times</option>)}
+                  </select>
+                </div>
+              )}
+
+              {form.recurrenceEndType === 'ondate' && (
+                <div className="form-group">
+                  <label>End Date</label>
+                  <input type="date" value={form.recurrenceEndDate} onChange={e=>set('recurrenceEndDate',e.target.value)} />
+                </div>
+              )}
+
+              <div className="form-group full">
+                <label>Recurrence Notes (optional)</label>
+                <input placeholder="e.g. Skipping July 4th weekend, indoor during winter months..." value={form.recurrenceNotes} onChange={e=>set('recurrenceNotes',e.target.value)} />
+              </div>
+
+              <div className="form-group full">
+                <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'10px 14px',fontSize:13,color:'#1a4a6b'}}>
+                  📅 <strong>Summary: </strong>
+                  {form.recurrenceFrequency==='daily' && 'Repeats every day'}
+                  {form.recurrenceFrequency==='weekly' && `Repeats every ${form.recurrenceDay}`}
+                  {form.recurrenceFrequency==='biweekly' && `Repeats every other ${form.recurrenceDay}`}
+                  {form.recurrenceFrequency==='custom' && `Repeats every ${form.recurrenceWeekInterval} weeks`}
+                  {form.recurrenceFrequency==='monthly' && form.recurrenceMonthType==='dayofweek' && `Repeats ${form.recurrenceMonthWeek} ${form.recurrenceMonthDay} of each month`}
+                  {form.recurrenceFrequency==='monthly' && form.recurrenceMonthType==='dateofmonth' && `Repeats on the ${form.recurrenceMonthWeek} of each month`}
+                  {form.recurrenceFrequency==='monthly' && form.recurrenceMonthType==='lastday' && 'Repeats on the last day of each month'}
+                  {form.recurrenceFrequency==='monthly' && form.recurrenceMonthType==='lastweekday' && 'Repeats on the last weekday of each month'}
+                  {form.recurrenceEndType==='never' && ' · Ongoing'}
+                  {form.recurrenceEndType==='after' && ` · Ends after ${form.recurrenceCount} occurrences`}
+                  {form.recurrenceEndType==='ondate' && form.recurrenceEndDate && ` · Ends ${form.recurrenceEndDate}`}
+                </div>
+              </div>
+
+            </div>
+          </div>
+        )}
         <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
         <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
         <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
@@ -677,7 +812,7 @@ function HostForm({ onSubmit, setTab }) {
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, isPaidHost, setTab }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, isPaidHost, setTab, vendorCalendars, setVendorCalendars }) {
   return (
     <div className="vendor-card">
       <div className="vendor-card-top">
@@ -749,6 +884,28 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                   <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:12,fontFamily:'DM Sans,sans-serif'}} onClick={()=>setTab('host')}>Post your event first</button> to request bookings
                 </div>
               )}
+              {isPaidHost && hostEvent && vendorCalendars && (() => {
+                const cal = vendorCalendars[v.id];
+                const eventDate = hostEvent.date;
+                if (!cal || !eventDate) return null;
+                const isAvail = cal.availability && cal.availability[eventDate] === 'available';
+                const isBooked = cal.bookedDates && cal.bookedDates.includes(eventDate);
+                if (isBooked) return (
+                  <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#8b1a1a',textAlign:'center'}}>
+                    📅 Already booked on {eventDate}
+                  </div>
+                );
+                if (isAvail) return (
+                  <button className="contact-btn" style={{background:'#1a6b3a',color:'#fff',fontWeight:700,fontSize:13}} onClick={()=>{
+                    const newCal = {...(vendorCalendars[v.id]||{}), bookedDates:[...(vendorCalendars[v.id]?.bookedDates||[]), eventDate]};
+                    setVendorCalendars(prev=>({...prev,[v.id]:newCal}));
+                    sendBookingRequest(v, {...hostEvent, directBook:true});
+                  }}>
+                    ⚡ Direct Book — {eventDate}
+                  </button>
+                );
+                return null;
+              })()}
               <div style={{display:'flex',gap:6}}>
                 {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a',fontSize:12}} onClick={()=>openMessage(v)}>💬 Message</button>}
                 <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
@@ -764,7 +921,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, isPaidHost, setHostPaid }) {
+function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, isPaidHost, setHostPaid, vendorCalendars, setVendorCalendars }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterPrivate, setFilterPrivate] = useState('no');
@@ -867,7 +1024,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}</div>
       }
 
       {flagged.length>0 && (
@@ -877,7 +1034,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are in range but may have minimum purchase or private event fee requirements that don't match your filters.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.75 }}>
-            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}
+            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}
           </div>
         </>
       )}
@@ -888,7 +1045,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, hostEve
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are beyond their stated travel radius for zip {hostZip}.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.5 }}>
-            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} />)}
+            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}
           </div>
         </>
       )}
@@ -1166,7 +1323,9 @@ export default function App() {
   const [activeConvoId, setActiveConvoId] = useState(null);
   const [tosTab, setTosTab] = useState(null);
   const [bookingRequests, setBookingRequests] = useState([]);
-  const [bookingModal, setBookingModal] = useState(null); // { vendor }
+  const [bookingModal, setBookingModal] = useState(null);
+  const [vendorCalendars, setVendorCalendars] = useState({}); // { vendorId: { availability, bookedDates, blockedDates } }
+  const [calendarVendorId, setCalendarVendorId] = useState(null);
 
   const sendBookingRequest = (vendor, eventDetails) => {
     const req = {
@@ -1188,6 +1347,13 @@ export default function App() {
       vendorCount: eventDetails.vendorCount || '',
       budget: eventDetails.budget || '',
       notes: eventDetails.notes || '',
+      isRecurring: eventDetails.isRecurring || false,
+      recurrenceFrequency: eventDetails.recurrenceFrequency || '',
+      recurrenceDay: eventDetails.recurrenceDay || '',
+      recurrenceEndType: eventDetails.recurrenceEndType || '',
+      recurrenceEndDate: eventDetails.recurrenceEndDate || '',
+      recurrenceCount: eventDetails.recurrenceCount || '',
+      recurrenceNotes: eventDetails.recurrenceNotes || '',
       categoriesNeeded: eventDetails.vendorCategories || [],
       subcategoriesNeeded: eventDetails.vendorSubcategories || [],
       status: 'pending',
@@ -1249,6 +1415,7 @@ export default function App() {
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
+                <button className={`nav-tab${tab==="calendar"?" active":""}`} onClick={()=>{setTab("calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
             </div>
             <div className="nav-group">
@@ -1361,12 +1528,13 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} />}
+        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage tosTab={tosTab} setTosTab={setTosTab} setTab={setTab} />}
+        {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId || 1} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
       </div>
     </>
   );
@@ -1668,6 +1836,16 @@ function BookingRequestCard({ req, respondToBooking }) {
           {req.budget      && <div><strong style={{color:'#c8a84b'}}>Budget:</strong> {req.budget}</div>}
           {req.categoriesNeeded?.length > 0 && <div><strong style={{color:'#c8a84b'}}>Categories needed:</strong> {req.categoriesNeeded.join(', ')}</div>}
           {req.notes       && <div><strong style={{color:'#c8a84b'}}>Notes:</strong> {req.notes}</div>}
+          {req.isRecurring && (
+            <div style={{marginTop:6,padding:'8px 10px',background:'#1a3a28',borderRadius:6,border:'1px solid #2a5a38'}}>
+              <div style={{color:'#7ab88a',fontWeight:700,marginBottom:3}}>🔁 Recurring Event</div>
+              <div><strong style={{color:'#c8a84b'}}>Frequency:</strong> {req.recurrenceFrequency==='weekly'?`Every ${req.recurrenceDay}`:req.recurrenceFrequency==='biweekly'?`Every other ${req.recurrenceDay}`:req.recurrenceFrequency==='monthly'?'Monthly':req.recurrenceFrequency}</div>
+              {req.recurrenceEndType==='after' && <div><strong style={{color:'#c8a84b'}}>Duration:</strong> {req.recurrenceCount} occurrences</div>}
+              {req.recurrenceEndType==='ondate' && req.recurrenceEndDate && <div><strong style={{color:'#c8a84b'}}>Ends:</strong> {req.recurrenceEndDate}</div>}
+              {req.recurrenceEndType==='never' && <div><strong style={{color:'#c8a84b'}}>Ends:</strong> Ongoing</div>}
+              {req.recurrenceNotes && <div><strong style={{color:'#c8a84b'}}>Notes:</strong> {req.recurrenceNotes}</div>}
+            </div>
+          )}
         </div>
       )}
 
@@ -1711,6 +1889,276 @@ function BookingRequestCard({ req, respondToBooking }) {
           <div>💬 Host was notified. They can message other vendors.</div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Vendor Calendar Page ─────────────────────────────────────────────────────
+function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
+  const today = new Date();
+  const [viewYear,  setViewYear]  = useState(today.getFullYear());
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [selMode,   setSelMode]   = useState('available'); // 'available' | 'blocked'
+  const [dragStart, setDragStart] = useState(null);
+  const [hoveredDate, setHoveredDate] = useState(null);
+  const [showIcalInfo, setShowIcalInfo] = useState(false);
+
+  const cal = vendorCalendars[vendorId] || { availability:{}, bookedDates:[], blockedDates:[] };
+  const setCal = (updater) => setVendorCalendars(prev => ({
+    ...prev,
+    [vendorId]: typeof updater === 'function' ? updater(prev[vendorId] || { availability:{}, bookedDates:[], blockedDates:[] }) : updater
+  }));
+
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+
+  const dateStr = (d) => `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  const getStatus = (d) => {
+    const ds = dateStr(d);
+    if (cal.bookedDates?.includes(ds)) return 'booked';
+    if (cal.blockedDates?.includes(ds)) return 'blocked';
+    if (cal.availability?.[ds] === 'available') return 'available';
+    return 'unset';
+  };
+
+  const toggleDate = (d) => {
+    const ds = dateStr(d);
+    if (cal.bookedDates?.includes(ds)) return; // can't toggle booked dates
+    setCal(prev => {
+      const avail = {...(prev.availability||{})};
+      const blocked = [...(prev.blockedDates||[])];
+      if (selMode === 'available') {
+        if (avail[ds] === 'available') { delete avail[ds]; }
+        else { avail[ds] = 'available'; const bi = blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
+        return {...prev, availability: avail, blockedDates: blocked};
+      } else {
+        const bi = blocked.indexOf(ds);
+        if (bi > -1) { blocked.splice(bi,1); }
+        else { blocked.push(ds); delete avail[ds]; }
+        return {...prev, availability: avail, blockedDates: blocked};
+      }
+    });
+  };
+
+  const setWeekdayAvailability = (dayOfWeek, status) => {
+    setCal(prev => {
+      const avail = {...(prev.availability||{})};
+      const blocked = [...(prev.blockedDates||[])];
+      for (let d=1; d<=daysInMonth; d++) {
+        const date = new Date(viewYear, viewMonth, d);
+        if (date.getDay() !== dayOfWeek) continue;
+        const ds = dateStr(d);
+        if (prev.bookedDates?.includes(ds)) continue;
+        if (status === 'available') { avail[ds]='available'; const bi=blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
+        else if (status === 'blocked') { blocked.push(ds); delete avail[ds]; }
+        else { delete avail[ds]; const bi=blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
+      }
+      return {...prev, availability: avail, blockedDates: [...new Set(blocked)]};
+    });
+  };
+
+  const availCount  = Object.values(cal.availability||{}).filter(v=>v==='available').length;
+  const bookedCount = (cal.bookedDates||[]).length;
+  const blockedCount= (cal.blockedDates||[]).length;
+
+  // Generate iCal text for download
+  const generateICal = () => {
+    const lines = [
+      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SJVendorMatch//Vendor Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'
+    ];
+    Object.entries(cal.availability||{}).filter(([,v])=>v==='available').forEach(([ds])=>{
+      const d = ds.replace(/-/g,'');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:Available - SJVendorMatch`,`UID:avail-${d}@sjvendormatch`,`STATUS:TENTATIVE`,'END:VEVENT');
+    });
+    (cal.bookedDates||[]).forEach(ds=>{
+      const d = ds.replace(/-/g,'');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:BOOKED - SJVendorMatch`,`UID:booked-${d}@sjvendormatch`,`STATUS:CONFIRMED`,'END:VEVENT');
+    });
+    lines.push('END:VCALENDAR');
+    return lines.join('\r\n');
+  };
+
+  const downloadICal = () => {
+    const blob = new Blob([generateICal()], {type:'text/calendar'});
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormatch-calendar.ics'; a.click();
+  };
+
+  const statusStyle = (status) => {
+    if (status==='available') return {background:'#1a6b3a',color:'#fff',border:'2px solid #1a6b3a'};
+    if (status==='booked')    return {background:'#c8a84b',color:'#1a1410',border:'2px solid #c8a84b'};
+    if (status==='blocked')   return {background:'#8b1a1a',color:'#fff',border:'2px dashed #c08080'};
+    return {background:'#f5f0ea',color:'#7a6a5a',border:'2px solid #e0d5c5'};
+  };
+
+  return (
+    <div className="section" style={{maxWidth:900}}>
+      <div className="section-title">My Availability Calendar</div>
+      <p className="section-sub">Set your available dates so hosts can see when you're open — and direct-book you instantly.</p>
+
+      {/* Stats row */}
+      <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
+        {[
+          {label:'Available',count:availCount,  color:'#1a6b3a',bg:'#d4f4e0',border:'#b8e8c8'},
+          {label:'Booked',   count:bookedCount,  color:'#7a5a10',bg:'#fdf4dc',border:'#ffd966'},
+          {label:'Blocked',  count:blockedCount, color:'#8b1a1a',bg:'#fdecea',border:'#f5c6c6'},
+        ].map(({label,count,color,bg,border})=>(
+          <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:10,padding:'10px 20px',textAlign:'center',minWidth:110}}>
+            <div style={{fontSize:22,fontWeight:700,color,fontFamily:'Playfair Display,serif'}}>{count}</div>
+            <div style={{fontSize:12,color,fontWeight:600}}>{label} Dates</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
+        {/* Calendar */}
+        <div style={{flex:'1 1 400px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
+
+          {/* Month nav */}
+          <div style={{background:'#1a1410',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <button onClick={prevMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:20,cursor:'pointer',padding:'0 8px'}}>‹</button>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#e8c97a'}}>{MONTHS[viewMonth]} {viewYear}</div>
+            <button onClick={nextMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:20,cursor:'pointer',padding:'0 8px'}}>›</button>
+          </div>
+
+          {/* Day headers */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f5f0ea',borderBottom:'1px solid #e8ddd0'}}>
+            {DAYS.map(d=><div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>)}
+          </div>
+
+          {/* Day grid */}
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,padding:8}}>
+            {Array(firstDay).fill(null).map((_,i)=><div key={`e${i}`}/>)}
+            {Array(daysInMonth).fill(null).map((_,i)=>{
+              const d = i+1;
+              const ds = dateStr(d);
+              const status = getStatus(d);
+              const isPast = new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+              const ss = statusStyle(status);
+              return (
+                <div key={d} title={status}
+                  onClick={()=>!isPast && toggleDate(d)}
+                  onMouseEnter={()=>setHoveredDate(ds)}
+                  onMouseLeave={()=>setHoveredDate(null)}
+                  style={{
+                    ...ss,
+                    borderRadius:8, padding:'8px 4px', textAlign:'center', cursor:isPast?'not-allowed':'pointer',
+                    fontSize:14, fontWeight:600, transition:'all 0.15s', userSelect:'none',
+                    opacity: isPast?0.35:1,
+                    transform: hoveredDate===ds&&!isPast?'scale(1.08)':'scale(1)',
+                    boxShadow: hoveredDate===ds&&!isPast?'0 2px 8px rgba(0,0,0,0.15)':'none',
+                  }}>
+                  {d}
+                  {status==='booked' && <div style={{fontSize:8,marginTop:1}}>BOOKED</div>}
+                  {status==='available' && <div style={{fontSize:8,marginTop:1}}>OPEN</div>}
+                  {status==='blocked' && <div style={{fontSize:8,marginTop:1}}>BUSY</div>}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Controls panel */}
+        <div style={{flex:'1 1 260px',display:'flex',flexDirection:'column',gap:14}}>
+
+          {/* Mode selector */}
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
+            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Click dates to mark as:</div>
+            {[
+              {val:'available',label:'✅ Available',desc:'Open for bookings',bg:'#d4f4e0',color:'#1a6b3a',border:'#1a6b3a'},
+              {val:'blocked',  label:'🔴 Blocked / Busy',desc:'Not available',bg:'#fdecea',color:'#8b1a1a',border:'#8b1a1a'},
+            ].map(({val,label,desc,bg,color,border})=>(
+              <div key={val} onClick={()=>setSelMode(val)}
+                style={{padding:'10px 12px',borderRadius:8,marginBottom:6,cursor:'pointer',
+                  background:selMode===val?bg:'#f5f0ea', border:`2px solid ${selMode===val?border:'#e0d5c5'}`,
+                  transition:'all 0.15s'}}>
+                <div style={{fontWeight:700,color:selMode===val?color:'#4a3a28',fontSize:13}}>{label}</div>
+                <div style={{fontSize:11,color:'#7a6a5a'}}>{desc}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick-set by weekday */}
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
+            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Quick-set this month:</div>
+            <div style={{fontSize:12,color:'#7a6a5a',marginBottom:8}}>Mark all of a weekday as:</div>
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
+                <thead>
+                  <tr>
+                    <th style={{textAlign:'left',color:'#7a6a5a',padding:'3px 4px',fontWeight:600}}>Day</th>
+                    <th style={{color:'#1a6b3a',padding:'3px 4px',fontWeight:600}}>Open</th>
+                    <th style={{color:'#8b1a1a',padding:'3px 4px',fontWeight:600}}>Busy</th>
+                    <th style={{color:'#7a6a5a',padding:'3px 4px',fontWeight:600}}>Clear</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {DAYS.map((day,i)=>(
+                    <tr key={day}>
+                      <td style={{padding:'3px 4px',fontWeight:600,color:'#4a3a28'}}>{day}</td>
+                      <td style={{padding:'3px 4px',textAlign:'center'}}>
+                        <button onClick={()=>setWeekdayAvailability(i,'available')} style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#1a6b3a',fontWeight:700}}>✓</button>
+                      </td>
+                      <td style={{padding:'3px 4px',textAlign:'center'}}>
+                        <button onClick={()=>setWeekdayAvailability(i,'blocked')} style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#8b1a1a',fontWeight:700}}>✗</button>
+                      </td>
+                      <td style={{padding:'3px 4px',textAlign:'center'}}>
+                        <button onClick={()=>setWeekdayAvailability(i,'unset')} style={{background:'#f5f0ea',border:'1px solid #e0d5c5',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#7a6a5a'}}>–</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
+            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Legend</div>
+            {[
+              {color:'#1a6b3a',bg:'#d4f4e0',label:'Available — hosts can book'},
+              {color:'#c8a84b',bg:'#fdf4dc',label:'Booked — confirmed event'},
+              {color:'#8b1a1a',bg:'#fdecea',label:'Blocked — unavailable'},
+              {color:'#7a6a5a',bg:'#f5f0ea',label:'Unset — not specified'},
+            ].map(({color,bg,label})=>(
+              <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+                <div style={{width:16,height:16,borderRadius:4,background:bg,border:`2px solid ${color}`,flexShrink:0}}/>
+                <div style={{fontSize:12,color:'#4a3a28'}}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Sync / Export */}
+          <div style={{background:'#1a1410',borderRadius:12,padding:16}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:15,color:'#e8c97a',marginBottom:8}}>📲 Sync Your Calendar</div>
+            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>Download your calendar as an .ics file to import into Google Calendar, Apple Calendar, or Outlook.</div>
+            <button onClick={downloadICal} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
+              ⬇ Download .ics File
+            </button>
+            <button onClick={()=>setShowIcalInfo(s=>!s)} style={{width:'100%',background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',borderRadius:8,padding:'8px 0',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              {showIcalInfo?'Hide':'How to import ▼'}
+            </button>
+            {showIcalInfo && (
+              <div style={{marginTop:10,fontSize:11,color:'#a89a8a',lineHeight:1.8}}>
+                <div style={{fontWeight:700,color:'#c8a84b',marginBottom:4}}>Google Calendar:</div>
+                <div>Settings → Import &amp; Export → Import → select the .ics file</div>
+                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Apple Calendar:</div>
+                <div>File → Import → select the .ics file</div>
+                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Outlook:</div>
+                <div>File → Open &amp; Export → Import/Export → Import an iCalendar file</div>
+                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>iPhone / Android:</div>
+                <div>Email yourself the .ics file and tap it to add to your phone calendar</div>
+              </div>
+            )}
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
