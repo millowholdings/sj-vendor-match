@@ -1898,87 +1898,100 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selMode,   setSelMode]   = useState('available'); // 'available' | 'blocked'
-  const [dragStart, setDragStart] = useState(null);
   const [hoveredDate, setHoveredDate] = useState(null);
   const [showIcalInfo, setShowIcalInfo] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null); // date string being edited
+  const [timeModalOpen, setTimeModalOpen] = useState(false);
+  const [recurringOpen, setRecurringOpen] = useState(false);
 
-  const cal = vendorCalendars[vendorId] || { availability:{}, bookedDates:[], blockedDates:[] };
+  // Recurring time templates: { id, label, days:[0-6], startTime, endTime, active }
+  const [recurringTemplates, setRecurringTemplates] = useState([]);
+  const [editingTemplate, setEditingTemplate] = useState(null);
+
+  const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const MONTHS     = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+  const cal = vendorCalendars[vendorId] || { dates:{}, bookedDates:[] };
+  // dates: { '2025-06-14': { status:'available'|'blocked', startTime:'09:00', endTime:'17:00' } }
+
   const setCal = (updater) => setVendorCalendars(prev => ({
     ...prev,
-    [vendorId]: typeof updater === 'function' ? updater(prev[vendorId] || { availability:{}, bookedDates:[], blockedDates:[] }) : updater
+    [vendorId]: typeof updater === 'function'
+      ? updater(prev[vendorId] || { dates:{}, bookedDates:[] })
+      : updater
   }));
 
-  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth= new Date(viewYear, viewMonth+1, 0).getDate();
+  const prevMonth  = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth  = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+  const dateStr    = (d) => `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const isPast     = (d) => new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
-  const prevMonth = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
-  const nextMonth = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+  const getDate    = (ds) => cal.dates?.[ds] || null;
+  const isBooked   = (ds) => cal.bookedDates?.includes(ds);
 
-  const dateStr = (d) => `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-
-  const getStatus = (d) => {
-    const ds = dateStr(d);
-    if (cal.bookedDates?.includes(ds)) return 'booked';
-    if (cal.blockedDates?.includes(ds)) return 'blocked';
-    if (cal.availability?.[ds] === 'available') return 'available';
-    return 'unset';
+  const fmt12 = (t) => {
+    if (!t) return '';
+    const [h,m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    return `${((h%12)||12)}:${String(m).padStart(2,'0')} ${ampm}`;
   };
 
-  const toggleDate = (d) => {
-    const ds = dateStr(d);
-    if (cal.bookedDates?.includes(ds)) return; // can't toggle booked dates
+  // Apply a recurring template across the current month
+  const applyTemplate = (tpl) => {
     setCal(prev => {
-      const avail = {...(prev.availability||{})};
-      const blocked = [...(prev.blockedDates||[])];
-      if (selMode === 'available') {
-        if (avail[ds] === 'available') { delete avail[ds]; }
-        else { avail[ds] = 'available'; const bi = blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
-        return {...prev, availability: avail, blockedDates: blocked};
-      } else {
-        const bi = blocked.indexOf(ds);
-        if (bi > -1) { blocked.splice(bi,1); }
-        else { blocked.push(ds); delete avail[ds]; }
-        return {...prev, availability: avail, blockedDates: blocked};
-      }
-    });
-  };
-
-  const setWeekdayAvailability = (dayOfWeek, status) => {
-    setCal(prev => {
-      const avail = {...(prev.availability||{})};
-      const blocked = [...(prev.blockedDates||[])];
+      const dates = {...(prev.dates||{})};
       for (let d=1; d<=daysInMonth; d++) {
         const date = new Date(viewYear, viewMonth, d);
-        if (date.getDay() !== dayOfWeek) continue;
+        if (!tpl.days.includes(date.getDay())) continue;
         const ds = dateStr(d);
         if (prev.bookedDates?.includes(ds)) continue;
-        if (status === 'available') { avail[ds]='available'; const bi=blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
-        else if (status === 'blocked') { blocked.push(ds); delete avail[ds]; }
-        else { delete avail[ds]; const bi=blocked.indexOf(ds); if(bi>-1) blocked.splice(bi,1); }
+        if (isPast(d)) continue;
+        dates[ds] = { status:'available', startTime: tpl.startTime, endTime: tpl.endTime };
       }
-      return {...prev, availability: avail, blockedDates: [...new Set(blocked)]};
+      return {...prev, dates};
     });
   };
 
-  const availCount  = Object.values(cal.availability||{}).filter(v=>v==='available').length;
-  const bookedCount = (cal.bookedDates||[]).length;
-  const blockedCount= (cal.blockedDates||[]).length;
+  const removeTemplate = (id) => setRecurringTemplates(t => t.filter(x => x.id !== id));
 
-  // Generate iCal text for download
-  const generateICal = () => {
-    const lines = [
-      'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SJVendorMatch//Vendor Calendar//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'
-    ];
-    Object.entries(cal.availability||{}).filter(([,v])=>v==='available').forEach(([ds])=>{
-      const d = ds.replace(/-/g,'');
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:Available - SJVendorMatch`,`UID:avail-${d}@sjvendormatch`,`STATUS:TENTATIVE`,'END:VEVENT');
+  const saveTemplate = (tpl) => {
+    if (tpl.id) {
+      setRecurringTemplates(t => t.map(x => x.id===tpl.id ? tpl : x));
+    } else {
+      setRecurringTemplates(t => [...t, {...tpl, id: Date.now()}]);
+    }
+    setEditingTemplate(null);
+  };
+
+  const setDateEntry = (ds, entry) => {
+    setCal(prev => {
+      const dates = {...(prev.dates||{})};
+      if (!entry) { delete dates[ds]; }
+      else { dates[ds] = entry; }
+      return {...prev, dates};
     });
-    (cal.bookedDates||[]).forEach(ds=>{
+  };
+
+  const availCount  = Object.values(cal.dates||{}).filter(d=>d.status==='available').length;
+  const bookedCount = (cal.bookedDates||[]).length;
+  const blockedCount= Object.values(cal.dates||{}).filter(d=>d.status==='blocked').length;
+
+  const generateICal = () => {
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SJVendorMatch//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+    Object.entries(cal.dates||{}).forEach(([ds,entry]) => {
+      if (entry.status !== 'available') return;
       const d = ds.replace(/-/g,'');
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:BOOKED - SJVendorMatch`,`UID:booked-${d}@sjvendormatch`,`STATUS:CONFIRMED`,'END:VEVENT');
+      const summary = entry.startTime
+        ? `Available ${fmt12(entry.startTime)}–${fmt12(entry.endTime)} - SJVendorMatch`
+        : 'Available - SJVendorMatch';
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:${summary}`,`UID:avail-${d}@sjvendormatch`,'STATUS:TENTATIVE','END:VEVENT');
+    });
+    (cal.bookedDates||[]).forEach(ds => {
+      const d = ds.replace(/-/g,'');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,'SUMMARY:BOOKED - SJVendorMatch',`UID:booked-${d}@sjvendormatch`,'STATUS:CONFIRMED','END:VEVENT');
     });
     lines.push('END:VCALENDAR');
     return lines.join('\r\n');
@@ -1989,25 +2002,154 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormatch-calendar.ics'; a.click();
   };
 
-  const statusStyle = (status) => {
-    if (status==='available') return {background:'#1a6b3a',color:'#fff',border:'2px solid #1a6b3a'};
-    if (status==='booked')    return {background:'#c8a84b',color:'#1a1410',border:'2px solid #c8a84b'};
-    if (status==='blocked')   return {background:'#8b1a1a',color:'#fff',border:'2px dashed #c08080'};
-    return {background:'#f5f0ea',color:'#7a6a5a',border:'2px solid #e0d5c5'};
+  const statusStyle = (ds) => {
+    if (isBooked(ds))                        return {bg:'#c8a84b', color:'#1a1410', border:'#c8a84b', label:'BOOKED'};
+    const entry = getDate(ds);
+    if (!entry)                              return {bg:'#f5f0ea', color:'#9a8a7a', border:'#e0d5c5', label:''};
+    if (entry.status==='available')          return {bg:'#1a6b3a', color:'#fff',    border:'#1a6b3a', label:'OPEN'};
+    if (entry.status==='blocked')            return {bg:'#8b1a1a', color:'#fff',    border:'#8b1a1a', label:'BUSY'};
+    return                                          {bg:'#f5f0ea', color:'#9a8a7a', border:'#e0d5c5', label:''};
+  };
+
+  // ── Date Time Modal ────────────────────────────────────────────────────────
+  const DateTimeModal = ({ ds, onClose }) => {
+    const existing = getDate(ds) || {};
+    const booked = isBooked(ds);
+    const [status,    setStatus]    = useState(existing.status || 'available');
+    const [startTime, setStartTime] = useState(existing.startTime || '09:00');
+    const [endTime,   setEndTime]   = useState(existing.endTime   || '17:00');
+    const [allDay,    setAllDay]    = useState(!existing.startTime);
+
+    const save = () => {
+      setDateEntry(ds, { status, startTime: allDay ? '' : startTime, endTime: allDay ? '' : endTime });
+      onClose();
+    };
+    const clear = () => { setDateEntry(ds, null); onClose(); };
+
+    return (
+      <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.55)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}} onClick={e=>{if(e.target===e.currentTarget)onClose();}}>
+        <div style={{background:'#fff',borderRadius:14,padding:28,minWidth:300,maxWidth:380,width:'100%',boxShadow:'0 8px 40px rgba(0,0,0,0.25)'}}>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#1a1410',marginBottom:4}}>
+            {new Date(ds+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+          </div>
+          {booked ? (
+            <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',fontSize:14,color:'#7a5a10',fontWeight:600}}>
+              ✅ This date is booked — confirmed event.
+            </div>
+          ) : (<>
+            <div style={{marginBottom:16}}>
+              <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Status</label>
+              <div style={{display:'flex',gap:8}}>
+                {[{val:'available',label:'✅ Available',bg:'#d4f4e0',color:'#1a6b3a',border:'#1a6b3a'},{val:'blocked',label:'🔴 Blocked',bg:'#fdecea',color:'#8b1a1a',border:'#8b1a1a'}].map(({val,label,bg,color,border})=>(
+                  <div key={val} onClick={()=>setStatus(val)} style={{flex:1,padding:'10px 8px',borderRadius:8,cursor:'pointer',textAlign:'center',fontWeight:700,fontSize:13,
+                    background:status===val?bg:'#f5f0ea', border:`2px solid ${status===val?border:'#e0d5c5'}`, color:status===val?color:'#7a6a5a', transition:'all 0.15s'}}>
+                    {label}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {status === 'available' && (<>
+              <div style={{marginBottom:12}}>
+                <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14,color:'#4a3a28',textTransform:'none',letterSpacing:0,fontWeight:400}}>
+                  <input type="checkbox" checked={allDay} onChange={e=>setAllDay(e.target.checked)} style={{width:16,height:16}} />
+                  All day availability
+                </label>
+              </div>
+              {!allDay && (
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+                  <div>
+                    <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Start Time</label>
+                    <input type="time" value={startTime} onChange={e=>setStartTime(e.target.value)}
+                      style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+                  </div>
+                  <div>
+                    <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>End Time</label>
+                    <input type="time" value={endTime} onChange={e=>setEndTime(e.target.value)}
+                      style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+                  </div>
+                </div>
+              )}
+            </>)}
+
+            <div style={{display:'flex',gap:8}}>
+              <button onClick={save} style={{flex:2,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Save</button>
+              <button onClick={clear} style={{flex:1,background:'#f5f0ea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:8,padding:'11px 0',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Clear</button>
+              <button onClick={onClose} style={{flex:1,background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:8,padding:'11px 0',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+            </div>
+          </>)}
+          {booked && <button onClick={onClose} style={{marginTop:12,width:'100%',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>}
+        </div>
+      </div>
+    );
+  };
+
+  // ── Recurring Template Editor ──────────────────────────────────────────────
+  const TemplateEditor = ({ initial, onSave, onCancel }) => {
+    const [tpl, setTpl] = useState(initial || { id:null, label:'', days:[], startTime:'09:00', endTime:'17:00', allDay:false });
+    const toggleDay = (i) => setTpl(t => ({...t, days: t.days.includes(i) ? t.days.filter(d=>d!==i) : [...t.days,i]}));
+    return (
+      <div style={{background:'#fdf9f5',border:'1.5px solid #e8ddd0',borderRadius:12,padding:20,marginBottom:12}}>
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Template Name</label>
+          <input value={tpl.label} onChange={e=>setTpl(t=>({...t,label:e.target.value}))} placeholder="e.g. Weekend Markets, Weekday Evenings"
+            style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+        </div>
+        <div style={{marginBottom:12}}>
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Repeats On</label>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {DAYS_SHORT.map((d,i)=>(
+              <div key={d} onClick={()=>toggleDay(i)} style={{padding:'6px 10px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:12,
+                background:tpl.days.includes(i)?'#1a1410':'#f5f0ea', color:tpl.days.includes(i)?'#e8c97a':'#4a3a28',
+                border:`2px solid ${tpl.days.includes(i)?'#c8a84b':'#e0d5c5'}`, transition:'all 0.15s'}}>
+                {d}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div style={{marginBottom:12}}>
+          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14,color:'#4a3a28',textTransform:'none',letterSpacing:0,fontWeight:400,marginBottom:8}}>
+            <input type="checkbox" checked={tpl.allDay} onChange={e=>setTpl(t=>({...t,allDay:e.target.checked}))} style={{width:16,height:16}} />
+            All day
+          </label>
+          {!tpl.allDay && (
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+              <div>
+                <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Start Time</label>
+                <input type="time" value={tpl.startTime} onChange={e=>setTpl(t=>({...t,startTime:e.target.value}))}
+                  style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+              </div>
+              <div>
+                <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>End Time</label>
+                <input type="time" value={tpl.endTime} onChange={e=>setTpl(t=>({...t,endTime:e.target.value}))}
+                  style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>onSave(tpl)} disabled={!tpl.label||tpl.days.length===0}
+            style={{flex:2,background:(!tpl.label||tpl.days.length===0)?'#ccc':'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            Save Template
+          </button>
+          <button onClick={onCancel} style={{flex:1,background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:8,padding:'10px 0',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="section" style={{maxWidth:900}}>
+    <div className="section" style={{maxWidth:960}}>
       <div className="section-title">My Availability Calendar</div>
-      <p className="section-sub">Set your available dates so hosts can see when you're open — and direct-book you instantly.</p>
+      <p className="section-sub">Set your available dates and times so hosts can see when you're open and direct-book you instantly.</p>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
         {[
-          {label:'Available',count:availCount,  color:'#1a6b3a',bg:'#d4f4e0',border:'#b8e8c8'},
-          {label:'Booked',   count:bookedCount,  color:'#7a5a10',bg:'#fdf4dc',border:'#ffd966'},
-          {label:'Blocked',  count:blockedCount, color:'#8b1a1a',bg:'#fdecea',border:'#f5c6c6'},
-        ].map(({label,count,color,bg,border})=>(
+          {label:'Available',count:availCount,  bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
+          {label:'Booked',   count:bookedCount,  bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
+          {label:'Blocked',  count:blockedCount, bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6'},
+        ].map(({label,count,bg,color,border})=>(
           <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:10,padding:'10px 20px',textAlign:'center',minWidth:110}}>
             <div style={{fontSize:22,fontWeight:700,color,fontFamily:'Playfair Display,serif'}}>{count}</div>
             <div style={{fontSize:12,color,fontWeight:600}}>{label} Dates</div>
@@ -2016,105 +2158,94 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
       </div>
 
       <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
-        {/* Calendar */}
-        <div style={{flex:'1 1 400px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
 
-          {/* Month nav */}
+        {/* ── Calendar ── */}
+        <div style={{flex:'1 1 380px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
           <div style={{background:'#1a1410',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <button onClick={prevMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:20,cursor:'pointer',padding:'0 8px'}}>‹</button>
+            <button onClick={prevMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>‹</button>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#e8c97a'}}>{MONTHS[viewMonth]} {viewYear}</div>
-            <button onClick={nextMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:20,cursor:'pointer',padding:'0 8px'}}>›</button>
+            <button onClick={nextMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>›</button>
           </div>
-
-          {/* Day headers */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f5f0ea',borderBottom:'1px solid #e8ddd0'}}>
-            {DAYS.map(d=><div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>)}
+            {DAYS_SHORT.map(d=><div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>)}
           </div>
-
-          {/* Day grid */}
           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,padding:8}}>
             {Array(firstDay).fill(null).map((_,i)=><div key={`e${i}`}/>)}
             {Array(daysInMonth).fill(null).map((_,i)=>{
               const d = i+1;
               const ds = dateStr(d);
-              const status = getStatus(d);
-              const isPast = new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
-              const ss = statusStyle(status);
+              const ss = statusStyle(ds);
+              const entry = getDate(ds);
+              const past  = isPast(d);
+              const hov   = hoveredDate===ds;
               return (
-                <div key={d} title={status}
-                  onClick={()=>!isPast && toggleDate(d)}
+                <div key={d}
+                  onClick={()=>{ if(!past){ setSelectedDate(ds); setTimeModalOpen(true); }}}
                   onMouseEnter={()=>setHoveredDate(ds)}
                   onMouseLeave={()=>setHoveredDate(null)}
-                  style={{
-                    ...ss,
-                    borderRadius:8, padding:'8px 4px', textAlign:'center', cursor:isPast?'not-allowed':'pointer',
-                    fontSize:14, fontWeight:600, transition:'all 0.15s', userSelect:'none',
-                    opacity: isPast?0.35:1,
-                    transform: hoveredDate===ds&&!isPast?'scale(1.08)':'scale(1)',
-                    boxShadow: hoveredDate===ds&&!isPast?'0 2px 8px rgba(0,0,0,0.15)':'none',
-                  }}>
-                  {d}
-                  {status==='booked' && <div style={{fontSize:8,marginTop:1}}>BOOKED</div>}
-                  {status==='available' && <div style={{fontSize:8,marginTop:1}}>OPEN</div>}
-                  {status==='blocked' && <div style={{fontSize:8,marginTop:1}}>BUSY</div>}
+                  style={{background:ss.bg,color:ss.color,border:`2px solid ${ss.border}`,borderRadius:8,
+                    padding:'6px 2px',textAlign:'center',cursor:past?'not-allowed':'pointer',
+                    fontSize:13,fontWeight:600,transition:'all 0.15s',userSelect:'none',
+                    opacity:past?0.3:1, transform:hov&&!past?'scale(1.07)':'scale(1)',
+                    boxShadow:hov&&!past?'0 2px 8px rgba(0,0,0,0.18)':'none', minHeight:46}}>
+                  <div>{d}</div>
+                  {ss.label && <div style={{fontSize:7,marginTop:1,letterSpacing:0.5}}>{ss.label}</div>}
+                  {entry?.startTime && !isBooked(ds) && (
+                    <div style={{fontSize:7,lineHeight:1.2,marginTop:1}}>
+                      {fmt12(entry.startTime).replace(' ','')}<br/>{fmt12(entry.endTime).replace(' ','')}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
+          <div style={{padding:'8px 12px',background:'#f5f0ea',borderTop:'1px solid #e8ddd0',fontSize:11,color:'#a89a8a',textAlign:'center'}}>
+            Click any date to set availability &amp; time
+          </div>
         </div>
 
-        {/* Controls panel */}
+        {/* ── Right panel ── */}
         <div style={{flex:'1 1 260px',display:'flex',flexDirection:'column',gap:14}}>
 
-          {/* Mode selector */}
+          {/* Recurring Templates */}
           <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
-            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Click dates to mark as:</div>
-            {[
-              {val:'available',label:'✅ Available',desc:'Open for bookings',bg:'#d4f4e0',color:'#1a6b3a',border:'#1a6b3a'},
-              {val:'blocked',  label:'🔴 Blocked / Busy',desc:'Not available',bg:'#fdecea',color:'#8b1a1a',border:'#8b1a1a'},
-            ].map(({val,label,desc,bg,color,border})=>(
-              <div key={val} onClick={()=>setSelMode(val)}
-                style={{padding:'10px 12px',borderRadius:8,marginBottom:6,cursor:'pointer',
-                  background:selMode===val?bg:'#f5f0ea', border:`2px solid ${selMode===val?border:'#e0d5c5'}`,
-                  transition:'all 0.15s'}}>
-                <div style={{fontWeight:700,color:selMode===val?color:'#4a3a28',fontSize:13}}>{label}</div>
-                <div style={{fontSize:11,color:'#7a6a5a'}}>{desc}</div>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+              <div style={{fontWeight:700,color:'#1a1410',fontSize:14}}>🔁 Recurring Availability</div>
+              <button onClick={()=>{setEditingTemplate('new');setRecurringOpen(true);}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'5px 12px',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:700}}>+ New</button>
+            </div>
+            <div style={{fontSize:12,color:'#a89a8a',marginBottom:10,lineHeight:1.5}}>
+              Create weekly schedules (e.g. "Every Saturday 9am–4pm") and apply them to any month in one click.
+            </div>
+
+            {recurringOpen && editingTemplate==='new' && (
+              <TemplateEditor initial={null} onSave={(tpl)=>{saveTemplate(tpl);setRecurringOpen(false);}} onCancel={()=>{setRecurringOpen(false);setEditingTemplate(null);}} />
+            )}
+
+            {recurringTemplates.length === 0 && !recurringOpen && (
+              <div style={{fontSize:12,color:'#c0b0a0',textAlign:'center',padding:'10px 0',fontStyle:'italic'}}>No recurring templates yet</div>
+            )}
+
+            {recurringTemplates.map(tpl=>(
+              <div key={tpl.id} style={{background:'#f5f0ea',borderRadius:10,padding:'10px 12px',marginBottom:8,border:'1px solid #e8ddd0'}}>
+                {editingTemplate===tpl.id ? (
+                  <TemplateEditor initial={tpl} onSave={(t)=>{saveTemplate(t);setEditingTemplate(null);}} onCancel={()=>setEditingTemplate(null)} />
+                ) : (<>
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                    <div style={{fontWeight:700,color:'#1a1410',fontSize:13}}>{tpl.label}</div>
+                    <div style={{display:'flex',gap:5}}>
+                      <button onClick={()=>setEditingTemplate(tpl.id)} style={{background:'none',border:'1px solid #e0d5c5',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#7a6a5a',fontFamily:'DM Sans,sans-serif'}}>Edit</button>
+                      <button onClick={()=>removeTemplate(tpl.id)} style={{background:'none',border:'1px solid #f5c6c6',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#8b1a1a',fontFamily:'DM Sans,sans-serif'}}>✕</button>
+                    </div>
+                  </div>
+                  <div style={{fontSize:11,color:'#7a6a5a',marginBottom:6}}>
+                    {tpl.days.map(i=>DAYS_SHORT[i]).join(', ')} · {tpl.allDay?'All day':`${fmt12(tpl.startTime)} – ${fmt12(tpl.endTime)}`}
+                  </div>
+                  <button onClick={()=>applyTemplate(tpl)} style={{width:'100%',background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'7px 0',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                    ✓ Apply to {MONTHS[viewMonth]}
+                  </button>
+                </>)}
               </div>
             ))}
-          </div>
-
-          {/* Quick-set by weekday */}
-          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
-            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Quick-set this month:</div>
-            <div style={{fontSize:12,color:'#7a6a5a',marginBottom:8}}>Mark all of a weekday as:</div>
-            <div style={{overflowX:'auto'}}>
-              <table style={{width:'100%',borderCollapse:'collapse',fontSize:12}}>
-                <thead>
-                  <tr>
-                    <th style={{textAlign:'left',color:'#7a6a5a',padding:'3px 4px',fontWeight:600}}>Day</th>
-                    <th style={{color:'#1a6b3a',padding:'3px 4px',fontWeight:600}}>Open</th>
-                    <th style={{color:'#8b1a1a',padding:'3px 4px',fontWeight:600}}>Busy</th>
-                    <th style={{color:'#7a6a5a',padding:'3px 4px',fontWeight:600}}>Clear</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {DAYS.map((day,i)=>(
-                    <tr key={day}>
-                      <td style={{padding:'3px 4px',fontWeight:600,color:'#4a3a28'}}>{day}</td>
-                      <td style={{padding:'3px 4px',textAlign:'center'}}>
-                        <button onClick={()=>setWeekdayAvailability(i,'available')} style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#1a6b3a',fontWeight:700}}>✓</button>
-                      </td>
-                      <td style={{padding:'3px 4px',textAlign:'center'}}>
-                        <button onClick={()=>setWeekdayAvailability(i,'blocked')} style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#8b1a1a',fontWeight:700}}>✗</button>
-                      </td>
-                      <td style={{padding:'3px 4px',textAlign:'center'}}>
-                        <button onClick={()=>setWeekdayAvailability(i,'unset')} style={{background:'#f5f0ea',border:'1px solid #e0d5c5',borderRadius:4,padding:'2px 8px',cursor:'pointer',fontSize:11,color:'#7a6a5a'}}>–</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
           </div>
 
           {/* Legend */}
@@ -2124,7 +2255,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
               {color:'#1a6b3a',bg:'#d4f4e0',label:'Available — hosts can book'},
               {color:'#c8a84b',bg:'#fdf4dc',label:'Booked — confirmed event'},
               {color:'#8b1a1a',bg:'#fdecea',label:'Blocked — unavailable'},
-              {color:'#7a6a5a',bg:'#f5f0ea',label:'Unset — not specified'},
+              {color:'#9a8a7a',bg:'#f5f0ea',label:'Unset — not specified'},
             ].map(({color,bg,label})=>(
               <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
                 <div style={{width:16,height:16,borderRadius:4,background:bg,border:`2px solid ${color}`,flexShrink:0}}/>
@@ -2133,10 +2264,10 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
             ))}
           </div>
 
-          {/* Sync / Export */}
+          {/* Sync */}
           <div style={{background:'#1a1410',borderRadius:12,padding:16}}>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:15,color:'#e8c97a',marginBottom:8}}>📲 Sync Your Calendar</div>
-            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>Download your calendar as an .ics file to import into Google Calendar, Apple Calendar, or Outlook.</div>
+            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>Download as .ics to import into Google Calendar, Apple Calendar, or Outlook.</div>
             <button onClick={downloadICal} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
               ⬇ Download .ics File
             </button>
@@ -2146,19 +2277,23 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
             {showIcalInfo && (
               <div style={{marginTop:10,fontSize:11,color:'#a89a8a',lineHeight:1.8}}>
                 <div style={{fontWeight:700,color:'#c8a84b',marginBottom:4}}>Google Calendar:</div>
-                <div>Settings → Import &amp; Export → Import → select the .ics file</div>
+                <div>Settings → Import &amp; Export → Import → select .ics file</div>
                 <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Apple Calendar:</div>
-                <div>File → Import → select the .ics file</div>
+                <div>File → Import → select .ics file</div>
                 <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Outlook:</div>
-                <div>File → Open &amp; Export → Import/Export → Import an iCalendar file</div>
+                <div>File → Open &amp; Export → Import/Export → Import iCalendar</div>
                 <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>iPhone / Android:</div>
                 <div>Email yourself the .ics file and tap it to add to your phone calendar</div>
               </div>
             )}
           </div>
-
         </div>
       </div>
+
+      {/* Date/Time Modal */}
+      {timeModalOpen && selectedDate && (
+        <DateTimeModal ds={selectedDate} onClose={()=>{setTimeModalOpen(false);setSelectedDate(null);}} />
+      )}
     </div>
   );
 }
