@@ -7,30 +7,29 @@ const CATEGORIES = [
   "Clothing & Apparel", "Beauty & Skincare", "Plants & Floral", "Crafts & Handmade",
   "Health & Wellness", "Kids & Baby", "Pet Products", "Photography & Media",
   "Wedding & Bridal", "Baby & Maternity", "Party & Event Decor", "Personalized Gifts",
-  "Vintage & Thrift", "Spiritual & Metaphysical", "Wine Charms", "Entertainment"
+  "Vintage & Thrift", "Spiritual & Metaphysical", "Entertainment", "Other"
 ];
 
 const SUBCATEGORIES = {
-  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie"],
-  "Jewelry & Accessories": ["Earrings", "Necklaces & Pendants", "Bracelets & Bangles", "Rings", "Hair Accessories", "Bags & Purses", "Permanent", "Charm", "Custom/Personalized", "Handmade"],
+  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie", "Other"],
+  "Jewelry & Accessories": ["Earrings", "Necklaces & Pendants", "Bracelets & Bangles", "Rings", "Hair Accessories", "Bags & Purses", "Permanent", "Charm", "Custom/Personalized", "Handmade", "Other"],
   "Art & Prints": ["Illustrations & Drawing", "Paintings", "Digital Prints", "Custom Portraits", "Stickers & Postcards", "Mixed Media", "Other"],
   "Candles & Home Decor": ["Soy Candles", "Wax Melts", "Diffusers & Oils", "Wall Art", "Throw Pillows", "Seasonal Decor", "Other"],
-  "Clothing & Apparel": ["T-Shirts & Hoodies", "Dresses & Skirts", "Kids Clothing", "Hats & Beanies", "Activewear", "Custom/Personalized"],
-  "Beauty & Skincare": ["Skincare & Serums", "Body Butters & Lotions", "Lip Care", "Hair Care", "Bath Products", "Makeup & Cosmetics", "Injectibles"],
-  "Plants & Floral": ["Succulents & Cacti", "Tropical Plants", "Floral Arrangements", "Dried Florals", "Seeds & Bulbs", "Terrariums"],
-  "Crafts & Handmade": ["Woodwork", "Ceramics & Pottery", "Knit & Crochet", "Resin Art", "Macrame", "Paper Crafts", "Charcuterie", "Invitations", "Custom"],
-  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Yoga", "Personal Training", "Physical Therapy"],
-  "Kids & Baby": ["Toys & Games", "Clothing", "Nursery Decor", "Books", "Personalized Gifts", "Educational"],
-  "Pet Products": ["Treats & Food", "Toys", "Collars & Leashes", "Grooming", "Apparel", "Beds & Accessories"],
-  "Photography & Media": ["Event Photography", "Portrait Sessions", "Digital Downloads", "Prints & Albums", "Video Services", "Headshots"],
-  "Wedding & Bridal": ["Bridal Accessories", "Wedding Favors", "Bridesmaid Gifts", "Vow Books & Stationery", "Bridal Robes & Apparel", "Wedding Decor", "Custom Veils & Hair Accessories"],
-  "Baby & Maternity": ["Baby Shower Favors", "Nursery Decor", "Baby Clothing & Accessories", "Maternity Apparel", "Gender Reveal Items", "Milestone Keepsakes", "Custom Baby Gifts"],
-  "Party & Event Decor": ["Balloon Arrangements", "Table Centerpieces", "Backdrops & Banners", "Custom Signage", "Party Favors", "Themed Decorations", "Photo Booth Props"],
-  "Personalized Gifts": ["Custom Tumblers & Cups", "Engraved Items", "Embroidered Goods", "Custom Jewelry", "Monogrammed Gifts", "Photo Gifts", "Name & Word Art"],
-  "Vintage & Thrift": ["Vintage Clothing", "Antiques & Collectibles", "Vintage Jewelry", "Upcycled Goods", "Retro Home Decor", "Vinyl & Media"],
-  "Spiritual & Metaphysical": ["Crystals & Gemstones", "Tarot & Oracle Cards", "Sage & Cleansing", "Spiritual Jewelry", "Meditation & Mindfulness", "Altar Supplies"],
-  "Wine Charms": ["Custom/Personalized", "Seasonal & Holiday", "Wedding & Bridal", "Birthday & Celebration", "Sports & Hobbies", "Nature & Floral", "Funny & Novelty"],
-  "Entertainment": ["Solo Acoustic Artist", "Acoustic Duo", "Full Band", "DJ (with MC)", "DJ (Music Only)", "Self DJ Rental", "Cover Band", "Jazz Ensemble", "Classical/String Quartet", "Karaoke Host", "Comedian/Stand-Up", "Magician", "Caricature Artist", "Photo Booth Operator", "Balloon Artist", "Face Painter", "Henna Artist", "Tarot/Palm Reader", "Fire Performer", "Strolling Entertainer"],
+  "Clothing & Apparel": ["T-Shirts & Hoodies", "Dresses & Skirts", "Kids Clothing", "Hats & Beanies", "Activewear", "Custom/Personalized", "Other"],
+  "Beauty & Skincare": ["Skincare & Serums", "Body Butters & Lotions", "Lip Care", "Hair Care", "Bath Products", "Makeup & Cosmetics", "Injectibles", "Other"],
+  "Plants & Floral": ["Succulents & Cacti", "Tropical Plants", "Floral Arrangements", "Dried Florals", "Seeds & Bulbs", "Terrariums", "Other"],
+  "Crafts & Handmade": ["Woodwork", "Ceramics & Pottery", "Knit & Crochet", "Resin Art", "Macrame", "Paper Crafts", "Charcuterie", "Invitations", "Custom", "Other"],
+  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Yoga", "Personal Training", "Physical Therapy", "Other"],
+  "Kids & Baby": ["Toys & Games", "Clothing", "Nursery Decor", "Books", "Personalized Gifts", "Educational", "Other"],
+  "Pet Products": ["Treats & Food", "Toys", "Collars & Leashes", "Grooming", "Apparel", "Beds & Accessories", "Other"],
+  "Photography & Media": ["Event Photography", "Portrait Sessions", "Digital Downloads", "Prints & Albums", "Video Services", "Headshots", "Other"],
+  "Wedding & Bridal": ["Bridal Accessories", "Wedding Favors", "Bridesmaid Gifts", "Vow Books & Stationery", "Bridal Robes & Apparel", "Wedding Decor", "Custom Veils & Hair Accessories", "Other"],
+  "Baby & Maternity": ["Baby Shower Favors", "Nursery Decor", "Baby Clothing & Accessories", "Maternity Apparel", "Gender Reveal Items", "Milestone Keepsakes", "Custom Baby Gifts", "Other"],
+  "Party & Event Decor": ["Balloon Arrangements", "Table Centerpieces", "Backdrops & Banners", "Custom Signage", "Party Favors", "Themed Decorations", "Photo Booth Props", "Other"],
+  "Personalized Gifts": ["Custom Tumblers & Cups", "Engraved Items", "Embroidered Goods", "Custom Jewelry", "Monogrammed Gifts", "Photo Gifts", "Name & Word Art", "Wine Charms", "Other"],
+  "Vintage & Thrift": ["Vintage Clothing", "Antiques & Collectibles", "Vintage Jewelry", "Upcycled Goods", "Retro Home Decor", "Vinyl & Media", "Other"],
+  "Spiritual & Metaphysical": ["Crystals & Gemstones", "Tarot & Oracle Cards", "Sage & Cleansing", "Spiritual Jewelry", "Meditation & Mindfulness", "Altar Supplies", "Other"],
+  "Entertainment": ["Solo Acoustic Artist", "Acoustic Duo", "Full Band", "DJ (with MC)", "DJ (Music Only)", "Self DJ Rental", "Cover Band", "Jazz Ensemble", "Classical/String Quartet", "Karaoke Host", "Comedian/Stand-Up", "Magician", "Caricature Artist", "Photo Booth Operator", "Balloon Artist", "Face Painter", "Henna Artist", "Tarot/Palm Reader", "Fire Performer", "Strolling Entertainer", "Other"],
 };
 
 const EVENT_TYPES = [
@@ -38,7 +37,7 @@ const EVENT_TYPES = [
   "Wedding Ceremony", "Bridal Shower", "Baby Shower", "Gender Reveal",
   "Community Festival", "Farmers Market", "Fundraiser", "Grand Opening",
   "Holiday Market", "Block Party", "Private Party", "Sip & Shop",
-  "Girls Night Out", "Bachelorette Party", "Anniversary Celebration"
+  "Girls Night Out", "Bachelorette Party", "Anniversary Celebration", "Other"
 ];
 
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
@@ -440,6 +439,8 @@ function VendorForm({ onSubmit, setTab }) {
     priceMax:0,
     hasMinPurchase:false, minPurchaseAmt:25,
     chargesPrivateFee:false, privateEventFee:150,
+    acceptsDirectBooking:false, requiresTicketedEvents:false,
+    otherCategory:'', otherEventType:'',
     setupTime:30, tableSize:'6ft', needsElectric:false,
     yearsActive:''
   });
@@ -494,7 +495,7 @@ function VendorForm({ onSubmit, setTab }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Daily Booth Fee</label>
+        <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
           <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
             <option value={0}>Free / No fee</option>
             <option value={25}>$25/day</option>
@@ -521,10 +522,10 @@ function VendorForm({ onSubmit, setTab }) {
           {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
         </div>
         <div className="form-group">
-          <label>Private Event Fee?</label>
+          <label>Private Event Fee? (payable to you)</label>
           <select value={form.chargesPrivateFee?'yes':'no'} onChange={e=>set('chargesPrivateFee',e.target.value==='yes')}>
             <option value="no">No private event fee</option>
-            <option value="yes">Yes — I charge extra for private events</option>
+            <option value="yes">Yes — I charge extra for private events (payable to you)</option>
           </select>
           {form.chargesPrivateFee && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Private event fee</div><select value={form.privateEventFee} onChange={e=>set('privateEventFee',+e.target.value)}>{[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
         </div>
@@ -552,6 +553,26 @@ function VendorForm({ onSubmit, setTab }) {
         <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" hint="PDF — helps hosts understand your offerings" /></div>
       </div>
 
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Booking Preferences</h3>
+      <div className="form-grid">
+        <div className="form-group">
+          <label>Accept Direct Bookings?</label>
+          <select value={form.acceptsDirectBooking?'yes':'no'} onChange={e=>set('acceptsDirectBooking',e.target.value==='yes')}>
+            <option value="no">No — I prefer to review requests first</option>
+            <option value="yes">Yes — hosts may direct book me when I'm available</option>
+          </select>
+          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>If yes, hosts can instantly book open slots on your calendar without waiting for approval.</div>
+        </div>
+        <div className="form-group">
+          <label>Ticketed Events Required?</label>
+          <select value={form.requiresTicketedEvents?'yes':'no'} onChange={e=>set('requiresTicketedEvents',e.target.value==='yes')}>
+            <option value="no">No — I'm open to ticketed and non-ticketed events</option>
+            <option value="yes">Yes — I only participate in ticketed events</option>
+          </select>
+        </div>
+      </div>
+
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
@@ -575,7 +596,8 @@ function HostForm({ onSubmit, setTab }) {
     expectedAttendance:'', indoorOutdoor:'outdoor',
     vendorCategories:[], vendorSubcategories:[], vendorCount:5,
     electricAvailable:true, tableProvided:false,
-    budget:'', minPurchaseCover:0, isPrivateEvent:false, privatePerVendor:0, privateTotalBudget:0, notes:'', managedBooking:false
+    budget:'', minPurchaseCover:0, isPrivateEvent:false, privatePerVendor:0, privateTotalBudget:0,
+    isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', otherVendorCategory:'', notes:'', managedBooking:false
   });
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
   return (
@@ -591,6 +613,12 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Phone</label><input placeholder="(856) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <div className="form-group"><label>Event Name *</label><input placeholder="e.g. Haddonfield Holiday Market" value={form.eventName} onChange={e=>set('eventName',e.target.value)} /></div>
         <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set('eventType',e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+        {form.eventType === 'Other' && (
+          <div className="form-group">
+            <label>Describe your event type</label>
+            <input placeholder="e.g. Art Walk, Craft Fair, Food Truck Rally..." value={form.otherEventType} onChange={e=>set('otherEventType',e.target.value)} />
+          </div>
+        )}
         <ZipInput label="Event Zip Code *" value={form.eventZip} onChange={v=>set('eventZip',v)} hint="Vendors whose travel radius covers this zip will be matched to your event" />
         <div className="form-group"><label>Venue Address</label><input placeholder="Street address" value={form.address} onChange={e=>set('address',e.target.value)} /></div>
         <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} onChange={e=>set('date',e.target.value)} /></div>
@@ -780,6 +808,7 @@ function HostForm({ onSubmit, setTab }) {
         subcategories={form.vendorSubcategories}
         onCategoriesChange={v=>set('vendorCategories',v)}
         onSubcategoriesChange={v=>set('vendorSubcategories',v)}
+        otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
       />
 
       <hr className="form-divider" />
@@ -937,9 +966,10 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, setBook
     .map(v => {
       const dist = hasZip ? distanceMiles(v.homeZip, hostZip) : null;
       const inRange = !hasZip ? true : (dist===null ? true : dist <= v.radius);
-      const minOk = !v.hasMinPurchase || hostMinCover===9999 || hostMinCover >= (v.minPurchaseAmt||0);
-      const privateOk = !isPrivate || !v.chargesPrivateFee;
-      const flagged = !minOk || !privateOk;
+      const minOk      = !v.hasMinPurchase || hostMinCover===9999 || hostMinCover >= (v.minPurchaseAmt||0);
+      const privateOk  = !isPrivate || !v.chargesPrivateFee;
+      const ticketedOk = !v.requiresTicketedEvents || (hostEvent && hostEvent.isTicketedEvent);
+      const flagged    = !minOk || !privateOk || !ticketedOk;
       return {...v, dist, inRange, minOk, privateOk, flagged};
     });
 
