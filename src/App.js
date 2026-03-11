@@ -376,9 +376,14 @@ function CheckboxGroup({ label, options, selected, onChange, otherValue, onOther
 // ─── Category + Subcategory Picker ────────────────────────────────────────────
 function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChange, onSubcategoriesChange, otherCategory, onOtherCategoryChange, otherSubcategories, onOtherSubcategoryChange }) {
   const handleCatChange = newCats => {
-    const valid = subcategories.filter(s => newCats.some(cat => (SUBCATEGORIES[cat]||[]).includes(s)));
+    const addedCats = newCats.filter(c => !categories.includes(c));
+    const removedCats = categories.filter(c => !newCats.includes(c));
+    // Keep existing valid subcats, auto-add all subs for newly added categories
+    const kept    = subcategories.filter(s => !removedCats.some(c => (SUBCATEGORIES[c]||[]).includes(s)));
+    const autoAdd = addedCats.flatMap(c => SUBCATEGORIES[c] || []);
+    const merged  = [...new Set([...kept, ...autoAdd])];
     onCategoriesChange(newCats);
-    onSubcategoriesChange(valid);
+    onSubcategoriesChange(merged);
   };
   const toggleSubAll = (cat, catSubs) => {
     const allOn  = catSubs.every(s => subcategories.includes(s));
