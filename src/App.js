@@ -1949,7 +1949,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
         const ds = dateStr(d);
         if (prev.bookedDates?.includes(ds)) continue;
         if (isPast(d)) continue;
-        dates[ds] = { status:'available', startTime: tpl.startTime, endTime: tpl.endTime };
+        dates[ds] = { status: tpl.status || 'available', startTime: tpl.allDay ? '' : tpl.startTime, endTime: tpl.allDay ? '' : tpl.endTime };
       }
       return {...prev, dates};
     });
@@ -2086,53 +2086,76 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
   // ── Recurring Template Editor ──────────────────────────────────────────────
   const TemplateEditor = ({ initial, onSave, onCancel }) => {
-    const [tpl, setTpl] = useState(initial || { id:null, label:'', days:[], startTime:'09:00', endTime:'17:00', allDay:false });
+    const [tpl, setTpl] = useState(initial || { id:null, label:'', days:[], status:'available', startTime:'09:00', endTime:'17:00', allDay:false });
     const toggleDay = (i) => setTpl(t => ({...t, days: t.days.includes(i) ? t.days.filter(d=>d!==i) : [...t.days,i]}));
+    const canSave = tpl.label.trim() && tpl.days.length > 0;
     return (
       <div style={{background:'#fdf9f5',border:'1.5px solid #e8ddd0',borderRadius:12,padding:20,marginBottom:12}}>
+
         <div style={{marginBottom:12}}>
           <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Template Name</label>
           <input value={tpl.label} onChange={e=>setTpl(t=>({...t,label:e.target.value}))} placeholder="e.g. Weekend Markets, Weekday Evenings"
-            style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+            style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none'}} />
         </div>
+
         <div style={{marginBottom:12}}>
-          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Repeats On</label>
-          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
-            {DAYS_SHORT.map((d,i)=>(
-              <div key={d} onClick={()=>toggleDay(i)} style={{padding:'6px 10px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:12,
-                background:tpl.days.includes(i)?'#1a1410':'#f5f0ea', color:tpl.days.includes(i)?'#e8c97a':'#4a3a28',
-                border:`2px solid ${tpl.days.includes(i)?'#c8a84b':'#e0d5c5'}`, transition:'all 0.15s'}}>
-                {d}
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Status</label>
+          <div style={{display:'flex',gap:8}}>
+            {[{val:'available',label:'✅ Available',bg:'#d4f4e0',color:'#1a6b3a',border:'#1a6b3a'},{val:'blocked',label:'🔴 Blocked / Busy',bg:'#fdecea',color:'#8b1a1a',border:'#8b1a1a'}].map(({val,label,bg,color,border})=>(
+              <div key={val} onClick={()=>setTpl(t=>({...t,status:val}))}
+                style={{flex:1,padding:'9px 6px',borderRadius:8,cursor:'pointer',textAlign:'center',fontWeight:700,fontSize:12,
+                  background:tpl.status===val?bg:'#f5f0ea', border:`2px solid ${tpl.status===val?border:'#e0d5c5'}`,
+                  color:tpl.status===val?color:'#7a6a5a', transition:'all 0.15s'}}>
+                {label}
               </div>
             ))}
           </div>
         </div>
+
         <div style={{marginBottom:12}}>
-          <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14,color:'#4a3a28',textTransform:'none',letterSpacing:0,fontWeight:400,marginBottom:8}}>
-            <input type="checkbox" checked={tpl.allDay} onChange={e=>setTpl(t=>({...t,allDay:e.target.checked}))} style={{width:16,height:16}} />
-            All day
-          </label>
-          {!tpl.allDay && (
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-              <div>
-                <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Start Time</label>
-                <input type="time" value={tpl.startTime} onChange={e=>setTpl(t=>({...t,startTime:e.target.value}))}
-                  style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+          <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:6,textTransform:'uppercase',letterSpacing:1}}>Repeats On</label>
+          <div style={{display:'flex',gap:5,flexWrap:'wrap'}}>
+            {DAYS_SHORT.map((d,i)=>(
+              <div key={d} onClick={()=>toggleDay(i)} style={{padding:'7px 10px',borderRadius:6,cursor:'pointer',fontWeight:700,fontSize:12,
+                background:tpl.days.includes(i)?'#1a1410':'#f5f0ea', color:tpl.days.includes(i)?'#e8c97a':'#4a3a28',
+                border:`2px solid ${tpl.days.includes(i)?'#c8a84b':'#e0d5c5'}`, transition:'all 0.15s',userSelect:'none'}}>
+                {d}
               </div>
-              <div>
-                <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>End Time</label>
-                <input type="time" value={tpl.endTime} onChange={e=>setTpl(t=>({...t,endTime:e.target.value}))}
-                  style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
-              </div>
-            </div>
-          )}
+            ))}
+          </div>
+          {tpl.days.length===0 && <div style={{fontSize:11,color:'#c8a84b',marginTop:5}}>Select at least one day</div>}
         </div>
+
+        {tpl.status === 'available' && (
+          <div style={{marginBottom:12}}>
+            <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer',fontSize:14,color:'#4a3a28',textTransform:'none',letterSpacing:0,fontWeight:400,marginBottom:8}}>
+              <input type="checkbox" checked={tpl.allDay} onChange={e=>setTpl(t=>({...t,allDay:e.target.checked}))} style={{width:16,height:16,cursor:'pointer'}} />
+              All day
+            </label>
+            {!tpl.allDay && (
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                <div>
+                  <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>Start Time</label>
+                  <input type="time" value={tpl.startTime} onChange={e=>setTpl(t=>({...t,startTime:e.target.value}))}
+                    style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none'}} />
+                </div>
+                <div>
+                  <label style={{display:'block',fontSize:12,fontWeight:700,color:'#7a6a5a',marginBottom:4,textTransform:'uppercase',letterSpacing:1}}>End Time</label>
+                  <input type="time" value={tpl.endTime} onChange={e=>setTpl(t=>({...t,endTime:e.target.value}))}
+                    style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'8px 10px',fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none'}} />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!canSave && <div style={{fontSize:11,color:'#a89a8a',marginBottom:8}}>Enter a name and select at least one day to save.</div>}
         <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>onSave(tpl)} disabled={!tpl.label||tpl.days.length===0}
-            style={{flex:2,background:(!tpl.label||tpl.days.length===0)?'#ccc':'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          <button onClick={()=>{ if(canSave) onSave(tpl); }}
+            style={{flex:2,background:canSave?'#1a1410':'#d0c8c0',color:canSave?'#e8c97a':'#a89a8a',border:'none',borderRadius:8,padding:'11px 0',fontSize:13,fontWeight:700,cursor:canSave?'pointer':'not-allowed',fontFamily:'DM Sans,sans-serif',transition:'all 0.2s'}}>
             Save Template
           </button>
-          <button onClick={onCancel} style={{flex:1,background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:8,padding:'10px 0',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+          <button onClick={onCancel} style={{flex:1,background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:8,padding:'11px 0',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
         </div>
       </div>
     );
