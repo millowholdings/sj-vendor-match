@@ -110,13 +110,14 @@ function isUrgent(d){ if(!d) return false; return (new Date(d+"T12:00:00")-new D
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: #f5f0ea; color: #1a1410; min-height: 100vh; }
   .app { min-height: 100vh; }
   .nav { background: #1a1410; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
-  .nav-logo { font-family: 'Playfair Display', serif; font-size: 22px; color: #e8c97a; letter-spacing: 1px; }
-  .nav-logo span { color: #fff; font-style: italic; }
+  .nav-logo { display:flex; align-items:baseline; gap:6px; }
+  .nav-logo-cursive { font-family: 'Great Vibes', cursive; font-size: 28px; color: #e8c97a; line-height:1; }
+  .nav-logo-serif { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; letter-spacing: 1px; font-weight:700; }
   .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
   .nav-tab { background: none; border: 1px solid transparent; color: #a89a8a; padding: 8px 18px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.2s; }
   .nav-tab:hover { color: #e8c97a; border-color: #e8c97a30; }
@@ -614,7 +615,7 @@ function VendorForm({ onSubmit, setTab }) {
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of SJVendorMatch within 12 months is prohibited and subject to a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of South Jersey Vendor Market within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. <strong style={{ color:'#e8c97a' }}>Pay nothing until your first booking!!</strong> Then just $10/month or $100/year.</p>
@@ -872,7 +873,7 @@ function HostForm({ onSubmit, setTab }) {
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>SJVendorMatch Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of SJVendorMatch within 12 months without a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
@@ -1443,7 +1444,7 @@ export default function App() {
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
       hostName: "You (Host)", status: "active",
       messages: [{
-        id: 1, from: "system", text: `Conversation started with ${vendor.name}. All communications are protected under the SJVendorMatch Non-Circumvention Agreement. Direct booking outside this platform within 12 months is prohibited.`, ts: new Date().toISOString()
+        id: 1, from: "system", text: `Conversation started with ${vendor.name}. All communications are protected under the South Jersey Vendor Market Non-Circumvention Agreement. Direct booking outside this platform within 12 months is prohibited.`, ts: new Date().toISOString()
       }]
     };
     setConversations(c => [newConvo, ...c]);
@@ -1477,7 +1478,7 @@ export default function App() {
       <style>{styles}</style>
       <div className="app">
         <nav className="nav">
-          <div className="nav-logo">SJ<span>Vendor</span>Match</div>
+          <div className="nav-logo"><span className="nav-logo-cursive">South Jersey</span><span className="nav-logo-serif">Vendor Market</span></div>
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
             <div className="nav-group">
@@ -1507,9 +1508,12 @@ export default function App() {
         {tab==='home' && (
           <>
             <div className="hero">
-              <div className="hero-eyebrow">South Jersey's Vendor Matching Platform</div>
-              <h1>Connect. Grow. <em>Thrive.</em></h1>
-              <p>The only platform built exclusively for South Jersey vendors and event hosts — matched by zip code and travel radius.</p>
+              <div className="hero-eyebrow">South Jersey's Vendor Marketplace</div>
+              <h1 style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,marginBottom:8}}>
+                  <span style={{fontFamily:"'Great Vibes', cursive",fontSize:'clamp(48px,7vw,80px)',color:'#e8c97a',lineHeight:1.1,fontWeight:400}}>South Jersey</span>
+                  <span style={{fontFamily:"'Playfair Display', serif",fontSize:'clamp(28px,4vw,48px)',color:'#fff',letterSpacing:2,fontWeight:700,textTransform:'uppercase'}}>Vendor Market</span>
+                </h1>
+              <p style={{fontSize:16,color:'#c8b89a',maxWidth:560,margin:'0 auto 32px',lineHeight:1.7}}>Connecting vendors and events across South Jersey and Beyond</p>
               <div style={{ display:"flex", gap:16, justifyContent:"center", alignItems:"stretch", maxWidth:900, margin:"0 auto", flexWrap:"wrap", position:"relative" }}>
                 <div style={{ flex:1, minWidth:280, padding:"32px 40px", textAlign:"left", background:"rgba(255,255,255,.05)", borderRadius:8, border:"1px solid rgba(255,255,255,.08)" }}>
                   <div style={{ fontSize:11, letterSpacing:"3px", textTransform:"uppercase", color:"#e8c97a", marginBottom:8 }}>&#128717; For Vendors</div>
@@ -1566,7 +1570,7 @@ export default function App() {
                 <div className="success-banner">
                   <div className="success-icon">🎉</div>
                   <h2>You're in the network!</h2>
-                  <p>Your vendor profile has been submitted. We'll review and activate your listing within <span className="success-highlight">24 hours</span>. Welcome to SJVendorMatch.</p>
+                  <p>Your vendor profile has been submitted. We'll review and activate your listing within <span className="success-highlight">24 hours</span>. Welcome to South Jersey Vendor Market.</p>
                 </div>
                 <button className="btn-submit" onClick={()=>setVendorSuccess(false)}>Submit Another Profile</button>
               </>
@@ -1751,7 +1755,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
           {/* ToS notice banner */}
           <div style={{ background:'#fdf4dc', borderBottom:'1px solid #ffd966', padding:'8px 24px', fontSize:12, color:'#7a5a10', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-            🔒 <strong>Protected by SJVendorMatch Non-Circumvention Agreement.</strong> Direct booking outside this platform within 12 months is prohibited and subject to a finder's fee.
+            🔒 <strong>Protected by South Jersey Vendor Market Non-Circumvention Agreement.</strong> Direct booking outside this platform within 12 months is prohibited and subject to a finder's fee.
           </div>
 
           {/* Messages */}
@@ -1823,19 +1827,19 @@ function TosPage({ setTab }) {
   return (
     <div className="section" style={{ maxWidth:860 }}>
       <div className="section-title">Terms of Service</div>
-      <p className="section-sub">SJVendorMatch Platform Agreement — effective upon registration</p>
+      <p className="section-sub">South Jersey Vendor Market Platform Agreement — effective upon registration</p>
 
       {[
-        { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on SJVendorMatch, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and SJVendorMatch." },
-        { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through SJVendorMatch — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through SJVendorMatch, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. SJVendorMatch reserves the right to remove violating users from the platform permanently." },
+        { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on South Jersey Vendor Market, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and South Jersey Vendor Market." },
+        { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through South Jersey Vendor Market — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through South Jersey Vendor Market, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. South Jersey Vendor Market reserves the right to remove violating users from the platform permanently." },
         { title: "3. Vendor Responsibilities", body: "Vendors agree to: (a) provide accurate information about their business, products, pricing, insurance status, and availability; (b) honor commitments made through in-app messaging and booking; (c) maintain current and valid certificates of insurance where applicable; (d) conduct all platform communications through the in-app messaging system; (e) pay the applicable monthly subscription fee to maintain an active listing." },
         { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
-        { title: "5. In-App Messaging & Communication", body: "SJVendorMatch provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. SJVendorMatch does not read private messages but may access them if a dispute is filed." },
-        { title: "6. Privacy & Data Protection", body: "SJVendorMatch collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
-        { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $10/month or $100/year (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. SJVendorMatch reserves the right to modify pricing with 30 days notice." },
-        { title: "8. Limitation of Liability", body: "SJVendorMatch is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to SJVendorMatch in the 3 months preceding any claim." },
-        { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to SJVendorMatch at support@sjvendormatch.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against SJVendorMatch itself." },
-        { title: "10. Modifications & Termination", body: "SJVendorMatch reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
+        { title: "5. In-App Messaging & Communication", body: "South Jersey Vendor Market provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. South Jersey Vendor Market does not read private messages but may access them if a dispute is filed." },
+        { title: "6. Privacy & Data Protection", body: "South Jersey Vendor Market collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
+        { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $10/month or $100/year (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
+        { title: "8. Limitation of Liability", body: "South Jersey Vendor Market is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to South Jersey Vendor Market in the 3 months preceding any claim." },
+        { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@sjvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
+        { title: "10. Modifications & Termination", body: "South Jersey Vendor Market reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
       ].map(({ title, body }) => (
         <div key={title} style={{ marginBottom:28 }}>
           <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410', marginBottom:8 }}>{title}</div>
@@ -1847,7 +1851,7 @@ function TosPage({ setTab }) {
 
       <div style={{ background:'#1a1410', borderRadius:10, padding:'28px 32px', marginTop:32, textAlign:'center' }}>
         <div style={{ fontFamily:'Playfair Display,serif', fontSize:20, color:'#e8c97a', marginBottom:8 }}>Questions about our Terms?</div>
-        <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@sjvendormatch.com</p>
+        <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@sjvendormarket.com</p>
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
           <button className="btn-primary" onClick={()=>setTab('vendor')}>Join as a Vendor</button>
           <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
@@ -2050,18 +2054,18 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
   const blockedCount= Object.values(cal.dates||{}).filter(d=>d.status==='blocked').length;
 
   const generateICal = () => {
-    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//SJVendorMatch//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
+    const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//South Jersey Vendor Market//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
     Object.entries(cal.dates||{}).forEach(([ds,entry]) => {
       if (entry.status !== 'available') return;
       const d = ds.replace(/-/g,'');
       const summary = entry.startTime
-        ? `Available ${fmt12(entry.startTime)}–${fmt12(entry.endTime)} - SJVendorMatch`
-        : 'Available - SJVendorMatch';
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:${summary}`,`UID:avail-${d}@sjvendormatch`,'STATUS:TENTATIVE','END:VEVENT');
+        ? `Available ${fmt12(entry.startTime)}–${fmt12(entry.endTime)} - South Jersey Vendor Market`
+        : 'Available - South Jersey Vendor Market';
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:${summary}`,`UID:avail-${d}@sjvendormarket`,'STATUS:TENTATIVE','END:VEVENT');
     });
     (cal.bookedDates||[]).forEach(ds => {
       const d = ds.replace(/-/g,'');
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,'SUMMARY:BOOKED - SJVendorMatch',`UID:booked-${d}@sjvendormatch`,'STATUS:CONFIRMED','END:VEVENT');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,'SUMMARY:BOOKED - South Jersey Vendor Market',`UID:booked-${d}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
     });
     lines.push('END:VCALENDAR');
     return lines.join('\r\n');
@@ -2069,7 +2073,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
   const downloadICal = () => {
     const blob = new Blob([generateICal()], {type:'text/calendar'});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormatch-calendar.ics'; a.click();
+    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormarket-calendar.ics'; a.click();
   };
 
   const statusStyle = (ds) => {
