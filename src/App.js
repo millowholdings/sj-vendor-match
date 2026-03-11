@@ -582,14 +582,6 @@ function VendorForm({ onSubmit, setTab }) {
       </div>
 
       <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Documents & Photos</h3>
-      <div className="form-grid">
-        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" hint="JPG, PNG — products, booth setup, branding" /></div>
-        <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" hint="PDF or image — required for many events" /></div>
-        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" hint="PDF — helps hosts understand your offerings" /></div>
-      </div>
-
-      <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booking Preferences</h3>
       <div className="form-grid">
         <div className="form-group">
@@ -608,6 +600,16 @@ function VendorForm({ onSubmit, setTab }) {
           </select>
         </div>
       </div>
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Documents & Photos</h3>
+      <div className="form-grid">
+        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" hint="JPG, PNG — products, booth setup, branding" /></div>
+        <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" hint="PDF or image — required for many events" /></div>
+        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" hint="PDF — helps hosts understand your offerings" /></div>
+      </div>
+
+      
 
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
