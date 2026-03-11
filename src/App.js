@@ -116,7 +116,7 @@ const styles = `
   .app { min-height: 100vh; }
   .nav { background: #1a1410; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
   .nav-logo { display:flex; align-items:baseline; gap:6px; }
-  .nav-logo-cursive { font-family: 'Great Vibes', cursive; font-size: 28px; color: #e8c97a; line-height:1; }
+  .nav-logo-cursive { font-family: 'Great Vibes', cursive; font-size: 28px; color: #e8c97a; line-height:1; letter-spacing: -1px; }
   .nav-logo-serif { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; letter-spacing: 1px; font-weight:700; }
   .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
   .nav-tab { background: none; border: 1px solid transparent; color: #a89a8a; padding: 8px 18px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.2s; }
@@ -1510,7 +1510,7 @@ export default function App() {
             <div className="hero">
               <div className="hero-eyebrow">South Jersey's Vendor Marketplace</div>
               <h1 style={{display:'flex',flexDirection:'column',alignItems:'center',gap:4,marginBottom:8}}>
-                  <span style={{fontFamily:"'Great Vibes', cursive",fontSize:'clamp(48px,7vw,80px)',color:'#e8c97a',lineHeight:1.1,fontWeight:400}}>South Jersey</span>
+                  <span style={{fontFamily:"'Great Vibes', cursive",fontSize:'clamp(48px,7vw,80px)',color:'#e8c97a',lineHeight:1.1,fontWeight:400,letterSpacing:'-2px'}}>South Jersey</span>
                   <span style={{fontFamily:"'Playfair Display', serif",fontSize:'clamp(28px,4vw,48px)',color:'#fff',letterSpacing:2,fontWeight:700,textTransform:'uppercase'}}>Vendor Market</span>
                 </h1>
               <p style={{fontSize:16,color:'#c8b89a',maxWidth:560,margin:'0 auto 32px',lineHeight:1.7}}>Connecting vendors and events across South Jersey and Beyond</p>
