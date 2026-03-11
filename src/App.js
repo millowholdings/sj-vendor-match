@@ -336,10 +336,11 @@ function ZipInput({ label, value, onChange, hint }) {
 }
 
 // ─── Checkbox Group with Select All ──────────────────────────────────────────
-function CheckboxGroup({ label, options, selected, onChange }) {
+function CheckboxGroup({ label, options, selected, onChange, otherValue, onOtherChange }) {
   const allOn  = options.length > 0 && options.every(o => selected.includes(o));
   const toggle = val => onChange(selected.includes(val) ? selected.filter(v => v !== val) : [...selected, val]);
   const toggleAll = () => onChange(allOn ? selected.filter(s => !options.includes(s)) : [...new Set([...selected, ...options])]);
+  const showOther = options.includes('Other') && selected.includes('Other');
   return (
     <div className="checkbox-section">
       <div className="checkbox-section-header">
@@ -356,12 +357,23 @@ function CheckboxGroup({ label, options, selected, onChange }) {
           </label>
         ))}
       </div>
+      {showOther && (
+        <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid #e8ddd0'}}>
+          <input
+            placeholder="Please describe..."
+            value={otherValue||''}
+            onChange={e=>onOtherChange && onOtherChange(e.target.value)}
+            style={{width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'9px 12px',fontSize:14,
+              fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}}
+          />
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Category + Subcategory Picker ────────────────────────────────────────────
-function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChange, onSubcategoriesChange }) {
+function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChange, onSubcategoriesChange, otherCategory, onOtherCategoryChange, otherSubcategories, onOtherSubcategoryChange }) {
   const handleCatChange = newCats => {
     const valid = subcategories.filter(s => newCats.some(cat => (SUBCATEGORIES[cat]||[]).includes(s)));
     onCategoriesChange(newCats);
@@ -372,12 +384,22 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
     const others = subcategories.filter(s => !catSubs.includes(s));
     onSubcategoriesChange(allOn ? others : [...others, ...catSubs]);
   };
-  const toggleSub = sub => {
-    onSubcategoriesChange(subcategories.includes(sub) ? subcategories.filter(s => s !== sub) : [...subcategories, sub]);
+  const toggleSub = (sub, cat) => {
+    const isRemoving = subcategories.includes(sub);
+    onSubcategoriesChange(isRemoving ? subcategories.filter(s => s !== sub) : [...subcategories, sub]);
+    if (sub === 'Other') {
+      if (!isRemoving) {
+        // Mark this cat's Other as active (empty string = checked, no text yet)
+        onOtherSubcategoryChange && onOtherSubcategoryChange(cat, '');
+      } else {
+        // Remove this cat's Other entry
+        onOtherSubcategoryChange && onOtherSubcategoryChange(cat, null);
+      }
+    }
   };
   return (
     <>
-      <CheckboxGroup label="Your Categories *" options={CATEGORIES} selected={categories} onChange={handleCatChange} />
+      <CheckboxGroup label="Your Categories *" options={CATEGORIES} selected={categories} onChange={handleCatChange} otherValue={otherCategory||''} onOtherChange={v=>onOtherCategoryChange && onOtherCategoryChange(v)} />
       {categories.length > 0 && (
         <div className="subcat-block">
           <div style={{ fontSize:12, fontWeight:700, color:'#7a6a5a', textTransform:'uppercase', letterSpacing:1, marginBottom:16 }}>
@@ -397,11 +419,22 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
                 <div className="checkbox-grid">
                   {catSubs.map(sub => (
                     <label key={sub} className={`checkbox-item${subcategories.includes(sub) ? ' checked' : ''}`}>
-                      <input type="checkbox" checked={subcategories.includes(sub)} onChange={() => toggleSub(sub)} />
+                      <input type="checkbox" checked={subcategories.includes(sub)} onChange={() => toggleSub(sub, cat)} />
                       {sub}
                     </label>
                   ))}
                 </div>
+                {catSubs.includes('Other') && otherSubcategories && otherSubcategories[cat] !== undefined && (
+                  <div style={{marginTop:6,paddingTop:6,borderTop:'1px solid #e8ddd0'}}>
+                    <input
+                      placeholder={`Describe your "${cat}" subcategory...`}
+                      value={(otherSubcategories&&otherSubcategories[cat])||''}
+                      onChange={e=>onOtherSubcategoryChange && onOtherSubcategoryChange(cat, e.target.value)}
+                      style={{width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',
+                        fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}}
+                    />
+                  </div>
+                )}
               </div>
             );
           })}
@@ -430,6 +463,7 @@ function UploadZone({ label, hint }) {
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
 function VendorForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
+  const [otherSubcategories, setOtherSubcategories] = useState({});
   const [form, setForm] = useState({
     businessName:'', ownerName:'', email:'', phone:'',
     homeZip:'', radius:20,
@@ -486,11 +520,13 @@ function VendorForm({ onSubmit, setTab }) {
       <CategorySubcategoryPicker
         categories={form.categories} subcategories={form.subcategories}
         onCategoriesChange={v=>set('categories',v)} onSubcategoriesChange={v=>set('subcategories',v)}
+        otherCategory={form.otherCategory} onOtherCategoryChange={v=>set('otherCategory',v)}
+        otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Event Fit</h3>
-      <CheckboxGroup label="Event Types You're Open To" options={EVENT_TYPES} selected={form.eventTypes} onChange={v=>set('eventTypes',v)} />
+      <CheckboxGroup label="Event Types You're Open To" options={EVENT_TYPES} selected={form.eventTypes} onChange={v=>set('eventTypes',v)} otherValue={form.otherEventType} onOtherChange={v=>set('otherEventType',v)} />
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
@@ -588,6 +624,7 @@ function VendorForm({ onSubmit, setTab }) {
 // ─── Host Form ────────────────────────────────────────────────────────────────
 function HostForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
+  const [otherSubcategories, setOtherSubcategories] = useState({});
   const [form, setForm] = useState({
     orgName:'', contactName:'', email:'', phone:'',
     eventName:'', eventType:'', eventZip:'', address:'',
@@ -614,9 +651,9 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Event Name *</label><input placeholder="e.g. Haddonfield Holiday Market" value={form.eventName} onChange={e=>set('eventName',e.target.value)} /></div>
         <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set('eventType',e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
         {form.eventType === 'Other' && (
-          <div className="form-group">
-            <label>Describe your event type</label>
-            <input placeholder="e.g. Art Walk, Craft Fair, Food Truck Rally..." value={form.otherEventType} onChange={e=>set('otherEventType',e.target.value)} />
+          <div className="form-group" style={{marginTop:-4}}>
+            <input placeholder="Please describe your event type..." value={form.otherEventType} onChange={e=>set('otherEventType',e.target.value)}
+              style={{border:'1.5px solid #c8a84b',borderRadius:8,padding:'9px 12px',fontSize:14,fontFamily:'DM Sans,sans-serif',width:'100%',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />
           </div>
         )}
         <ZipInput label="Event Zip Code *" value={form.eventZip} onChange={v=>set('eventZip',v)} hint="Vendors whose travel radius covers this zip will be matched to your event" />
@@ -809,6 +846,7 @@ function HostForm({ onSubmit, setTab }) {
         onCategoriesChange={v=>set('vendorCategories',v)}
         onSubcategoriesChange={v=>set('vendorSubcategories',v)}
         otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
+        otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
 
       <hr className="form-divider" />
