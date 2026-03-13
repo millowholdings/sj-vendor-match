@@ -481,7 +481,7 @@ function VendorForm({ onSubmit, setTab }) {
     chargesPrivateFee:false, privateEventFee:150,
     acceptsDirectBooking:false, requiresTicketedEvents:false,
     otherCategory:'', otherEventType:'',
-    preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible',
+    preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
     setupTime:30, tableSize:'6ft', needsElectric:false,
     yearsActive:''
   });
@@ -670,6 +670,19 @@ function VendorForm({ onSubmit, setTab }) {
             <option value="asmany">As many as possible</option>
             <option value="flexible">Flexible</option>
           </select>
+        </div>
+
+        <div className="form-group">
+          <label>New Event Match Notifications</label>
+          <select value={form.emailFrequency} onChange={e=>set('emailFrequency',e.target.value)}>
+            <option value="instant">As soon as a match is posted</option>
+            <option value="daily">Daily digest</option>
+            <option value="weekly">Weekly roundup</option>
+            <option value="biweekly">Every two weeks</option>
+            <option value="monthly">Monthly only</option>
+            <option value="none">Don't email me — I'll check manually</option>
+          </select>
+          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>When new events matching your categories and location are posted from Facebook or other sources, how often would you like to be notified?</div>
         </div>
 
       </div>
