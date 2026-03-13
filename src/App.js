@@ -1378,8 +1378,19 @@ function OpportunitiesPage({ opps }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
             {list.map(opp => (
               <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden", transition:"all 0.2s" }}>
+                {opp.photoUrl && (
+                  <div style={{ position:'relative', height:160, overflow:'hidden' }}>
+                    <img src={opp.photoUrl} alt={opp.eventName}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                    <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(26,20,16,0.7) 100%)' }} />
+                    <div style={{ position:'absolute', bottom:10, left:14,
+                      display:'inline-block', background:'#e8c97a', color:'#1a1410',
+                      fontSize:10, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase',
+                      padding:'3px 10px', borderRadius:20 }}>{opp.source}</div>
+                  </div>
+                )}
                 <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"20px 24px" }}>
-                  <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>
+                  {!opp.photoUrl && <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>}
                   <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{opp.eventName}</div>
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
                 </div>
@@ -1420,15 +1431,16 @@ function OpportunitiesPage({ opps }) {
 
 // ─── Admin Post Form ──────────────────────────────────────────────────────────
 function AdminPostForm({ onPost }) {
-  const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", source:"Facebook Group" };
+  const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", source:"Facebook Group", photoUrl:"" };
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState(blank);
   const [posted, setPosted] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
   const submit = () => {
     if (!form.eventName||!form.eventType||!form.zip||!form.date) { alert("Please fill in Event Name, Type, Zip Code, and Date."); return; }
-    onPost({...form, id:Date.now(), spots:parseInt(form.spots)||0});
-    setForm(blank); setPosted(true); setTimeout(()=>setPosted(false),4000);
+    onPost({...form, id:Date.now(), spots:parseInt(form.spots)||0, photoUrl:photoPreview||""});
+    setForm(blank); setPhotoPreview(null); setPosted(true); setTimeout(()=>setPosted(false),4000);
   };
 
   return (
@@ -1458,6 +1470,44 @@ function AdminPostForm({ onPost }) {
           <CheckboxGroup label="Vendor Categories Needed" options={CATEGORIES} selected={form.categoriesNeeded} onChange={v=>set("categoriesNeeded",v)} />
         </div>
         <div className="form-group full"><label>Notes for Vendors</label><textarea placeholder="Tables provided? Tents required? Electric available? Insured vendors only?" value={form.notes} onChange={e=>set("notes",e.target.value)} /></div>
+      </div>
+      <div className="form-group full" style={{ marginTop:8 }}>
+        <label>Event Photo (optional)</label>
+        <div style={{ display:'flex', gap:16, alignItems:'flex-start', flexWrap:'wrap' }}>
+          <label style={{ flex:'0 0 auto', background:'#f5f0ea', border:'2px dashed #c8a84b', borderRadius:10,
+            padding:'18px 24px', cursor:'pointer', textAlign:'center', minWidth:160, transition:'all 0.2s' }}
+            onMouseEnter={e=>e.currentTarget.style.background='#fdf9f0'}
+            onMouseLeave={e=>e.currentTarget.style.background='#f5f0ea'}>
+            <input type="file" accept="image/*" style={{ display:'none' }}
+              onChange={e => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = ev => setPhotoPreview(ev.target.result);
+                reader.readAsDataURL(file);
+              }} />
+            <div style={{ fontSize:28, marginBottom:6 }}>📷</div>
+            <div style={{ fontSize:13, fontWeight:600, color:'#4a3a28' }}>Click to upload</div>
+            <div style={{ fontSize:11, color:'#a89a8a', marginTop:2 }}>JPG, PNG, WebP</div>
+          </label>
+          {photoPreview && (
+            <div style={{ position:'relative', flex:'0 0 auto' }}>
+              <img src={photoPreview} alt="Event preview"
+                style={{ width:160, height:120, objectFit:'cover', borderRadius:10, border:'2px solid #e8c97a', display:'block' }} />
+              <button onClick={()=>setPhotoPreview(null)}
+                style={{ position:'absolute', top:-8, right:-8, width:24, height:24, borderRadius:'50%',
+                  background:'#8b1a1a', color:'#fff', border:'none', cursor:'pointer', fontSize:13,
+                  display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>✕</button>
+              <div style={{ fontSize:11, color:'#7a6a5a', marginTop:4, textAlign:'center' }}>Preview</div>
+            </div>
+          )}
+          {!photoPreview && (
+            <div style={{ fontSize:12, color:'#a89a8a', alignSelf:'center', lineHeight:1.6 }}>
+              Add a flyer, banner, or event photo.<br />
+              Shows on the opportunity card for vendors.
+            </div>
+          )}
+        </div>
       </div>
       <div style={{ marginTop:24 }}>
         <button className="btn-submit" onClick={submit}>Post to Opportunities Board</button>
