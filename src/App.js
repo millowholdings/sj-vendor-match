@@ -481,6 +481,7 @@ function VendorForm({ onSubmit, setTab }) {
     chargesPrivateFee:false, privateEventFee:150,
     acceptsDirectBooking:false, requiresTicketedEvents:false,
     otherCategory:'', otherEventType:'',
+    preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible',
     setupTime:30, tableSize:'6ft', needsElectric:false,
     yearsActive:''
   });
@@ -605,6 +606,72 @@ function VendorForm({ onSubmit, setTab }) {
             <option value="yes">Yes — I only participate in ticketed events</option>
           </select>
         </div>
+      </div>
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Communication & Availability</h3>
+      <div className="form-grid">
+
+        <div className="form-group full">
+          <label>Preferred Contact Method(s)</label>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:4}}>
+            {[
+              {val:'platform',  label:'💬 Platform Messaging'},
+              {val:'email',     label:'📧 Email'},
+              {val:'phone',     label:'📞 Phone Call'},
+              {val:'text',      label:'💬 Text / SMS'},
+              {val:'facebook',  label:'📘 Facebook Messenger'},
+              {val:'instagram', label:'📷 Instagram DM'},
+              {val:'whatsapp',  label:'📱 WhatsApp'},
+            ].map(({val,label}) => {
+              const on = form.preferredContact.includes(val);
+              return (
+                <div key={val} onClick={()=>set('preferredContact', on ? form.preferredContact.filter(v=>v!==val) : [...form.preferredContact,val])}
+                  style={{padding:'8px 14px',borderRadius:20,cursor:'pointer',fontSize:13,fontWeight:600,userSelect:'none',transition:'all 0.15s',
+                    background:on?'#1a1410':'#f5f0ea', color:on?'#e8c97a':'#4a3a28',
+                    border:`2px solid ${on?'#c8a84b':'#e0d5c5'}`}}>
+                  {label}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>Select all that apply — hosts will see your preferred ways to connect.</div>
+        </div>
+
+        <div className="form-group">
+          <label>Typical Response Time</label>
+          <select value={form.responseTime} onChange={e=>set('responseTime',e.target.value)}>
+            <option value="fewhours">Within a few hours</option>
+            <option value="24hrs">Within 24 hours</option>
+            <option value="48hrs">Within 48 hours</option>
+            <option value="weekends">Weekends only</option>
+            <option value="flexible">Flexible</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Booking Lead Time Needed</label>
+          <select value={form.bookingLeadTime} onChange={e=>set('bookingLeadTime',e.target.value)}>
+            <option value="1week">At least 1 week</option>
+            <option value="2weeks">At least 2 weeks</option>
+            <option value="1month">At least 1 month</option>
+            <option value="2months">2+ months</option>
+            <option value="flexible">Flexible — last minute is fine</option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>How Often Do You Want to Vend?</label>
+          <select value={form.eventFrequency} onChange={e=>set('eventFrequency',e.target.value)}>
+            <option value="fewyear">A few times a year</option>
+            <option value="monthly">About once a month</option>
+            <option value="biweekly">2–3 times a month</option>
+            <option value="weekly">Weekly</option>
+            <option value="asmany">As many as possible</option>
+            <option value="flexible">Flexible</option>
+          </select>
+        </div>
+
       </div>
 
       <hr className="form-divider" />
