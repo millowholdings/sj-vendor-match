@@ -389,6 +389,7 @@ function CheckboxGroup({ label, options, selected, onChange, otherValue, onOther
       {showOther && (
         <div style={{marginTop:8,paddingTop:8,borderTop:'1px solid #e8ddd0'}}>
           <input
+            autoFocus
             placeholder="Please describe..."
             value={otherValue||''}
             onChange={e=>onOtherChange && onOtherChange(e.target.value)}
@@ -404,19 +405,32 @@ function CheckboxGroup({ label, options, selected, onChange, otherValue, onOther
 // ─── Category + Subcategory Picker ────────────────────────────────────────────
 function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChange, onSubcategoriesChange, otherCategory, onOtherCategoryChange, otherSubcategories, onOtherSubcategoryChange }) {
   const handleCatChange = newCats => {
-    const addedCats = newCats.filter(c => !categories.includes(c));
+    const addedCats   = newCats.filter(c => !categories.includes(c));
     const removedCats = categories.filter(c => !newCats.includes(c));
-    // Keep existing valid subcats, auto-add all subs for newly added categories
     const kept    = subcategories.filter(s => !removedCats.some(c => (SUBCATEGORIES[c]||[]).includes(s)));
     const autoAdd = addedCats.flatMap(c => SUBCATEGORIES[c] || []);
     const merged  = [...new Set([...kept, ...autoAdd])];
     onCategoriesChange(newCats);
     onSubcategoriesChange(merged);
+    // Show the Other text input for any newly added category whose subcats include Other
+    if (onOtherSubcategoryChange) {
+      addedCats.forEach(cat => {
+        if ((SUBCATEGORIES[cat] || []).includes('Other'))
+          onOtherSubcategoryChange(cat, '');
+      });
+      removedCats.forEach(cat => {
+        if ((SUBCATEGORIES[cat] || []).includes('Other'))
+          onOtherSubcategoryChange(cat, null);
+      });
+    }
   };
   const toggleSubAll = (cat, catSubs) => {
     const allOn  = catSubs.every(s => subcategories.includes(s));
     const others = subcategories.filter(s => !catSubs.includes(s));
     onSubcategoriesChange(allOn ? others : [...others, ...catSubs]);
+    // Show/hide the Other text input when Select All toggles Other in or out
+    if (catSubs.includes('Other') && onOtherSubcategoryChange)
+      onOtherSubcategoryChange(cat, allOn ? null : '');
   };
   const toggleSub = (sub, cat) => {
     const isRemoving = subcategories.includes(sub);
@@ -458,9 +472,10 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
                     </label>
                   ))}
                 </div>
-                {catSubs.includes('Other') && otherSubcategories && otherSubcategories[cat] !== undefined && (
+                {catSubs.includes('Other') && subcategories.includes('Other') && otherSubcategories && otherSubcategories[cat] !== undefined && (
                   <div style={{marginTop:6,paddingTop:6,borderTop:'1px solid #e8ddd0'}}>
                     <input
+                      autoFocus
                       placeholder={`Describe your "${cat}" subcategory...`}
                       value={(otherSubcategories&&otherSubcategories[cat])||''}
                       onChange={e=>onOtherSubcategoryChange && onOtherSubcategoryChange(cat, e.target.value)}
