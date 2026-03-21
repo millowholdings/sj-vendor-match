@@ -494,9 +494,59 @@ function UploadZone({ label, hint }) {
   );
 }
 
+// ─── TOS Modal ────────────────────────────────────────────────────────────────
+const TOS_SECTIONS = [
+  { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on South Jersey Vendor Market, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and South Jersey Vendor Market." },
+  { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through South Jersey Vendor Market — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through South Jersey Vendor Market, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. South Jersey Vendor Market reserves the right to remove violating users from the platform permanently." },
+  { title: "3. Vendor Responsibilities", body: "Vendors agree to: (a) provide accurate information about their business, products, pricing, insurance status, and availability; (b) honor commitments made through in-app messaging and booking; (c) maintain current and valid certificates of insurance where applicable; (d) conduct all platform communications through the in-app messaging system; (e) pay the applicable monthly subscription fee to maintain an active listing." },
+  { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
+  { title: "5. In-App Messaging & Communication", body: "South Jersey Vendor Market provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. South Jersey Vendor Market does not read private messages but may access them if a dispute is filed." },
+  { title: "6. Privacy & Data Protection", body: "South Jersey Vendor Market collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
+  { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $10/month or $100/year (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
+  { title: "8. Limitation of Liability", body: "South Jersey Vendor Market is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to South Jersey Vendor Market in the 3 months preceding any claim." },
+  { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@sjvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
+  { title: "10. Modifications & Termination", body: "South Jersey Vendor Market reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
+];
+
+function TosModal({ onClose }) {
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.7)', zIndex:1000, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+      <div onClick={e=>e.stopPropagation()} style={{ background:'#fdf9f5', borderRadius:12, width:'100%', maxWidth:720, maxHeight:'85vh', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,0.4)' }}>
+        {/* Header */}
+        <div style={{ background:'#1a1410', borderRadius:'12px 12px 0 0', padding:'20px 28px', display:'flex', alignItems:'center', justifyContent:'space-between', flexShrink:0 }}>
+          <div>
+            <div style={{ fontFamily:'Playfair Display,serif', fontSize:20, color:'#e8c97a' }}>Terms of Service</div>
+            <div style={{ fontSize:12, color:'#a89a8a', marginTop:2 }}>South Jersey Vendor Market Platform Agreement</div>
+          </div>
+          <button onClick={onClose} style={{ background:'none', border:'1px solid #ffffff30', color:'#fff', width:32, height:32, borderRadius:'50%', cursor:'pointer', fontSize:16, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>✕</button>
+        </div>
+        {/* Scrollable content */}
+        <div style={{ overflowY:'auto', padding:'28px', flex:1 }}>
+          {TOS_SECTIONS.map(({ title, body }) => (
+            <div key={title} style={{ marginBottom:24 }}>
+              <div style={{ fontFamily:'Playfair Display,serif', fontSize:16, color:'#1a1410', marginBottom:6 }}>{title}</div>
+              {body.split('\n\n').map((para, i) => (
+                <p key={i} style={{ fontSize:13, color:'#5a4a3a', lineHeight:1.8, marginBottom:6 }}>{para}</p>
+              ))}
+            </div>
+          ))}
+          <div style={{ fontSize:13, color:'#a89a8a', borderTop:'1px solid #e8ddd0', paddingTop:16, marginTop:8 }}>
+            Questions? Contact us at <strong>support@sjvendormarket.com</strong>
+          </div>
+        </div>
+        {/* Footer */}
+        <div style={{ borderTop:'1px solid #e8ddd0', padding:'16px 28px', display:'flex', justifyContent:'flex-end', flexShrink:0, background:'#fff', borderRadius:'0 0 12px 12px' }}>
+          <button onClick={onClose} style={{ background:'#1a1410', color:'#e8c97a', border:'none', padding:'10px 28px', borderRadius:6, fontSize:14, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif' }}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
 function VendorForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
+  const [showTos, setShowTos] = useState(false);
   const [otherSubcategories, setOtherSubcategories] = useState({});
   const [form, setForm] = useState({
     businessName:'', ownerName:'', email:'', phone:'',
@@ -725,10 +775,11 @@ function VendorForm({ onSubmit, setTab }) {
 
       
 
+      {showTos && <TosModal onClose={()=>setShowTos(false)} />}
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of South Jersey Vendor Market within 12 months is prohibited and subject to a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of South Jersey Vendor Market within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. <strong style={{ color:'#e8c97a' }}>Pay nothing until your first booking!!</strong> Then just $10/month or $100/year.</p>
@@ -740,6 +791,7 @@ function VendorForm({ onSubmit, setTab }) {
 // ─── Host Form ────────────────────────────────────────────────────────────────
 function HostForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
+  const [showTos, setShowTos] = useState(false);
   const [otherSubcategories, setOtherSubcategories] = useState({});
   const [form, setForm] = useState({
     orgName:'', contactName:'', email:'', phone:'',
@@ -986,8 +1038,9 @@ function HostForm({ onSubmit, setTab }) {
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
-          <span>I agree to the <button type="button" onClick={()=>setTab('tos')} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
+          <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
         </label>
+        {showTos && <TosModal onClose={()=>setShowTos(false)} />}
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
     </div>
