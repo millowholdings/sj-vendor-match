@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "./supabase";
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
@@ -86,23 +87,50 @@ function distanceMiles(zip1, zip2) {
 function isValidZip(zip) { return /^\d{5}$/.test(zip); }
 function isKnownZip(zip) { return !!ZIP_COORDS[zip]; }
 
-// ─── Sample Data ─────────────────────────────────────────────────────────────
-const SAMPLE_VENDORS = [
-  { id:1, name:"Subtle Boujee",           category:"Jewelry & Accessories", homeZip:"08033", radius:20, emoji:"💎", tags:["Handmade","Luxury","Custom"],              price:"$150–$300/day", matchScore:98, description:"Elevated handmade jewelry and accessories for every occasion.", insurance:true,  hasMinPurchase:true,  minPurchaseAmt:25,  chargesPrivateFee:true,  privateEventFee:200 },
-  { id:2, name:"Ian's Essentials",        category:"Health & Wellness",     homeZip:"08107", radius:15, emoji:"🌿", tags:["Organic","Self-care","Local"],              price:"$100–$200/day", matchScore:95, description:"Curated wellness and essential products made with care.", insurance:true,  hasMinPurchase:false, minPurchaseAmt:0,   chargesPrivateFee:false, privateEventFee:0   },
-  { id:3, name:"Shore Thing Candles",     category:"Candles & Home Decor",  homeZip:"08226", radius:30, emoji:"🕯️", tags:["Hand-poured","Shore-inspired","Gift-ready"], price:"$75–$150/day", matchScore:91, description:"Hand-poured soy candles inspired by South Jersey's shoreline.", insurance:false, hasMinPurchase:true,  minPurchaseAmt:15,  chargesPrivateFee:false, privateEventFee:0   },
-  { id:4, name:"Rooted & Raw Botanicals", category:"Plants & Floral",       homeZip:"08033", radius:20, emoji:"🌸", tags:["Sustainable","Seasonal","Local"],            price:"$200–$400/day", matchScore:88, description:"Locally grown plants, floral arrangements, and botanical wellness.", insurance:true },
-  { id:5, name:"The Dough Collective",    category:"Food & Beverage",       homeZip:"08057", radius:15, emoji:"🥐", tags:["Baked goods","Allergen-friendly","Custom"],  price:"$125–$250/day", matchScore:84, description:"Artisan baked goods with allergen-friendly options for every crowd.", insurance:true },
-  { id:6, name:"Pine Barrens Print Co.",  category:"Art & Prints",          homeZip:"08055", radius:25, emoji:"🎨", tags:["NJ-inspired","Photography","Custom framing"], price:"$80–$180/day", matchScore:79, description:"Photography and art prints celebrating New Jersey's landscapes.", insurance:false },
-];
+// ─── Supabase row → app shape converters ─────────────────────────────────────
+function dbVendorToApp(v) {
+  return {
+    id:                v.id,
+    name:              v.name,
+    category:          v.category,
+    subcategories:     v.subcategories  || [],
+    homeZip:           v.home_zip,
+    radius:            v.radius,
+    emoji:             v.emoji          || "🏪",
+    tags:              v.tags           || [],
+    price:             v.price          || "",
+    description:       v.description    || "",
+    insurance:         v.insurance      || false,
+    hasMinPurchase:    v.has_min_purchase    || false,
+    minPurchaseAmt:    v.min_purchase_amt    || 0,
+    chargesPrivateFee: v.charges_private_fee || false,
+    privateEventFee:   v.private_event_fee   || 0,
+    matchScore:        100,
+  };
+}
 
-
-// ─── Sample Opportunities ─────────────────────────────────────────────────────
-const SAMPLE_OPPS = [
-  { id:1, eventName:"Collingswood Spring Pop-Up Market", eventType:"Pop-Up Market", zip:"08107", date:"2026-04-12", startTime:"10:00", endTime:"16:00", boothFee:"$50/vendor", spots:20, categoriesNeeded:["Food & Beverage","Jewelry & Accessories","Art & Prints","Candles & Home Decor"], contactName:"Maria Lopez", contactEmail:"maria@collmarkets.com", contactPhone:"(856) 555-0101", fbLink:"https://facebook.com/events/", deadline:"2026-04-01", notes:"Outdoor market in Knight Park. Tables not provided. Electric available for 5 spots.", source:"Facebook Group" },
-  { id:2, eventName:"Haddonfield Summer Artisan Fair", eventType:"Community Festival", zip:"08033", date:"2026-06-07", startTime:"09:00", endTime:"17:00", boothFee:"Free (vendors keep all sales)", spots:35, categoriesNeeded:["Art & Prints","Crafts & Handmade","Jewelry & Accessories","Plants & Floral"], contactName:"Haddonfield Events Committee", contactEmail:"events@haddonfield.com", contactPhone:"(856) 555-0202", fbLink:"https://facebook.com/events/", deadline:"2026-05-15", notes:"Annual summer fair on Kings Highway. High foot traffic. Tents required.", source:"Facebook Group" },
-  { id:3, eventName:"Voorhees Wellness & Self-Care Expo", eventType:"Pop-Up Market", zip:"08043", date:"2026-03-29", startTime:"11:00", endTime:"15:00", boothFee:"$75/vendor", spots:12, categoriesNeeded:["Health & Wellness","Beauty & Skincare","Candles & Home Decor","Plants & Floral"], contactName:"Jasmine Reed", contactEmail:"jasmine@wellnessexpo.com", contactPhone:"(856) 555-0303", fbLink:"https://facebook.com/events/", deadline:"2026-03-20", notes:"Indoor venue. Tables provided. Insured vendors preferred.", source:"Host Submitted" },
-];
+function dbEventToApp(e) {
+  return {
+    id:               e.id,
+    eventName:        e.event_name,
+    eventType:        e.event_type,
+    zip:              e.zip,
+    date:             e.date,
+    startTime:        e.start_time ? e.start_time.slice(0, 5) : "",
+    endTime:          e.end_time   ? e.end_time.slice(0, 5)   : "",
+    boothFee:         e.booth_fee         || "",
+    spots:            e.spots             || 0,
+    categoriesNeeded: e.categories_needed || [],
+    contactName:      e.contact_name      || "",
+    contactEmail:     e.contact_email     || "",
+    contactPhone:     e.contact_phone     || "",
+    fbLink:           e.fb_link           || "",
+    deadline:         e.deadline          || "",
+    notes:            e.notes             || "",
+    source:           e.source            || "Host Submitted",
+    photoUrl:         e.photo_url         || "",
+  };
+}
 
 function fmtDate(d){ if(!d) return ""; const dt=new Date(d+"T12:00:00"); return dt.toLocaleDateString("en-US",{weekday:"short",month:"long",day:"numeric",year:"numeric"}); }
 function fmtTime(t){ if(!t) return ""; const [h,m]=t.split(":"); const hr=parseInt(h); return `${hr%12||12}:${m} ${hr>=12?"PM":"AM"}`; }
@@ -1076,7 +1104,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, isPaidHost, setHostPaid, vendorCalendars, setVendorCalendars }) {
+function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, isPaidHost, setHostPaid, vendorCalendars, setVendorCalendars }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterPrivate, setFilterPrivate] = useState('no');
@@ -1086,7 +1114,7 @@ function MatchesPage({ openMessage, sendBookingRequest, bookingRequests, setBook
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
   const isPrivate = filterPrivate === 'yes';
 
-  const enriched = SAMPLE_VENDORS
+  const enriched = vendors
     .filter(v => !filterCategory  || v.category === filterCategory)
     .filter(v => !filterInsurance || (filterInsurance==='yes' ? v.insurance : !v.insurance))
     .map(v => {
@@ -1259,7 +1287,7 @@ function PricingPage({ setTab }) {
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
-function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[] }) {
+function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
   return (
     <div className="section" style={{ maxWidth:1000 }}>
       <div className="section-title">Admin Dashboard</div>
@@ -1267,10 +1295,31 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[] }) {
       <div className="admin-grid">
         <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Opportunities</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendorSubs.length}</div><div className="admin-stat-label">Vendor Submissions</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">{SAMPLE_VENDORS.length}</div><div className="admin-stat-label">Active Vendors</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Active Vendors</div></div>
         <div className="admin-stat"><div className="admin-stat-num">$0</div><div className="admin-stat-label">Monthly Revenue</div></div>
       </div>
-      <AdminPostForm onPost={opp=>setOpps(prev=>[{...opp, source:opp.source||"Admin"}, ...prev])} />
+      <AdminPostForm onPost={async opp => {
+        const { data, error } = await supabase.from('events').insert({
+          event_name:        opp.eventName,
+          event_type:        opp.eventType,
+          zip:               opp.zip,
+          date:              opp.date,
+          start_time:        opp.startTime  || null,
+          end_time:          opp.endTime    || null,
+          booth_fee:         opp.boothFee,
+          spots:             opp.spots      || 0,
+          categories_needed: opp.categoriesNeeded,
+          contact_name:      opp.contactName,
+          contact_email:     opp.contactEmail,
+          contact_phone:     opp.contactPhone,
+          fb_link:           opp.fbLink,
+          deadline:          opp.deadline   || null,
+          notes:             opp.notes,
+          source:            opp.source     || "Admin",
+        }).select().single();
+        if (error) { console.error('Error posting event:', error); return; }
+        setOpps(prev => [dbEventToApp(data), ...prev]);
+      }} />
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Opportunities</h3>
       {opps.length===0
         ? <div className="empty-state"><div className="big">&#128221;</div><p>No opportunities posted yet.</p></div>
@@ -1523,8 +1572,23 @@ export default function App() {
   const [hostSuccess,   setHostSuccess]   = useState(false);
   const [hostEvent,     setHostEvent]     = useState(null);
   const [hostPaid,      setHostPaid]      = useState(false);
-  const [opps, setOpps] = useState(SAMPLE_OPPS);
+  const [vendors, setVendors] = useState([]);
+  const [opps, setOpps] = useState([]);
   const [vendorSubs, setVendorSubs] = useState([]);
+
+  useEffect(() => {
+    async function fetchData() {
+      const [{ data: vendorRows, error: vErr }, { data: eventRows, error: eErr }] = await Promise.all([
+        supabase.from('vendors').select('*').order('created_at', { ascending: false }),
+        supabase.from('events').select('*').order('date', { ascending: true }),
+      ]);
+      if (vErr) console.error('Failed to load vendors:', vErr);
+      else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
+      if (eErr) console.error('Failed to load events:', eErr);
+      else if (eventRows) setOpps(eventRows.map(dbEventToApp));
+    }
+    fetchData();
+  }, []);
   const [conversations, setConversations] = useState([]);
   const [activeConvoId, setActiveConvoId] = useState(null);
   const [tosTab, setTosTab] = useState(null);
@@ -1587,11 +1651,29 @@ export default function App() {
     setTab("messages");
   };
 
-  const handleVendorSubmit = form => {
+  const handleVendorSubmit = async form => {
     if (!form.businessName || !form.email || form.categories.length===0) {
       alert("Please fill in Business Name, Email, and at least one Category.");
       return;
     }
+    const { error } = await supabase.from('vendors').insert({
+      name:                form.businessName,
+      category:            form.categories[0],
+      subcategories:       form.subcategories  || [],
+      home_zip:            form.homeZip,
+      radius:              form.radius,
+      tags:                [],
+      description:         form.description,
+      has_min_purchase:    form.hasMinPurchase,
+      min_purchase_amt:    form.minPurchaseAmt  || 0,
+      charges_private_fee: form.chargesPrivateFee,
+      private_event_fee:   form.privateEventFee  || 0,
+      contact_email:       form.email,
+      contact_phone:       form.phone    || null,
+      website:             form.website  || null,
+      instagram:           form.instagram || null,
+    });
+    if (error) console.error('Vendor submit error:', error);
     setVendorSubs(v => [form, ...v]);
     setVendorSuccess(true);
     window.scrollTo({top:0, behavior:"smooth"});
@@ -1736,10 +1818,10 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
+        {tab==="matches"      && <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage tosTab={tosTab} setTosTab={setTosTab} setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId || 1} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
