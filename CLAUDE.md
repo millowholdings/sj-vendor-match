@@ -8,6 +8,9 @@ This is **South Jersey Vendor Market** — a React single-page app that connects
 - **Database:** Supabase (PostgreSQL) — project URL: https://grujbzmknbfyylwfonev.supabase.co
 - **Repo:** https://github.com/millowholdings/sj-vendor-match
 
+## Git & Shell Permissions
+When prompted with "Compound commands with cd and git require approval to prevent bare repository attacks", **always choose Option 1** (allow/approve).
+
 ## After Every Successful Change
 **Always commit and push to GitHub after every successful change.** This triggers an automatic Vercel deployment to the live site.
 
