@@ -572,29 +572,56 @@ function TosModal({ onClose }) {
 }
 
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
+const VENDOR_DRAFT_KEY      = 'sjvm_vendor_draft';
+const VENDOR_DRAFT_SUBS_KEY = 'sjvm_vendor_draft_subs';
+const DEFAULT_VENDOR_FORM = {
+  businessName:'', ownerName:'', email:'', phone:'',
+  homeZip:'', radius:20,
+  categories:[], subcategories:[],
+  description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
+  eventTypes:[],
+  price:'', priceMax:0,
+  insurance:false,
+  hasMinPurchase:false, minPurchaseAmt:25,
+  chargesPrivateFee:false, privateEventFee:150,
+  acceptsDirectBooking:false, requiresTicketedEvents:false,
+  otherCategory:'', otherEventType:'',
+  preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
+  setupTime:30, tableSize:'6ft', needsElectric:false,
+  yearsActive:''
+};
+
 function VendorForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
-  const [otherSubcategories, setOtherSubcategories] = useState({});
-  const [form, setForm] = useState({
-    businessName:'', ownerName:'', email:'', phone:'',
-    homeZip:'', radius:20,
-    categories:[], subcategories:[],
-    description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
-    eventTypes:[],
-    price:'', priceMax:0,
-    insurance:false,
-    hasMinPurchase:false, minPurchaseAmt:25,
-    chargesPrivateFee:false, privateEventFee:150,
-    acceptsDirectBooking:false, requiresTicketedEvents:false,
-    otherCategory:'', otherEventType:'',
-    preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
-    setupTime:30, tableSize:'6ft', needsElectric:false,
-    yearsActive:''
+  const [hasDraft] = useState(() => !!localStorage.getItem(VENDOR_DRAFT_KEY));
+  const [otherSubcategories, setOtherSubcategories] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(VENDOR_DRAFT_SUBS_KEY) || '{}'); }
+    catch { return {}; }
   });
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(VENDOR_DRAFT_KEY);
+      return saved ? { ...DEFAULT_VENDOR_FORM, ...JSON.parse(saved) } : DEFAULT_VENDOR_FORM;
+    } catch { return DEFAULT_VENDOR_FORM; }
+  });
+  useEffect(() => { localStorage.setItem(VENDOR_DRAFT_KEY, JSON.stringify(form)); }, [form]);
+  useEffect(() => { localStorage.setItem(VENDOR_DRAFT_SUBS_KEY, JSON.stringify(otherSubcategories)); }, [otherSubcategories]);
+  const clearDraft = () => {
+    localStorage.removeItem(VENDOR_DRAFT_KEY);
+    localStorage.removeItem(VENDOR_DRAFT_SUBS_KEY);
+    setForm(DEFAULT_VENDOR_FORM);
+    setOtherSubcategories({});
+  };
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
   return (
     <div className="form-card">
+      {hasDraft && (
+        <div style={{ background:'#fdf4dc', border:'1px solid #ffd966', borderRadius:8, padding:'12px 16px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+          <div style={{ fontSize:14, color:'#7a5a10' }}>📋 <strong>Draft restored</strong> — your previously entered information has been loaded.</div>
+          <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
+        </div>
+      )}
       <h2 className="form-section-title"><span className="dot" />Vendor Profile</h2>
       <p style={{ color:'#7a6a5a', marginBottom:32, fontSize:15 }}>
         Join South Jersey's premier vendor network. Get matched with events and hosts looking for exactly what you offer.
@@ -824,7 +851,7 @@ function VendorForm({ onSubmit, setTab }) {
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
           <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of South Jersey Vendor Market within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
-        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
+        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(VENDOR_DRAFT_KEY); localStorage.removeItem(VENDOR_DRAFT_SUBS_KEY); onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. <strong style={{ color:'#e8c97a' }}>Pay nothing until your first booking!!</strong> Then just $10/month or $100/year.</p>
       </div>
     </div>
@@ -832,24 +859,51 @@ function VendorForm({ onSubmit, setTab }) {
 }
 
 // ─── Host Form ────────────────────────────────────────────────────────────────
+const HOST_DRAFT_KEY      = 'sjvm_host_draft';
+const HOST_DRAFT_SUBS_KEY = 'sjvm_host_draft_subs';
+const DEFAULT_HOST_FORM = {
+  orgName:'', contactName:'', email:'', phone:'',
+  eventName:'', eventType:'', eventZip:'', address:'',
+  date:'', startTime:'', endTime:'',
+  isRecurring:false, recurrenceFrequency:'weekly', recurrenceDay:'Saturday', recurrenceWeekInterval:1, recurrenceMonthType:'dayofweek', recurrenceMonthWeek:'1st', recurrenceMonthDay:'Saturday', recurrenceEndType:'never', recurrenceEndDate:'', recurrenceCount:4, recurrenceNotes:'',
+  expectedAttendance:'', indoorOutdoor:'outdoor',
+  vendorCategories:[], vendorSubcategories:[], vendorCount:5,
+  electricAvailable:true, tableProvided:false,
+  budget:'', minPurchaseCover:0, isPrivateEvent:false, privatePerVendor:0, privateTotalBudget:0,
+  isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', managedBooking:false
+};
+
 function HostForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
-  const [otherSubcategories, setOtherSubcategories] = useState({});
-  const [form, setForm] = useState({
-    orgName:'', contactName:'', email:'', phone:'',
-    eventName:'', eventType:'', eventZip:'', address:'',
-    date:'', startTime:'', endTime:'',
-    isRecurring:false, recurrenceFrequency:'weekly', recurrenceDay:'Saturday', recurrenceWeekInterval:1, recurrenceMonthType:'dayofweek', recurrenceMonthWeek:'1st', recurrenceMonthDay:'Saturday', recurrenceEndType:'never', recurrenceEndDate:'', recurrenceCount:4, recurrenceNotes:'',
-    expectedAttendance:'', indoorOutdoor:'outdoor',
-    vendorCategories:[], vendorSubcategories:[], vendorCount:5,
-    electricAvailable:true, tableProvided:false,
-    budget:'', minPurchaseCover:0, isPrivateEvent:false, privatePerVendor:0, privateTotalBudget:0,
-    isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', otherVendorCategory:'', notes:'', managedBooking:false
+  const [hasDraft] = useState(() => !!localStorage.getItem(HOST_DRAFT_KEY));
+  const [otherSubcategories, setOtherSubcategories] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(HOST_DRAFT_SUBS_KEY) || '{}'); }
+    catch { return {}; }
   });
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(HOST_DRAFT_KEY);
+      return saved ? { ...DEFAULT_HOST_FORM, ...JSON.parse(saved) } : DEFAULT_HOST_FORM;
+    } catch { return DEFAULT_HOST_FORM; }
+  });
+  useEffect(() => { localStorage.setItem(HOST_DRAFT_KEY, JSON.stringify(form)); }, [form]);
+  useEffect(() => { localStorage.setItem(HOST_DRAFT_SUBS_KEY, JSON.stringify(otherSubcategories)); }, [otherSubcategories]);
+  const clearDraft = () => {
+    localStorage.removeItem(HOST_DRAFT_KEY);
+    localStorage.removeItem(HOST_DRAFT_SUBS_KEY);
+    setForm(DEFAULT_HOST_FORM);
+    setOtherSubcategories({});
+  };
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
   return (
     <div className="form-card">
+      {hasDraft && (
+        <div style={{ background:'#fdf4dc', border:'1px solid #ffd966', borderRadius:8, padding:'12px 16px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+          <div style={{ fontSize:14, color:'#7a5a10' }}>📋 <strong>Draft restored</strong> — your previously entered information has been loaded.</div>
+          <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
+        </div>
+      )}
       <h2 className="form-section-title"><span className="dot" />Host an Event</h2>
       <p style={{ color:'#7a6a5a', marginBottom:32, fontSize:15 }}>
         Tell us about your event and we'll match you with the perfect South Jersey vendors — based on your event zip code and the categories you need.
@@ -1084,7 +1138,7 @@ function HostForm({ onSubmit, setTab }) {
           <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
         </label>
         {showTos && <TosModal onClose={()=>setShowTos(false)} />}
-        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
+        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
     </div>
   );
