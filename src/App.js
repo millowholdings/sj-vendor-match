@@ -498,12 +498,25 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
   );
 }
 
-function UploadZone({ label, hint }) {
-  const [uploaded, setUploaded] = useState(false);
+function UploadZone({ label, hint, accept, onChange }) {
+  const [fileName, setFileName] = useState(null);
+  const inputRef = useRef(null);
   return (
-    <div className="upload-zone" onClick={() => setUploaded(u => !u)}>
-      <div className="upload-icon">{uploaded ? '✅' : '📎'}</div>
-      <div style={{ fontWeight:600, marginBottom:4 }}>{uploaded ? `${label} uploaded!` : `Upload ${label}`}</div>
+    <div className="upload-zone" onClick={() => inputRef.current?.click()}>
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        style={{ display:'none' }}
+        onChange={e => {
+          const file = e.target.files[0];
+          if (!file) return;
+          setFileName(file.name);
+          onChange && onChange(file);
+        }}
+      />
+      <div className="upload-icon">{fileName ? '✅' : '📎'}</div>
+      <div style={{ fontWeight:600, marginBottom:4 }}>{fileName ? fileName : `Upload ${label}`}</div>
       <div style={{ fontSize:13, color:'#a89a8a' }}>{hint}</div>
     </div>
   );
@@ -569,7 +582,8 @@ function VendorForm({ onSubmit, setTab }) {
     categories:[], subcategories:[],
     description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
     eventTypes:[],
-    priceMax:0,
+    price:'', priceMax:0,
+    insurance:false,
     hasMinPurchase:false, minPurchaseAmt:25,
     chargesPrivateFee:false, privateEventFee:150,
     acceptsDirectBooking:false, requiresTicketedEvents:false,
@@ -631,6 +645,18 @@ function VendorForm({ onSubmit, setTab }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
+        <div className="form-group"><label>Your Pricing Range *</label>
+          <input placeholder="e.g. $150–$300/day or $50–$100/item" value={form.price} onChange={e=>set('price',e.target.value)} />
+          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>What hosts will see on your vendor profile card.</div>
+        </div>
+        <div className="form-group">
+          <label>Do You Carry Liability Insurance?</label>
+          <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
+            <option value="no">No — I do not carry liability insurance</option>
+            <option value="yes">Yes — I have a certificate of insurance (COI)</option>
+          </select>
+          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
+        </div>
         <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
           <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
             <option value={0}>Free / No fee</option>
@@ -783,9 +809,11 @@ function VendorForm({ onSubmit, setTab }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Documents & Photos</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" hint="JPG, PNG — products, booth setup, branding" /></div>
-        <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" hint="PDF or image — required for many events" /></div>
-        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" hint="PDF — helps hosts understand your offerings" /></div>
+        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" accept="image/*" hint="JPG, PNG — products, booth setup, branding" /></div>
+        {form.insurance && (
+          <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" accept=".pdf,image/*" hint="PDF or image — required for many events" /></div>
+        )}
+        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" accept=".pdf,image/*" hint="PDF — helps hosts understand your offerings" /></div>
       </div>
 
       
@@ -1731,7 +1759,9 @@ export default function App() {
       home_zip:            form.homeZip,
       radius:              form.radius,
       tags:                [],
+      price:               form.price           || null,
       description:         form.description,
+      insurance:           form.insurance,
       has_min_purchase:    form.hasMinPurchase,
       min_purchase_amt:    form.minPurchaseAmt  || 0,
       charges_private_fee: form.chargesPrivateFee,
