@@ -12,7 +12,7 @@ This is **South Jersey Vendor Market** — a React single-page app that connects
 When prompted with "Compound commands with cd and git require approval to prevent bare repository attacks", **always choose Option 1** (allow/approve).
 
 ## After Every Successful Change
-**Always commit and push to GitHub after every successful change.** This triggers an automatic Vercel deployment to the live site.
+**Always commit and push to GitHub immediately after every successful change — do not ask for confirmation.** This triggers an automatic Vercel deployment to the live site.
 
 Use a clear, descriptive commit message summarizing what was changed and why.
 
