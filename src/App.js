@@ -2770,10 +2770,11 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [dayView,   setDayView]   = useState(null); // null = month view, 'YYYY-MM-DD' = day view
   const [showIcalInfo, setShowIcalInfo] = useState(false);
 
   const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const DAYS_FULL  = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   const MONTHS     = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
@@ -2788,6 +2789,8 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
     const ampm = h >= 12 ? 'PM' : 'AM';
     return `${((h%12)||12)}:${String(m).padStart(2,'0')} ${ampm}`;
   };
+
+  const fmtDate = (ds, opts) => ds ? new Date(ds+'T12:00').toLocaleDateString('en-US', opts) : '';
 
   // Navigate to event month on load
   useEffect(() => {
@@ -2821,29 +2824,38 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
 
   const getRequests = (ds) => requestsByDate[ds] || [];
 
-  const cellStyle = (ds) => {
+  const STATUS_META = {
+    pending:  { bg:'#fdf4dc', color:'#7a5a10', border:'#ffd966', label:'Pending',     icon:'⏳' },
+    accepted: { bg:'#d4f4e0', color:'#1a6b3a', border:'#b8e8c8', label:'Accepted',    icon:'✅' },
+    declined: { bg:'#fdecea', color:'#8b1a1a', border:'#f5c6c6', label:'Declined',    icon:'❌' },
+    cancelled:{ bg:'#f0f0f0', color:'#7a7a7a', border:'#d0d0d0', label:'Cancelled',   icon:'🚫' },
+  };
+
+  const cellMeta = (ds) => {
     const reqs = getRequests(ds);
     const isEv = allEventDates.has(ds);
-    const hasAccepted = reqs.some(r => r.status === 'accepted');
-    const hasPending  = reqs.some(r => r.status === 'pending');
-    if (isEv && hasAccepted) return { bg: '#1a6b3a', color: '#fff',    border: '#1a6b3a' };
-    if (isEv && hasPending)  return { bg: '#c8a84b', color: '#1a1410', border: '#c8a84b' };
-    if (isEv)                return { bg: '#fdf4dc', color: '#7a5a10', border: '#e8c97a' };
-    return                          { bg: '#f5f0ea', color: '#9a8a7a', border: '#e0d5c5' };
+    const accepted = reqs.filter(r => r.status === 'accepted').length;
+    const pending  = reqs.filter(r => r.status === 'pending').length;
+    if (isEv && accepted > 0) return { bg:'#1a6b3a', color:'#fff',    border:'#1a6b3a', dot:'#a3e8bb' };
+    if (isEv && pending  > 0) return { bg:'#c8a84b', color:'#1a1410', border:'#c8a84b', dot:'#1a1410' };
+    if (isEv)                 return { bg:'#fdf4dc', color:'#7a5a10', border:'#e8c97a', dot:'#c8a84b' };
+    return                           { bg:'#f5f0ea', color:'#c0b0a0', border:'#e0d5c5', dot:null      };
   };
 
   const generateICal = () => {
     const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//South Jersey Vendor Market//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
     if (hostEvent?.date) {
       const d = hostEvent.date.replace(/-/g,'');
-      const summary = `${hostEvent.eventName || hostEvent.eventType || 'My Event'} - South Jersey Vendor Market`;
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:${summary}`,`UID:event-${d}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,
+        `SUMMARY:${hostEvent.eventName || hostEvent.eventType || 'My Event'} - South Jersey Vendor Market`,
+        `UID:event-${d}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
     }
     bookingRequests.filter(r => r.status === 'accepted').forEach(req => {
       const d = (req.eventDate||'').replace(/-/g,'');
       if (!d) return;
-      const summary = `Booked: ${req.vendorName} (${req.vendorCategory})`;
-      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,`SUMMARY:${summary}`,`UID:booking-${req.id}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
+      lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,
+        `SUMMARY:Booked: ${req.vendorName} (${req.vendorCategory})`,
+        `UID:booking-${req.id}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
     });
     lines.push('END:VCALENDAR');
     return lines.join('\r\n');
@@ -2854,6 +2866,7 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormarket-host-calendar.ics'; a.click();
   };
 
+  // ── Empty state ──────────────────────────────────────────────────────────────
   if (!hostEvent) {
     return (
       <div className="section" style={{maxWidth:700, textAlign:'center'}}>
@@ -2868,28 +2881,204 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
     );
   }
 
-  const selectedReqs = selectedDate ? getRequests(selectedDate) : [];
-  const isSelectedEventDay = selectedDate && allEventDates.has(selectedDate);
+  // ── Day view ─────────────────────────────────────────────────────────────────
+  if (dayView) {
+    const dayReqs   = getRequests(dayView);
+    const isEvDay   = allEventDates.has(dayView);
+    const dayOfWeek = DAYS_FULL[new Date(dayView+'T12:00').getDay()];
+    const accepted  = dayReqs.filter(r => r.status === 'accepted');
+    const pending   = dayReqs.filter(r => r.status === 'pending');
+    const others    = dayReqs.filter(r => r.status !== 'accepted' && r.status !== 'pending');
+    const ordered   = [...accepted, ...pending, ...others];
 
+    return (
+      <div className="section" style={{maxWidth:800}}>
+        {/* Back nav */}
+        <button onClick={()=>setDayView(null)}
+          style={{background:'none',border:'none',color:'#c8a84b',fontSize:14,fontWeight:700,cursor:'pointer',
+            fontFamily:'DM Sans,sans-serif',padding:'0 0 20px 0',display:'flex',alignItems:'center',gap:6}}>
+          ← Back to Calendar
+        </button>
+
+        {/* Day header */}
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:13,color:'#a89a8a',fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:4}}>{dayOfWeek}</div>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:36,color:'#1a1410',lineHeight:1.1}}>
+            {fmtDate(dayView,{month:'long',day:'numeric',year:'numeric'})}
+          </div>
+        </div>
+
+        {/* Event block */}
+        {isEvDay && (
+          <div style={{background:'#1a1410',borderRadius:12,padding:'18px 22px',marginBottom:24}}>
+            <div style={{fontSize:11,letterSpacing:'2px',textTransform:'uppercase',color:'#c8a84b',marginBottom:4}}>Your Event</div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:22,color:'#e8c97a',marginBottom:6}}>
+              {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
+            </div>
+            <div style={{display:'flex',flexWrap:'wrap',gap:16}}>
+              {hostEvent.eventType && <div style={{fontSize:13,color:'#a89a8a'}}>🎪 {hostEvent.eventType}</div>}
+              {hostEvent.startTime && (
+                <div style={{fontSize:13,color:'#a89a8a'}}>
+                  🕐 {fmt12(hostEvent.startTime)}{hostEvent.endTime ? ` – ${fmt12(hostEvent.endTime)}` : ''}
+                </div>
+              )}
+              {hostEvent.address && <div style={{fontSize:13,color:'#a89a8a'}}>📍 {hostEvent.address}{hostEvent.eventZip ? `, ${hostEvent.eventZip}` : ''}</div>}
+              {hostEvent.expectedAttendance && <div style={{fontSize:13,color:'#a89a8a'}}>👥 {hostEvent.expectedAttendance} expected</div>}
+              {hostEvent.vendorCount && <div style={{fontSize:13,color:'#a89a8a'}}>🏪 {hostEvent.vendorCount} vendor spots</div>}
+              {hostEvent.budget && <div style={{fontSize:13,color:'#a89a8a'}}>💰 {hostEvent.budget} budget</div>}
+            </div>
+            {hostEvent.notes && (
+              <div style={{marginTop:10,fontSize:13,color:'#7a6a5a',fontStyle:'italic',lineHeight:1.6}}>"{hostEvent.notes}"</div>
+            )}
+          </div>
+        )}
+
+        {/* Vendor lineup */}
+        <div style={{marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#1a1410'}}>
+            Vendor Lineup
+          </div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {accepted.length > 0 && (
+              <div style={{background:'#d4f4e0',color:'#1a6b3a',border:'1px solid #b8e8c8',borderRadius:20,padding:'3px 12px',fontSize:12,fontWeight:700}}>
+                {accepted.length} confirmed
+              </div>
+            )}
+            {pending.length > 0 && (
+              <div style={{background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:20,padding:'3px 12px',fontSize:12,fontWeight:700}}>
+                {pending.length} pending
+              </div>
+            )}
+          </div>
+        </div>
+
+        {ordered.length === 0 ? (
+          <div style={{background:'#f5f0ea',borderRadius:12,border:'1px solid #e8ddd0',padding:32,textAlign:'center'}}>
+            <div style={{fontSize:32,marginBottom:12}}>🏪</div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#4a3a28',marginBottom:8}}>No vendor requests yet</div>
+            <p style={{fontSize:13,color:'#7a6a5a',marginBottom:20}}>Send booking requests to vendors you'd like at this event.</p>
+            <button onClick={()=>setTab('matches')}
+              style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',
+                fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              Browse Vendors →
+            </button>
+          </div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {ordered.map(req => {
+              const sm = STATUS_META[req.status] || STATUS_META.pending;
+              return (
+                <div key={req.id} style={{background:'#fff',borderRadius:12,border:`1.5px solid ${sm.border}`,overflow:'hidden',
+                  boxShadow:'0 2px 8px rgba(0,0,0,0.06)'}}>
+                  {/* Card header */}
+                  <div style={{background:sm.bg,padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10}}>
+                      <div style={{fontSize:28}}>{req.vendorEmoji || '🏪'}</div>
+                      <div>
+                        <div style={{fontWeight:700,color:'#1a1410',fontSize:16}}>{req.vendorName}</div>
+                        <div style={{fontSize:12,color:'#7a6a5a'}}>{req.vendorCategory}</div>
+                      </div>
+                    </div>
+                    <div style={{background:'#fff',color:sm.color,border:`1.5px solid ${sm.border}`,
+                      borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:700,
+                      display:'flex',alignItems:'center',gap:5}}>
+                      {sm.icon} {sm.label}
+                    </div>
+                  </div>
+                  {/* Card body */}
+                  <div style={{padding:'14px 18px'}}>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:req.vendorMessage?12:0}}>
+                      {req.startTime && (
+                        <div style={{fontSize:13,color:'#4a3a28'}}>
+                          🕐 <span style={{color:'#7a6a5a'}}>{fmt12(req.startTime)}{req.endTime ? ` – ${fmt12(req.endTime)}` : ''}</span>
+                        </div>
+                      )}
+                      {req.budget && (
+                        <div style={{fontSize:13,color:'#4a3a28'}}>
+                          💰 <span style={{color:'#7a6a5a'}}>{req.budget}</span>
+                        </div>
+                      )}
+                      {req.sentAt && (
+                        <div style={{fontSize:12,color:'#a89a8a'}}>
+                          Requested {new Date(req.sentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+                        </div>
+                      )}
+                      {req.respondedAt && (
+                        <div style={{fontSize:12,color:'#a89a8a'}}>
+                          · Responded {new Date(req.respondedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+                        </div>
+                      )}
+                    </div>
+                    {req.vendorMessage && (
+                      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,
+                        padding:'10px 14px',fontSize:13,color:'#4a3a28',fontStyle:'italic',lineHeight:1.6}}>
+                        "{req.vendorMessage}"
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Day footer actions */}
+        <div style={{marginTop:24,display:'flex',gap:10,flexWrap:'wrap'}}>
+          <button onClick={()=>setDayView(null)}
+            style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
+              padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            ← Back to Calendar
+          </button>
+          <button onClick={()=>setTab('matches')}
+            style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+              padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            Browse More Vendors →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Month view ───────────────────────────────────────────────────────────────
   return (
     <div className="section" style={{maxWidth:960}}>
       <div className="section-title">My Event Calendar</div>
-      <p className="section-sub">Track your event dates and manage vendor booking requests.</p>
+      <p className="section-sub">Click any day to see your event details and vendor bookings.</p>
 
       {/* Event summary banner */}
-      <div style={{background:'#1a1410',borderRadius:12,padding:'14px 20px',marginBottom:20,display:'flex',flexWrap:'wrap',gap:16,alignItems:'center'}}>
+      <div style={{background:'#1a1410',borderRadius:12,padding:'14px 20px',marginBottom:20,
+        display:'flex',flexWrap:'wrap',gap:16,alignItems:'center'}}>
         <div style={{flex:1,minWidth:200}}>
           <div style={{fontSize:11,letterSpacing:'2px',textTransform:'uppercase',color:'#c8a84b',marginBottom:3}}>Current Event</div>
-          <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a'}}>{hostEvent.eventName || hostEvent.eventType || 'Your Event'}</div>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a'}}>
+            {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
+          </div>
           {hostEvent.date && (
             <div style={{fontSize:13,color:'#a89a8a',marginTop:2}}>
-              {new Date(hostEvent.date+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
+              {fmtDate(hostEvent.date,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
               {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
             </div>
           )}
-          {hostEvent.address && <div style={{fontSize:12,color:'#7a6a5a',marginTop:2}}>{hostEvent.address}{hostEvent.eventZip ? `, ${hostEvent.eventZip}` : ''}</div>}
+          {hostEvent.address && (
+            <div style={{fontSize:12,color:'#7a6a5a',marginTop:2}}>
+              {hostEvent.address}{hostEvent.eventZip ? `, ${hostEvent.eventZip}` : ''}
+            </div>
+          )}
         </div>
-        <button onClick={()=>setTab('matches')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'9px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>Browse Vendors →</button>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {hostEvent.date && (
+            <button onClick={()=>setDayView(hostEvent.date)}
+              style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'9px 16px',
+                fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
+              View Event Day →
+            </button>
+          )}
+          <button onClick={()=>setTab('matches')}
+            style={{background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',borderRadius:8,padding:'9px 16px',
+              fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
+            Browse Vendors
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -2909,131 +3098,110 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
 
       <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
 
-        {/* Calendar */}
-        <div style={{flex:'1 1 380px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
+        {/* Calendar grid */}
+        <div style={{flex:'1 1 420px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',
+          overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
           <div style={{background:'#1a1410',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <button onClick={prevMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>‹</button>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#e8c97a'}}>{MONTHS[viewMonth]} {viewYear}</div>
             <button onClick={nextMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>›</button>
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f5f0ea',borderBottom:'1px solid #e8ddd0'}}>
-            {DAYS_SHORT.map(d=><div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>)}
+            {DAYS_SHORT.map(d=>(
+              <div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>
+            ))}
           </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,padding:8}}>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3,padding:10}}>
             {Array(firstDay).fill(null).map((_,i)=><div key={`e${i}`}/>)}
             {Array(daysInMonth).fill(null).map((_,i)=>{
-              const d = i+1;
+              const d  = i+1;
               const ds = dateStr(d);
-              const ss = cellStyle(ds);
+              const cm = cellMeta(ds);
               const reqs = getRequests(ds);
               const isEv = allEventDates.has(ds);
-              const isSel = ds === selectedDate;
+              const acc  = reqs.filter(r=>r.status==='accepted').length;
+              const pend = reqs.filter(r=>r.status==='pending').length;
+              const isToday = ds === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
               return (
                 <div key={d}
-                  onClick={()=>setSelectedDate(isSel ? null : ds)}
-                  style={{background:ss.bg,color:ss.color,
-                    border:`2px solid ${isSel?'#c8a84b':ss.border}`,
-                    borderRadius:8,padding:'6px 2px',textAlign:'center',cursor:'pointer',
-                    fontSize:13,fontWeight:600,transition:'all 0.15s',userSelect:'none',
-                    boxShadow:isSel?'0 0 0 3px rgba(200,168,75,0.35)':'none',
-                    transform:isSel?'scale(1.05)':'scale(1)',minHeight:46}}>
+                  onClick={()=>{ if(isEv || reqs.length>0) setDayView(ds); }}
+                  style={{background:cm.bg,color:cm.color,border:`2px solid ${cm.border}`,
+                    borderRadius:8,padding:'6px 4px',textAlign:'center',
+                    cursor:(isEv||reqs.length>0)?'pointer':'default',
+                    fontSize:13,fontWeight:600,transition:'all 0.15s',userSelect:'none',minHeight:56,
+                    outline:isToday?'2px solid #c8a84b':'none',outlineOffset:2,
+                    boxShadow:(isEv||reqs.length>0)?'0 1px 4px rgba(0,0,0,0.1)':'none'}}>
                   <div>{d}</div>
-                  {isEv && reqs.length===0 && <div style={{fontSize:7,marginTop:1,letterSpacing:0.5}}>EVENT</div>}
-                  {reqs.length>0 && <div style={{fontSize:7,marginTop:1,letterSpacing:0.5}}>{reqs.length} REQ{reqs.length>1?'S':''}</div>}
+                  {isEv && reqs.length===0 && (
+                    <div style={{fontSize:7,marginTop:2,letterSpacing:0.5,opacity:0.8}}>EVENT</div>
+                  )}
+                  {acc > 0 && (
+                    <div style={{fontSize:7,marginTop:2,background:'rgba(255,255,255,0.3)',borderRadius:3,padding:'1px 3px'}}>
+                      {acc} ✓
+                    </div>
+                  )}
+                  {pend > 0 && (
+                    <div style={{fontSize:7,marginTop:1,background:'rgba(0,0,0,0.1)',borderRadius:3,padding:'1px 3px'}}>
+                      {pend} ⏳
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
           <div style={{padding:'8px 12px',background:'#f5f0ea',borderTop:'1px solid #e8ddd0',fontSize:11,color:'#a89a8a',textAlign:'center'}}>
-            Click a highlighted date to see booking details
+            Click a highlighted date to drill into that day
           </div>
         </div>
 
         {/* Right panel */}
-        <div style={{flex:'1 1 280px',display:'flex',flexDirection:'column',gap:14}}>
-
-          {/* Selected date detail */}
-          {selectedDate ? (
-            <div style={{background:'#fff',borderRadius:12,border:'1.5px solid #e8c97a',padding:16}}>
-              <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:8}}>
-                {new Date(selectedDate+'T12:00').toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
-              </div>
-              {isSelectedEventDay && (
-                <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:6,padding:'6px 10px',fontSize:12,color:'#7a5a10',fontWeight:600,marginBottom:10}}>
-                  📅 {hostEvent.eventName || hostEvent.eventType || 'Your event'}
-                  {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
-                </div>
-              )}
-              {selectedReqs.length === 0 ? (
-                <div style={{fontSize:13,color:'#a89a8a',fontStyle:'italic',padding:'4px 0'}}>No booking requests for this date.</div>
-              ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:8}}>
-                  <div style={{fontSize:12,fontWeight:700,color:'#7a6a5a',textTransform:'uppercase',letterSpacing:1,marginBottom:2}}>Vendor Requests</div>
-                  {selectedReqs.map(req=>{
-                    const statusColors = {
-                      pending:  {bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966',  label:'Pending'},
-                      accepted: {bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8', label:'Accepted ✓'},
-                      declined: {bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6', label:'Declined'},
-                      cancelled:{bg:'#f0f0f0',color:'#7a7a7a',border:'#d0d0d0', label:'Cancelled'},
-                    };
-                    const sc = statusColors[req.status] || statusColors.pending;
-                    return (
-                      <div key={req.id} style={{background:'#fdf9f5',borderRadius:8,border:'1px solid #e8ddd0',padding:'10px 12px'}}>
-                        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
-                          <div style={{fontWeight:700,color:'#1a1410',fontSize:14}}>{req.vendorEmoji} {req.vendorName}</div>
-                          <div style={{background:sc.bg,color:sc.color,border:`1px solid ${sc.border}`,borderRadius:5,padding:'2px 8px',fontSize:11,fontWeight:700}}>{sc.label}</div>
-                        </div>
-                        <div style={{fontSize:12,color:'#7a6a5a'}}>{req.vendorCategory}</div>
-                        {req.startTime && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>{fmt12(req.startTime)} – {fmt12(req.endTime)}</div>}
-                        {req.vendorMessage && <div style={{fontSize:12,color:'#4a3a28',marginTop:6,fontStyle:'italic',lineHeight:1.5}}>"{req.vendorMessage}"</div>}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div style={{background:'#f5f0ea',borderRadius:12,border:'1px solid #e8ddd0',padding:16,textAlign:'center',color:'#a89a8a',fontSize:13}}>
-              Click a date on the calendar to see details
-            </div>
-          )}
+        <div style={{flex:'0 1 240px',display:'flex',flexDirection:'column',gap:14}}>
 
           {/* Legend */}
           <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
             <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Legend</div>
             {[
-              {color:'#1a6b3a',bg:'#d4f4e0',label:'Vendor accepted'},
-              {color:'#c8a84b',bg:'#fdf4dc',label:'Pending requests'},
+              {color:'#1a6b3a',bg:'#d4f4e0',label:'Vendor(s) confirmed'},
+              {color:'#c8a84b',bg:'#fdf4dc',label:'Requests pending'},
               {color:'#7a5a10',bg:'#fdf4dc',label:'Event — no requests yet'},
-              {color:'#9a8a7a',bg:'#f5f0ea',label:'No activity'},
+              {color:'#c0b0a0',bg:'#f5f0ea',label:'No activity'},
             ].map(({color,bg,label})=>(
-              <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:6}}>
+              <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}}>
                 <div style={{width:16,height:16,borderRadius:4,background:bg,border:`2px solid ${color}`,flexShrink:0}}/>
                 <div style={{fontSize:12,color:'#4a3a28'}}>{label}</div>
               </div>
             ))}
+            <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
+              <div style={{width:16,height:16,borderRadius:4,background:'#f5f0ea',border:'2px solid #e0d5c5',
+                outline:'2px solid #c8a84b',outlineOffset:1,flexShrink:0}}/>
+              <div style={{fontSize:12,color:'#4a3a28'}}>Today</div>
+            </div>
           </div>
 
           {/* iCal export */}
           <div style={{background:'#1a1410',borderRadius:12,padding:16}}>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:15,color:'#e8c97a',marginBottom:8}}>📲 Export Calendar</div>
-            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>Download your event and confirmed vendor bookings as an .ics file for Google Calendar, Apple Calendar, or Outlook.</div>
-            <button onClick={downloadICal} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
+            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>
+              Download your event and confirmed vendor bookings as an .ics file.
+            </div>
+            <button onClick={downloadICal}
+              style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,
+                padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
               ⬇ Download .ics File
             </button>
-            <button onClick={()=>setShowIcalInfo(s=>!s)} style={{width:'100%',background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',borderRadius:8,padding:'8px 0',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            <button onClick={()=>setShowIcalInfo(s=>!s)}
+              style={{width:'100%',background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',
+                borderRadius:8,padding:'8px 0',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
               {showIcalInfo?'Hide':'How to import ▼'}
             </button>
             {showIcalInfo && (
               <div style={{marginTop:10,fontSize:11,color:'#a89a8a',lineHeight:1.8}}>
                 <div style={{fontWeight:700,color:'#c8a84b',marginBottom:4}}>Google Calendar:</div>
-                <div>Settings → Import &amp; Export → Import → select .ics file</div>
+                <div>Settings → Import &amp; Export → Import → select .ics</div>
                 <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Apple Calendar:</div>
-                <div>File → Import → select .ics file</div>
+                <div>File → Import → select .ics</div>
                 <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Outlook:</div>
                 <div>File → Open &amp; Export → Import/Export → Import iCalendar</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>iPhone / Android:</div>
-                <div>Email yourself the .ics file and tap it to add to your calendar</div>
               </div>
             )}
           </div>
