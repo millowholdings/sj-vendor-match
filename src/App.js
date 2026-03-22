@@ -673,7 +673,17 @@ function VendorForm({ onSubmit, setTab }) {
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
         <div className="form-group"><label>Your Pricing Range *</label>
-          <input placeholder="e.g. $150–$300/day or $50–$100/item" value={form.price} onChange={e=>set('price',e.target.value)} />
+          <select value={form.price} onChange={e=>set('price',e.target.value)}>
+            <option value="">Select a range...</option>
+            <option>Under $50</option>
+            <option>$50–$100</option>
+            <option>$100–$200</option>
+            <option>$200–$300</option>
+            <option>$300–$500</option>
+            <option>$500–$1,000</option>
+            <option>$1,000+</option>
+            <option>Contact for pricing</option>
+          </select>
           <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>What hosts will see on your vendor profile card.</div>
         </div>
         <div className="form-group">
