@@ -2866,21 +2866,6 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormarket-host-calendar.ics'; a.click();
   };
 
-  // ── Empty state ──────────────────────────────────────────────────────────────
-  if (!hostEvent) {
-    return (
-      <div className="section" style={{maxWidth:700, textAlign:'center'}}>
-        <div className="section-title">My Event Calendar</div>
-        <div style={{background:'#fdf9f5',border:'1.5px solid #e8ddd0',borderRadius:14,padding:40,marginTop:24}}>
-          <div style={{fontSize:48,marginBottom:16}}>📅</div>
-          <div style={{fontFamily:'Playfair Display,serif',fontSize:22,color:'#1a1410',marginBottom:12}}>No Event Posted Yet</div>
-          <p style={{color:'#7a6a5a',fontSize:14,lineHeight:1.7,marginBottom:24}}>Post your event first to see your calendar, manage vendor bookings, and track your lineup.</p>
-          <button className="btn-submit" onClick={()=>setTab('host')}>Post Your Event →</button>
-        </div>
-      </div>
-    );
-  }
-
   // ── Day view ─────────────────────────────────────────────────────────────────
   if (dayView) {
     const dayReqs   = getRequests(dayView);
@@ -3049,11 +3034,15 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:20}}>
         <div>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:30,color:'#1a1410',lineHeight:1.1}}>My Event Calendar</div>
-          <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>
-            {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
-            {hostEvent.date && ` · ${fmtDate(hostEvent.date,{month:'long',day:'numeric',year:'numeric'})}`}
-            {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
-          </div>
+          {hostEvent ? (
+            <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>
+              {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
+              {hostEvent.date && ` · ${fmtDate(hostEvent.date,{month:'long',day:'numeric',year:'numeric'})}`}
+              {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
+            </div>
+          ) : (
+            <div style={{fontSize:14,color:'#a89a8a',marginTop:6}}>Post an event to see it on your calendar</div>
+          )}
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
           {acceptedCount > 0 && (
@@ -3066,18 +3055,45 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
               {pendingCount} pending
             </div>
           )}
-          <button onClick={downloadICal}
-            style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
-              padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-            ⬇ Export .ics
-          </button>
-          <button onClick={()=>setTab('matches')}
-            style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
-              padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-            Browse Vendors →
-          </button>
+          {hostEvent ? (
+            <button onClick={downloadICal}
+              style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
+                padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              ⬇ Export .ics
+            </button>
+          ) : null}
+          {hostEvent ? (
+            <button onClick={()=>setTab('matches')}
+              style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+                padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              Browse Vendors →
+            </button>
+          ) : (
+            <button onClick={()=>setTab('host')}
+              style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+                padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              + Post Your Event
+            </button>
+          )}
         </div>
       </div>
+
+      {/* No-event prompt banner */}
+      {!hostEvent && (
+        <div style={{background:'#fdf9f5',border:'1.5px dashed #e0d5c5',borderRadius:12,
+          padding:'18px 24px',marginBottom:20,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
+          <div style={{fontSize:28}}>📅</div>
+          <div style={{flex:1,minWidth:200}}>
+            <div style={{fontWeight:700,color:'#1a1410',fontSize:15,marginBottom:2}}>No event posted yet</div>
+            <div style={{fontSize:13,color:'#7a6a5a'}}>Your events and vendor bookings will appear on this calendar once you post an event.</div>
+          </div>
+          <button onClick={()=>setTab('host')}
+            style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,
+              padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
+            Post an Event →
+          </button>
+        </div>
+      )}
 
       {/* Full-width calendar */}
       <div style={{background:'#fff',borderRadius:16,border:'1px solid #e8ddd0',overflow:'hidden',
