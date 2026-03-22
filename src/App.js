@@ -1838,7 +1838,7 @@ export default function App() {
     }
     setHostEvent(form);
     setHostSuccess(true);
-    setTab('matches');
+    setTab('host-calendar');
     window.scrollTo({top:0, behavior:'smooth'});
   };
 
@@ -3040,171 +3040,168 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
   }
 
   // ── Month view ───────────────────────────────────────────────────────────────
-  return (
-    <div className="section" style={{maxWidth:960}}>
-      <div className="section-title">My Event Calendar</div>
-      <p className="section-sub">Click any day to see your event details and vendor bookings.</p>
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-      {/* Event summary banner */}
-      <div style={{background:'#1a1410',borderRadius:12,padding:'14px 20px',marginBottom:20,
-        display:'flex',flexWrap:'wrap',gap:16,alignItems:'center'}}>
-        <div style={{flex:1,minWidth:200}}>
-          <div style={{fontSize:11,letterSpacing:'2px',textTransform:'uppercase',color:'#c8a84b',marginBottom:3}}>Current Event</div>
-          <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a'}}>
+  return (
+    <div style={{padding:'24px 24px 48px',maxWidth:1200,margin:'0 auto'}}>
+
+      {/* Top bar */}
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:30,color:'#1a1410',lineHeight:1.1}}>My Event Calendar</div>
+          <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>
             {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
+            {hostEvent.date && ` · ${fmtDate(hostEvent.date,{month:'long',day:'numeric',year:'numeric'})}`}
+            {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
           </div>
-          {hostEvent.date && (
-            <div style={{fontSize:13,color:'#a89a8a',marginTop:2}}>
-              {fmtDate(hostEvent.date,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}
-              {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
-            </div>
-          )}
-          {hostEvent.address && (
-            <div style={{fontSize:12,color:'#7a6a5a',marginTop:2}}>
-              {hostEvent.address}{hostEvent.eventZip ? `, ${hostEvent.eventZip}` : ''}
-            </div>
-          )}
         </div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          {hostEvent.date && (
-            <button onClick={()=>setDayView(hostEvent.date)}
-              style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'9px 16px',
-                fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
-              View Event Day →
-            </button>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+          {acceptedCount > 0 && (
+            <div style={{background:'#d4f4e0',color:'#1a6b3a',border:'1px solid #b8e8c8',borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:700}}>
+              {acceptedCount} confirmed
+            </div>
           )}
+          {pendingCount > 0 && (
+            <div style={{background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:700}}>
+              {pendingCount} pending
+            </div>
+          )}
+          <button onClick={downloadICal}
+            style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
+              padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            ⬇ Export .ics
+          </button>
           <button onClick={()=>setTab('matches')}
-            style={{background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',borderRadius:8,padding:'9px 16px',
-              fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
-            Browse Vendors
+            style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+              padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            Browse Vendors →
           </button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
-        {[
-          {label:'Requests Sent', count:totalReqs,    bg:'#f5f0ea',color:'#4a3a28',border:'#e0d5c5'},
-          {label:'Pending',       count:pendingCount,  bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
-          {label:'Accepted',      count:acceptedCount, bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
-          {label:'Declined',      count:declinedCount, bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6'},
-        ].map(({label,count,bg,color,border})=>(
-          <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:10,padding:'10px 20px',textAlign:'center',minWidth:100}}>
-            <div style={{fontSize:22,fontWeight:700,color,fontFamily:'Playfair Display,serif'}}>{count}</div>
-            <div style={{fontSize:12,color,fontWeight:600}}>{label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Full-width calendar */}
+      <div style={{background:'#fff',borderRadius:16,border:'1px solid #e8ddd0',overflow:'hidden',
+        boxShadow:'0 4px 24px rgba(0,0,0,0.08)'}}>
 
-      <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
+        {/* Month nav */}
+        <div style={{background:'#1a1410',padding:'16px 28px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <button onClick={prevMonth}
+            style={{background:'none',border:'none',color:'#c8a84b',fontSize:26,cursor:'pointer',padding:'0 12px',lineHeight:1}}>‹</button>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:24,color:'#e8c97a',letterSpacing:1}}>
+            {MONTHS[viewMonth]} {viewYear}
+          </div>
+          <button onClick={nextMonth}
+            style={{background:'none',border:'none',color:'#c8a84b',fontSize:26,cursor:'pointer',padding:'0 12px',lineHeight:1}}>›</button>
+        </div>
 
-        {/* Calendar grid */}
-        <div style={{flex:'1 1 420px',background:'#fff',borderRadius:14,border:'1px solid #e8ddd0',
-          overflow:'hidden',boxShadow:'0 2px 12px rgba(0,0,0,0.07)'}}>
-          <div style={{background:'#1a1410',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-            <button onClick={prevMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>‹</button>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#e8c97a'}}>{MONTHS[viewMonth]} {viewYear}</div>
-            <button onClick={nextMonth} style={{background:'none',border:'none',color:'#c8a84b',fontSize:22,cursor:'pointer',padding:'0 8px'}}>›</button>
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f5f0ea',borderBottom:'1px solid #e8ddd0'}}>
-            {DAYS_SHORT.map(d=>(
-              <div key={d} style={{padding:'8px 0',textAlign:'center',fontSize:11,fontWeight:700,color:'#7a6a5a',letterSpacing:1}}>{d}</div>
-            ))}
-          </div>
-          <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:3,padding:10}}>
-            {Array(firstDay).fill(null).map((_,i)=><div key={`e${i}`}/>)}
-            {Array(daysInMonth).fill(null).map((_,i)=>{
-              const d  = i+1;
-              const ds = dateStr(d);
-              const cm = cellMeta(ds);
-              const reqs = getRequests(ds);
-              const isEv = allEventDates.has(ds);
-              const acc  = reqs.filter(r=>r.status==='accepted').length;
-              const pend = reqs.filter(r=>r.status==='pending').length;
-              const isToday = ds === `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
-              return (
-                <div key={d}
-                  onClick={()=>{ if(isEv || reqs.length>0) setDayView(ds); }}
-                  style={{background:cm.bg,color:cm.color,border:`2px solid ${cm.border}`,
-                    borderRadius:8,padding:'6px 4px',textAlign:'center',
-                    cursor:(isEv||reqs.length>0)?'pointer':'default',
-                    fontSize:13,fontWeight:600,transition:'all 0.15s',userSelect:'none',minHeight:56,
-                    outline:isToday?'2px solid #c8a84b':'none',outlineOffset:2,
-                    boxShadow:(isEv||reqs.length>0)?'0 1px 4px rgba(0,0,0,0.1)':'none'}}>
-                  <div>{d}</div>
-                  {isEv && reqs.length===0 && (
-                    <div style={{fontSize:7,marginTop:2,letterSpacing:0.5,opacity:0.8}}>EVENT</div>
-                  )}
-                  {acc > 0 && (
-                    <div style={{fontSize:7,marginTop:2,background:'rgba(255,255,255,0.3)',borderRadius:3,padding:'1px 3px'}}>
-                      {acc} ✓
-                    </div>
-                  )}
-                  {pend > 0 && (
-                    <div style={{fontSize:7,marginTop:1,background:'rgba(0,0,0,0.1)',borderRadius:3,padding:'1px 3px'}}>
-                      {pend} ⏳
+        {/* Day-of-week headers */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',background:'#f5f0ea',
+          borderBottom:'2px solid #e8ddd0'}}>
+          {DAYS_SHORT.map(d=>(
+            <div key={d} style={{padding:'10px 0',textAlign:'center',fontSize:12,fontWeight:700,
+              color:'#7a6a5a',letterSpacing:1.5,textTransform:'uppercase'}}>
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Day cells */}
+        <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',
+          borderLeft:'1px solid #f0e8e0'}}>
+          {Array(firstDay).fill(null).map((_,i)=>(
+            <div key={`e${i}`} style={{minHeight:110,borderRight:'1px solid #f0e8e0',borderBottom:'1px solid #f0e8e0',background:'#fafaf8'}}/>
+          ))}
+          {Array(daysInMonth).fill(null).map((_,i)=>{
+            const d    = i+1;
+            const ds   = dateStr(d);
+            const cm   = cellMeta(ds);
+            const reqs = getRequests(ds);
+            const isEv = allEventDates.has(ds);
+            const isT  = ds === todayStr;
+            const accReqs  = reqs.filter(r=>r.status==='accepted');
+            const pendReqs = reqs.filter(r=>r.status==='pending');
+            const otherReqs= reqs.filter(r=>r.status!=='accepted'&&r.status!=='pending');
+            const clickable= isEv || reqs.length>0;
+            // show up to 3 vendor chips, then "+N more"
+            const chips = [...accReqs,...pendReqs,...otherReqs];
+            const visibleChips = chips.slice(0,3);
+            const extraChips   = chips.length - visibleChips.length;
+            return (
+              <div key={d}
+                onClick={()=>{ if(clickable) setDayView(ds); }}
+                style={{minHeight:110,borderRight:'1px solid #f0e8e0',borderBottom:'1px solid #f0e8e0',
+                  padding:'8px 10px',verticalAlign:'top',position:'relative',
+                  background: isEv ? cm.bg : '#fff',
+                  cursor:clickable?'pointer':'default',
+                  transition:'background 0.12s',
+                  boxShadow:isT?'inset 0 0 0 2px #c8a84b':'none'}}>
+                {/* Date number */}
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:4}}>
+                  <div style={{fontSize:14,fontWeight:isT?800:600,
+                    color: isEv ? cm.color : (isT?'#c8a84b':'#4a3a28'),
+                    width:24,height:24,display:'flex',alignItems:'center',justifyContent:'center',
+                    borderRadius:'50%',background:isT&&!isEv?'#fdf4dc':'transparent'}}>
+                    {d}
+                  </div>
+                  {isT && <div style={{fontSize:9,color:'#c8a84b',fontWeight:700,letterSpacing:1}}>TODAY</div>}
+                </div>
+
+                {/* Event pill */}
+                {isEv && (
+                  <div style={{background:'rgba(0,0,0,0.18)',color:cm.color,borderRadius:4,
+                    padding:'2px 6px',fontSize:10,fontWeight:700,marginBottom:4,
+                    overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                    📅 {hostEvent.eventName || hostEvent.eventType || 'Event'}
+                    {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}`}
+                  </div>
+                )}
+
+                {/* Vendor chips */}
+                <div style={{display:'flex',flexDirection:'column',gap:2}}>
+                  {visibleChips.map(req=>{
+                    const isAcc  = req.status==='accepted';
+                    const isPend = req.status==='pending';
+                    return (
+                      <div key={req.id} style={{
+                        borderRadius:4,padding:'2px 6px',fontSize:10,fontWeight:600,
+                        overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',
+                        background: isAcc  ? '#d4f4e0' : isPend ? '#fdf4dc' : '#f5f0ea',
+                        color:      isAcc  ? '#1a6b3a' : isPend ? '#7a5a10' : '#7a6a5a',
+                        border:     `1px solid ${isAcc?'#b8e8c8':isPend?'#ffd966':'#e0d5c5'}`,
+                      }}>
+                        {isAcc?'✓':isPend?'·':'–'} {req.vendorName}
+                      </div>
+                    );
+                  })}
+                  {extraChips > 0 && (
+                    <div style={{fontSize:10,color:'#a89a8a',fontWeight:600,paddingLeft:4}}>
+                      +{extraChips} more
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
-          <div style={{padding:'8px 12px',background:'#f5f0ea',borderTop:'1px solid #e8ddd0',fontSize:11,color:'#a89a8a',textAlign:'center'}}>
-            Click a highlighted date to drill into that day
-          </div>
+              </div>
+            );
+          })}
         </div>
+      </div>
 
-        {/* Right panel */}
-        <div style={{flex:'0 1 240px',display:'flex',flexDirection:'column',gap:14}}>
-
-          {/* Legend */}
-          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
-            <div style={{fontWeight:700,color:'#1a1410',marginBottom:10,fontSize:14}}>Legend</div>
-            {[
-              {color:'#1a6b3a',bg:'#d4f4e0',label:'Vendor(s) confirmed'},
-              {color:'#c8a84b',bg:'#fdf4dc',label:'Requests pending'},
-              {color:'#7a5a10',bg:'#fdf4dc',label:'Event — no requests yet'},
-              {color:'#c0b0a0',bg:'#f5f0ea',label:'No activity'},
-            ].map(({color,bg,label})=>(
-              <div key={label} style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}}>
-                <div style={{width:16,height:16,borderRadius:4,background:bg,border:`2px solid ${color}`,flexShrink:0}}/>
-                <div style={{fontSize:12,color:'#4a3a28'}}>{label}</div>
-              </div>
-            ))}
-            <div style={{display:'flex',alignItems:'center',gap:8,marginTop:4}}>
-              <div style={{width:16,height:16,borderRadius:4,background:'#f5f0ea',border:'2px solid #e0d5c5',
-                outline:'2px solid #c8a84b',outlineOffset:1,flexShrink:0}}/>
-              <div style={{fontSize:12,color:'#4a3a28'}}>Today</div>
-            </div>
+      {/* Legend row */}
+      <div style={{display:'flex',gap:20,marginTop:14,flexWrap:'wrap',alignItems:'center'}}>
+        {[
+          {color:'#1a6b3a',bg:'#d4f4e0',border:'#b8e8c8',label:'Vendor confirmed'},
+          {color:'#7a5a10',bg:'#fdf4dc',border:'#ffd966',label:'Request pending'},
+          {color:'#7a5a10',bg:'#fdf4dc',border:'#e8c97a',label:'Event day'},
+          {color:'#c8a84b',bg:'#fdf4dc',border:'#c8a84b',label:'Today'},
+        ].map(({color,bg,border,label})=>(
+          <div key={label} style={{display:'flex',alignItems:'center',gap:6}}>
+            <div style={{width:14,height:14,borderRadius:3,background:bg,border:`2px solid ${border}`,flexShrink:0}}/>
+            <div style={{fontSize:12,color:'#7a6a5a'}}>{label}</div>
           </div>
-
-          {/* iCal export */}
-          <div style={{background:'#1a1410',borderRadius:12,padding:16}}>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:15,color:'#e8c97a',marginBottom:8}}>📲 Export Calendar</div>
-            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>
-              Download your event and confirmed vendor bookings as an .ics file.
-            </div>
-            <button onClick={downloadICal}
-              style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,
-                padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
-              ⬇ Download .ics File
-            </button>
-            <button onClick={()=>setShowIcalInfo(s=>!s)}
-              style={{width:'100%',background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',
-                borderRadius:8,padding:'8px 0',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-              {showIcalInfo?'Hide':'How to import ▼'}
-            </button>
-            {showIcalInfo && (
-              <div style={{marginTop:10,fontSize:11,color:'#a89a8a',lineHeight:1.8}}>
-                <div style={{fontWeight:700,color:'#c8a84b',marginBottom:4}}>Google Calendar:</div>
-                <div>Settings → Import &amp; Export → Import → select .ics</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Apple Calendar:</div>
-                <div>File → Import → select .ics</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Outlook:</div>
-                <div>File → Open &amp; Export → Import/Export → Import iCalendar</div>
-              </div>
-            )}
-          </div>
+        ))}
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          <div style={{width:14,height:14,borderRadius:3,background:'#fff',border:'1px solid #e0d5c5',
+            boxShadow:'inset 0 0 0 2px #c8a84b',flexShrink:0}}/>
+          <div style={{fontSize:12,color:'#7a6a5a'}}>Today (ring)</div>
         </div>
       </div>
     </div>
