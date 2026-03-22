@@ -574,6 +574,18 @@ function TosModal({ onClose }) {
 // ─── Vendor Form ──────────────────────────────────────────────────────────────
 const VENDOR_DRAFT_KEY      = 'sjvm_vendor_draft';
 const VENDOR_DRAFT_SUBS_KEY = 'sjvm_vendor_draft_subs';
+const CONVERSATIONS_LS_KEY  = 'sjvm_conversations';
+const VENDOR_CALS_LS_KEY    = 'sjvm_vendor_calendars';
+const SESSION_KEY           = 'sjvm_session_id';
+
+function getSessionId() {
+  let id = localStorage.getItem(SESSION_KEY);
+  if (!id) {
+    id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+    localStorage.setItem(SESSION_KEY, id);
+  }
+  return id;
+}
 const DEFAULT_VENDOR_FORM = {
   businessName:'', ownerName:'', email:'', phone:'',
   homeZip:'', radius:20,
@@ -1447,7 +1459,41 @@ function PricingPage({ setTab }) {
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
+const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
+
 function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('sjvm_admin') === '1');
+  const [pw, setPw] = useState('');
+  const [pwError, setPwError] = useState(false);
+
+  const attemptUnlock = () => {
+    if (pw === ADMIN_PW) { sessionStorage.setItem('sjvm_admin','1'); setUnlocked(true); }
+    else { setPwError(true); setPw(''); }
+  };
+
+  if (!unlocked) {
+    return (
+      <div className="section" style={{maxWidth:420,textAlign:'center'}}>
+        <div className="section-title">Admin Access</div>
+        <div style={{background:'#fff',border:'1.5px solid #e8ddd0',borderRadius:14,padding:32,marginTop:16}}>
+          <div style={{fontSize:36,marginBottom:12}}>🔒</div>
+          <p style={{color:'#7a6a5a',fontSize:14,marginBottom:20}}>Enter the admin password to continue.</p>
+          <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setPwError(false);}}
+            onKeyDown={e=>{ if(e.key==='Enter') attemptUnlock(); }}
+            placeholder="Password"
+            style={{width:'100%',border:`1.5px solid ${pwError?'#c0392b':'#e0d5c5'}`,borderRadius:8,padding:'10px 14px',
+              fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',marginBottom:8,outline:'none'}} />
+          {pwError && <div style={{color:'#c0392b',fontSize:12,marginBottom:8}}>Incorrect password.</div>}
+          <button onClick={attemptUnlock}
+            style={{width:'100%',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+              padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            Enter
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="section" style={{ maxWidth:1000 }}>
       <div className="section-title">Admin Dashboard</div>
@@ -1476,9 +1522,11 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
           deadline:          opp.deadline   || null,
           notes:             opp.notes,
           source:            opp.source     || "Admin",
+          photo_url:         opp.photoUrl   || null,
         }).select().single();
-        if (error) { console.error('Error posting event:', error); return; }
+        if (error) { console.error('Error posting event:', error); return false; }
         setOpps(prev => [dbEventToApp(data), ...prev]);
+        return true;
       }} />
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Opportunities</h3>
       {opps.length===0
@@ -1641,15 +1689,19 @@ function OpportunitiesPage({ opps }) {
 // ─── Admin Post Form ──────────────────────────────────────────────────────────
 function AdminPostForm({ onPost }) {
   const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", source:"Facebook Group", photoUrl:"" };
-  const [photoPreview, setPhotoPreview] = useState(null);
   const [form, setForm] = useState(blank);
   const [posted, setPosted] = useState(false);
+  const [posting, setPosting] = useState(false);
+  const [postError, setPostError] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
-  const submit = () => {
+  const submit = async () => {
     if (!form.eventName||!form.eventType||!form.zip||!form.date) { alert("Please fill in Event Name, Type, Zip Code, and Date."); return; }
-    onPost({...form, id:Date.now(), spots:parseInt(form.spots)||0, photoUrl:photoPreview||""});
-    setForm(blank); setPhotoPreview(null); setPosted(true); setTimeout(()=>setPosted(false),4000);
+    setPosting(true); setPostError(false);
+    const ok = await onPost({...form, id:Date.now(), spots:parseInt(form.spots)||0});
+    setPosting(false);
+    if (ok) { setForm(blank); setPosted(true); setTimeout(()=>setPosted(false),4000); }
+    else { setPostError(true); setTimeout(()=>setPostError(false),6000); }
   };
 
   return (
@@ -1659,7 +1711,8 @@ function AdminPostForm({ onPost }) {
         <span style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20 }}>Admin Only</span>
       </div>
       <p style={{ color:"#7a6a5a", fontSize:14, marginBottom:24 }}>Post events from Facebook or approved hosts — they go live immediately on the Opportunities board.</p>
-      {posted && <div style={{ background:"#d4f4e0", border:"1px solid #b8e8c8", borderRadius:8, padding:"12px 16px", marginBottom:20, color:"#1a6b3a", fontWeight:600 }}>\u2713 Posted! Now live on the Opportunities board.</div>}
+      {posted    && <div style={{ background:"#d4f4e0", border:"1px solid #b8e8c8", borderRadius:8, padding:"12px 16px", marginBottom:20, color:"#1a6b3a", fontWeight:600 }}>✓ Posted! Now live on the Opportunities board.</div>}
+      {postError && <div style={{ background:"#fdecea", border:"1px solid #f5c6c6", borderRadius:8, padding:"12px 16px", marginBottom:20, color:"#8b1a1a", fontWeight:600 }}>✗ Failed to post. Check your connection and try again.</div>}
       <div className="form-grid">
         <div className="form-group full"><label>Event Name *</label><input placeholder="e.g. Collingswood Spring Pop-Up Market" value={form.eventName} onChange={e=>set("eventName",e.target.value)} /></div>
         <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set("eventType",e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
@@ -1681,45 +1734,23 @@ function AdminPostForm({ onPost }) {
         <div className="form-group full"><label>Notes for Vendors</label><textarea placeholder="Tables provided? Tents required? Electric available? Insured vendors only?" value={form.notes} onChange={e=>set("notes",e.target.value)} /></div>
       </div>
       <div className="form-group full" style={{ marginTop:8 }}>
-        <label>Event Photo (optional)</label>
-        <div style={{ display:'flex', gap:16, alignItems:'flex-start', flexWrap:'wrap' }}>
-          <label style={{ flex:'0 0 auto', background:'#f5f0ea', border:'2px dashed #c8a84b', borderRadius:10,
-            padding:'18px 24px', cursor:'pointer', textAlign:'center', minWidth:160, transition:'all 0.2s' }}
-            onMouseEnter={e=>e.currentTarget.style.background='#fdf9f0'}
-            onMouseLeave={e=>e.currentTarget.style.background='#f5f0ea'}>
-            <input type="file" accept="image/*" style={{ display:'none' }}
-              onChange={e => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = ev => setPhotoPreview(ev.target.result);
-                reader.readAsDataURL(file);
-              }} />
-            <div style={{ fontSize:28, marginBottom:6 }}>📷</div>
-            <div style={{ fontSize:13, fontWeight:600, color:'#4a3a28' }}>Click to upload</div>
-            <div style={{ fontSize:11, color:'#a89a8a', marginTop:2 }}>JPG, PNG, WebP</div>
-          </label>
-          {photoPreview && (
-            <div style={{ position:'relative', flex:'0 0 auto' }}>
-              <img src={photoPreview} alt="Event preview"
-                style={{ width:160, height:120, objectFit:'cover', borderRadius:10, border:'2px solid #e8c97a', display:'block' }} />
-              <button onClick={()=>setPhotoPreview(null)}
-                style={{ position:'absolute', top:-8, right:-8, width:24, height:24, borderRadius:'50%',
-                  background:'#8b1a1a', color:'#fff', border:'none', cursor:'pointer', fontSize:13,
-                  display:'flex', alignItems:'center', justifyContent:'center', fontWeight:700 }}>✕</button>
-              <div style={{ fontSize:11, color:'#7a6a5a', marginTop:4, textAlign:'center' }}>Preview</div>
-            </div>
-          )}
-          {!photoPreview && (
-            <div style={{ fontSize:12, color:'#a89a8a', alignSelf:'center', lineHeight:1.6 }}>
-              Add a flyer, banner, or event photo.<br />
-              Shows on the opportunity card for vendors.
-            </div>
-          )}
+        <label>Event Photo URL (optional)</label>
+        <input type="url" placeholder="https://example.com/event-photo.jpg"
+          value={form.photoUrl} onChange={e=>set("photoUrl",e.target.value)} />
+        <div style={{ fontSize:12, color:'#7a6a5a', marginTop:4 }}>
+          Paste a direct image link (Imgur, Google Drive share link, etc.). Shown on the opportunity card.
         </div>
+        {form.photoUrl && (
+          <img src={form.photoUrl} alt="Preview"
+            style={{ marginTop:8, maxHeight:120, borderRadius:8, border:'1px solid #e8ddd0', display:'block' }}
+            onError={e=>{ e.target.style.display='none'; }} />
+        )}
       </div>
       <div style={{ marginTop:24 }}>
-        <button className="btn-submit" onClick={submit}>Post to Opportunities Board</button>
+        <button className="btn-submit" onClick={submit} disabled={posting}
+          style={{ opacity: posting ? 0.7 : 1 }}>
+          {posting ? 'Posting…' : 'Post to Opportunities Board'}
+        </button>
       </div>
     </div>
   );
@@ -1736,28 +1767,68 @@ export default function App() {
   const [opps, setOpps] = useState([]);
   const [vendorSubs, setVendorSubs] = useState([]);
 
+  const [loadError, setLoadError] = useState(null);
+
   useEffect(() => {
     async function fetchData() {
       const [{ data: vendorRows, error: vErr }, { data: eventRows, error: eErr }] = await Promise.all([
         supabase.from('vendors').select('*').order('created_at', { ascending: false }),
         supabase.from('events').select('*').order('date', { ascending: true }),
       ]);
-      if (vErr) console.error('Failed to load vendors:', vErr);
+      if (vErr) { console.error('Failed to load vendors:', vErr); setLoadError('Could not load vendor data. Please refresh.'); }
       else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
-      if (eErr) console.error('Failed to load events:', eErr);
+      if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
       else if (eventRows) setOpps(eventRows.map(dbEventToApp));
+
+      // Load booking requests for this browser session from Supabase
+      const sid = getSessionId();
+      const { data: brRows, error: brErr } = await supabase
+        .from('booking_requests').select('*').eq('session_id', sid).order('created_at', { ascending: false });
+      if (brErr) console.error('Failed to load booking requests:', brErr);
+      else if (brRows && brRows.length > 0) {
+        setBookingRequests(brRows.map(r => ({
+          id: r.id, vendorId: r.vendor_id, vendorName: r.vendor_name,
+          vendorEmoji: r.vendor_emoji, vendorCategory: r.vendor_category,
+          hostName: r.host_name, hostEmail: r.host_email,
+          eventName: r.event_name, eventType: r.event_type,
+          eventZip: r.event_zip, eventDate: r.event_date,
+          startTime: r.start_time, endTime: r.end_time, address: r.address,
+          attendance: r.attendance, vendorCount: r.vendor_count,
+          budget: r.budget, notes: r.notes,
+          isRecurring: r.is_recurring, recurrenceFrequency: r.recurrence_frequency,
+          recurrenceDay: r.recurrence_day, recurrenceEndType: r.recurrence_end_type,
+          recurrenceEndDate: r.recurrence_end_date, recurrenceCount: r.recurrence_count,
+          recurrenceNotes: r.recurrence_notes,
+          categoriesNeeded: r.categories_needed || [], subcategoriesNeeded: r.subcategories_needed || [],
+          status: r.status, sentAt: r.sent_at, respondedAt: r.responded_at,
+          vendorMessage: r.vendor_message || '',
+        })));
+      }
     }
     fetchData();
   }, []);
-  const [conversations, setConversations] = useState([]);
+
+  // Conversations: persist to localStorage so they survive page refresh
+  const [conversations, setConversations] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(CONVERSATIONS_LS_KEY) || '[]'); } catch { return []; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(CONVERSATIONS_LS_KEY, JSON.stringify(conversations)); } catch {}
+  }, [conversations]);
+
   const [activeConvoId, setActiveConvoId] = useState(null);
   const [tosTab, setTosTab] = useState(null);
   const [bookingRequests, setBookingRequests] = useState([]);
-  const [bookingModal, setBookingModal] = useState(null);
-  const [vendorCalendars, setVendorCalendars] = useState({}); // { vendorId: { availability, bookedDates, blockedDates } }
-  const [calendarVendorId, setCalendarVendorId] = useState(null);
 
-  const sendBookingRequest = (vendor, eventDetails) => {
+  // Vendor calendars: persist to localStorage
+  const [vendorCalendars, setVendorCalendars] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(VENDOR_CALS_LS_KEY) || '{}'); } catch { return {}; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem(VENDOR_CALS_LS_KEY, JSON.stringify(vendorCalendars)); } catch {}
+  }, [vendorCalendars]);
+
+  const sendBookingRequest = async (vendor, eventDetails) => {
     const req = {
       id: Date.now(),
       vendorId: vendor.id,
@@ -1792,6 +1863,25 @@ export default function App() {
       vendorMessage: '',
     };
     setBookingRequests(r => [req, ...r]);
+    // Persist to Supabase so the request survives page refreshes
+    const { error: brErr } = await supabase.from('booking_requests').insert({
+      id: req.id, session_id: getSessionId(),
+      vendor_id: req.vendorId, vendor_name: req.vendorName,
+      vendor_emoji: req.vendorEmoji, vendor_category: req.vendorCategory,
+      host_name: req.hostName, host_email: req.hostEmail,
+      event_name: req.eventName, event_type: req.eventType,
+      event_zip: req.eventZip, event_date: req.eventDate,
+      start_time: req.startTime, end_time: req.endTime, address: req.address,
+      attendance: req.attendance, vendor_count: req.vendorCount,
+      budget: req.budget, notes: req.notes,
+      is_recurring: req.isRecurring, recurrence_frequency: req.recurrenceFrequency,
+      recurrence_day: req.recurrenceDay, recurrence_end_type: req.recurrenceEndType,
+      recurrence_end_date: req.recurrenceEndDate || null,
+      recurrence_count: req.recurrenceCount, recurrence_notes: req.recurrenceNotes,
+      categories_needed: req.categoriesNeeded, subcategories_needed: req.subcategoriesNeeded,
+      status: req.status, sent_at: req.sentAt,
+    });
+    if (brErr) console.error('Failed to persist booking request:', brErr);
     openMessage(vendor);
   };
 
@@ -1812,30 +1902,63 @@ export default function App() {
   };
 
   const handleVendorSubmit = async form => {
-    if (!form.businessName || !form.email || form.categories.length===0) {
+    // Fix 3: Strengthened validation
+    if (!form.businessName || !form.email || form.categories.length === 0) {
       alert("Please fill in Business Name, Email, and at least one Category.");
       return;
     }
+    if (!form.homeZip || !/^\d{5}$/.test(form.homeZip)) {
+      alert("Please enter a valid 5-digit home zip code.");
+      return;
+    }
+    if (!form.price) {
+      alert("Please select a pricing range.");
+      return;
+    }
+    // Fix 4: Save all collected fields including previously-missing ones
     const { error } = await supabase.from('vendors').insert({
       name:                form.businessName,
+      contact_name:        form.ownerName     || null,
       category:            form.categories[0],
-      subcategories:       form.subcategories  || [],
+      subcategories:       form.subcategories || [],
       home_zip:            form.homeZip,
       radius:              form.radius,
-      tags:                [],
-      price:               form.price           || null,
+      tags:                form.eventTypes    || [],
+      price:               form.price         || null,
       description:         form.description,
       insurance:           form.insurance,
       has_min_purchase:    form.hasMinPurchase,
       min_purchase_amt:    form.minPurchaseAmt  || 0,
       charges_private_fee: form.chargesPrivateFee,
-      private_event_fee:   form.privateEventFee  || 0,
+      private_event_fee:   form.privateEventFee || 0,
       contact_email:       form.email,
-      contact_phone:       form.phone    || null,
-      website:             form.website  || null,
-      instagram:           form.instagram || null,
+      contact_phone:       form.phone       || null,
+      website:             form.website     || null,
+      instagram:           form.instagram   || null,
+      // Extra fields stored in metadata until dedicated columns are added
+      metadata: {
+        facebook: form.facebook || null,
+        tiktok: form.tiktok || null,
+        otherSocial: form.otherSocial || null,
+        preferredContact: form.preferredContact,
+        responseTime: form.responseTime,
+        bookingLeadTime: form.bookingLeadTime,
+        eventFrequency: form.eventFrequency,
+        setupTime: form.setupTime,
+        tableSize: form.tableSize,
+        needsElectric: form.needsElectric,
+        yearsActive: form.yearsActive || null,
+        acceptsDirectBooking: form.acceptsDirectBooking,
+        requiresTicketedEvents: form.requiresTicketedEvents,
+        allCategories: form.categories,
+      },
     });
-    if (error) console.error('Vendor submit error:', error);
+    // Fix 1: Surface errors to the user instead of silently logging
+    if (error) {
+      console.error('Vendor submit error:', error);
+      alert('Something went wrong submitting your profile. Please try again.');
+      return;
+    }
     setVendorSubs(v => [form, ...v]);
     setVendorSuccess(true);
     window.scrollTo({top:0, behavior:"smooth"});
@@ -1844,6 +1967,14 @@ export default function App() {
   const handleHostSubmit = form => {
     if (!form.contactName || !form.email || !form.eventType) {
       alert('Please fill in Contact Name, Email, and Event Type.');
+      return;
+    }
+    if (!form.date) {
+      alert('Please select an event date.');
+      return;
+    }
+    if (!form.eventZip || !/^\d{5}$/.test(form.eventZip)) {
+      alert('Please enter a valid 5-digit event zip code.');
       return;
     }
     setHostEvent(form);
@@ -1856,6 +1987,12 @@ export default function App() {
     <>
       <style>{styles}</style>
       <div className="app">
+        {loadError && (
+          <div style={{background:'#fdecea',borderBottom:'2px solid #f5c6c6',padding:'10px 20px',
+            fontSize:13,color:'#8b1a1a',fontWeight:600,textAlign:'center',zIndex:200,position:'relative'}}>
+            ⚠ {loadError}
+          </div>
+        )}
         <nav className="nav">
           <div className="nav-logo"><span className="nav-logo-cursive">South Jersey</span><span className="nav-logo-serif">Vendor Market</span></div>
           <div className="nav-tabs">
@@ -2028,10 +2165,16 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
 
-  const respondToBooking = (reqId, status, vendorMsg='') => {
+  const respondToBooking = async (reqId, status, vendorMsg='') => {
+    const respondedAt = new Date().toISOString();
     setBookingRequests(reqs => reqs.map(r =>
-      r.id === reqId ? {...r, status, vendorMessage: vendorMsg, respondedAt: new Date().toISOString()} : r
+      r.id === reqId ? {...r, status, vendorMessage: vendorMsg, respondedAt} : r
     ));
+    // Persist status change to Supabase
+    const { error } = await supabase.from('booking_requests')
+      .update({ status, vendor_message: vendorMsg, responded_at: respondedAt })
+      .eq('id', reqId);
+    if (error) console.error('Failed to update booking request status:', error);
     // Add system message to conversation thread
     const req = bookingRequests.find(r => r.id === reqId);
     if (req) {

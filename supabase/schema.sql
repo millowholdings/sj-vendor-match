@@ -90,6 +90,64 @@ create policy "Anon update events"
   on events for update
   using (true);
 
+-- ─── Vendors: extra fields ────────────────────────────────────────────────────
+-- Run these ALTER TABLE statements if the columns don't exist yet
+alter table vendors add column if not exists contact_name text;
+alter table vendors add column if not exists metadata     jsonb default '{}';
+
+-- ─── Events: photo URL ────────────────────────────────────────────────────────
+alter table events add column if not exists photo_url text;
+
+-- ─── Booking Requests ─────────────────────────────────────────────────────────
+create table if not exists booking_requests (
+  id                   bigint       primary key,
+  session_id           text         not null,
+  vendor_id            text,
+  vendor_name          text,
+  vendor_emoji         text,
+  vendor_category      text,
+  host_name            text,
+  host_email           text,
+  event_name           text,
+  event_type           text,
+  event_zip            text,
+  event_date           text,
+  start_time           text,
+  end_time             text,
+  address              text,
+  attendance           text,
+  vendor_count         text,
+  budget               text,
+  notes                text,
+  is_recurring         boolean      default false,
+  recurrence_frequency text,
+  recurrence_day       text,
+  recurrence_end_type  text,
+  recurrence_end_date  text,
+  recurrence_count     text,
+  recurrence_notes     text,
+  categories_needed    text[]       default '{}',
+  subcategories_needed text[]       default '{}',
+  status               text         not null default 'pending',
+  sent_at              timestamptz,
+  responded_at         timestamptz,
+  vendor_message       text         default '',
+  created_at           timestamptz  not null default now()
+);
+
+create index if not exists booking_requests_session_idx on booking_requests (session_id);
+
+alter table booking_requests enable row level security;
+
+create policy "Anon read booking requests"
+  on booking_requests for select using (true);
+
+create policy "Anon insert booking requests"
+  on booking_requests for insert with check (true);
+
+create policy "Anon update booking requests"
+  on booking_requests for update using (true);
+
 -- ─── Optional: seed the sample data ─────────────────────────────────────────
 -- Uncomment to load the sample vendors from the app
 
