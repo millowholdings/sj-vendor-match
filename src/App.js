@@ -1894,14 +1894,35 @@ function VendorApplyModal({ opp, onClose }) {
   const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [autoFilled, setAutoFilled] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  // Auto-fill from vendor profile if they've registered on this device
+  useEffect(() => {
+    const vid = localStorage.getItem('sjvm_calendar_vendor_id');
+    if (!vid) return;
+    supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category').eq('id', vid).single()
+      .then(({ data }) => {
+        if (data) {
+          setForm(f => ({
+            ...f,
+            vendorName: f.vendorName || data.name || '',
+            contactName: f.contactName || data.contact_name || '',
+            email: f.email || data.contact_email || '',
+            phone: f.phone || data.contact_phone || '',
+            category: f.category || data.category || '',
+          }));
+          setAutoFilled(true);
+        }
+      });
+  }, []);
 
   const handleSubmit = async () => {
     if (!form.vendorName || !form.email || !form.contactName) { alert('Please fill in your business name, contact name, and email.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) { alert('Please enter a valid email.'); return; }
     setSubmitting(true);
     const responseToken = crypto.randomUUID();
-    const { error } = await supabase.from('booking_requests').insert({
+    const payload = {
       id: Date.now(), session_id: 'vendor-application',
       vendor_id: null, vendor_name: form.vendorName,
       vendor_emoji: '', vendor_category: form.category || '',
@@ -1913,7 +1934,12 @@ function VendorApplyModal({ opp, onClose }) {
       budget: opp.boothFee || '', notes: form.message,
       status: 'pending', sent_at: new Date().toISOString(),
       response_token: responseToken,
-    });
+    };
+    let { error } = await supabase.from('booking_requests').insert(payload);
+    if (error && error.code === 'PGRST204') {
+      const { response_token: _rt, ...withoutToken } = payload;
+      ({ error } = await supabase.from('booking_requests').insert(withoutToken));
+    }
     if (error) {
       console.error('Application error:', error);
       alert('Failed to submit application. Please try again.');
@@ -1958,6 +1984,11 @@ function VendorApplyModal({ opp, onClose }) {
             </div>
           ) : (
             <>
+              {autoFilled && (
+                <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#1a6b3a',fontWeight:600}}>
+                  ✓ Pre-filled from your vendor profile
+                </div>
+              )}
               <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
                 <div className="form-group"><label>Business Name *</label><input value={form.vendorName} onChange={e=>set('vendorName',e.target.value)} placeholder="Your business name" /></div>
                 <div className="form-group"><label>Contact Name *</label><input value={form.contactName} onChange={e=>set('contactName',e.target.value)} placeholder="Your name" /></div>
@@ -2510,7 +2541,7 @@ function AppInner() {
     };
     setBookingRequests(r => [req, ...r]);
     // Persist to Supabase so the request survives page refreshes
-    const { error: brErr } = await supabase.from('booking_requests').insert({
+    const brPayload = {
       id: req.id, session_id: getSessionId(),
       vendor_id: req.vendorId, vendor_name: req.vendorName,
       vendor_emoji: req.vendorEmoji, vendor_category: req.vendorCategory,
@@ -2527,7 +2558,12 @@ function AppInner() {
       categories_needed: req.categoriesNeeded, subcategories_needed: req.subcategoriesNeeded,
       status: req.status, sent_at: req.sentAt,
       response_token: responseToken,
-    });
+    };
+    let { error: brErr } = await supabase.from('booking_requests').insert(brPayload);
+    if (brErr && brErr.code === 'PGRST204') {
+      const { response_token: _rt, ...withoutToken } = brPayload;
+      ({ error: brErr } = await supabase.from('booking_requests').insert(withoutToken));
+    }
     if (brErr) console.error('Failed to persist booking request:', brErr);
 
     // Look up vendor email and send notification
@@ -2730,7 +2766,7 @@ function AppInner() {
         return;
       }
     }
-    const { data: newEvent, error: eventErr } = await supabase.from('events').insert({
+    const eventPayload = {
       event_name: form.eventName || form.eventType,
       event_type: form.eventType,
       zip: form.eventZip,
@@ -2747,7 +2783,13 @@ function AppInner() {
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
       vendor_discovery: form.vendorDiscovery || 'both',
-    }).select().single();
+    };
+    let { data: newEvent, error: eventErr } = await supabase.from('events').insert(eventPayload).select().single();
+    // Retry without vendor_discovery if column doesn't exist yet
+    if (eventErr && (eventErr.code === '42703' || eventErr.code === 'PGRST204')) {
+      const { vendor_discovery: _vd, ...withoutVd } = eventPayload;
+      ({ data: newEvent, error: eventErr } = await supabase.from('events').insert(withoutVd).select().single());
+    }
     if (eventErr) {
       console.error('Event submit error:', eventErr);
       alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@sjvendormarket.com`);
