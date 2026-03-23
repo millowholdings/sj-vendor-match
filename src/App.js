@@ -1361,6 +1361,141 @@ function PricingPage({ setTab }) {
   );
 }
 
+// ─── Pending Vendor Card (Admin) ──────────────────────────────────────────────
+function PendingVendorCard({ v, onApprove, onReject }) {
+  const [expanded, setExpanded] = useState(false);
+  const m = v.metadata || {};
+  const cats = m.allCategories || [v.category];
+  const photos = m.photoUrls || [];
+  const coiUrl = m.coiUrl || null;
+  const lookbookUrl = m.lookbookUrl || null;
+  const submitted = v.created_at ? new Date(v.created_at).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+  const Field = ({label, val}) => val ? (
+    <div style={{marginBottom:10}}>
+      <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>{label}</div>
+      <div style={{fontSize:14,color:'#1a1410'}}>{val}</div>
+    </div>
+  ) : null;
+
+  return (
+    <div style={{background:'#fff',border:'1.5px solid #e8ddd0',borderRadius:12,overflow:'hidden'}}>
+      {/* Summary row */}
+      <div style={{padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+        <div style={{display:'flex',alignItems:'center',gap:14,flex:1,minWidth:200}}>
+          <div style={{fontSize:28}}>{v.emoji||'🏪'}</div>
+          <div>
+            <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{v.name}</div>
+            <div style={{fontSize:12,color:'#7a6a5a'}}>{v.contact_name||'—'} · {v.contact_email||'—'} · {v.home_zip} · {v.radius}mi</div>
+            <div style={{fontSize:12,color:'#a89a8a',marginTop:2}}>{cats.join(', ')} · Submitted {submitted}</div>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+          <button onClick={()=>setExpanded(e=>!e)}
+            style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'7px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            {expanded ? '▾ Collapse' : '▸ View Full Application'}
+          </button>
+          <button onClick={onApprove}
+            style={{background:'#2e7d32',color:'#fff',border:'none',borderRadius:6,padding:'7px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            ✓ Approve
+          </button>
+          <button onClick={onReject}
+            style={{background:'#c62828',color:'#fff',border:'none',borderRadius:6,padding:'7px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            ✗ Reject
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div style={{borderTop:'1px solid #e8ddd0',padding:'20px 24px',background:'#faf8f5'}}>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 32px'}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Contact & Business</div>
+              <Field label="Business Name" val={v.name} />
+              <Field label="Owner" val={v.contact_name} />
+              <Field label="Email" val={v.contact_email} />
+              <Field label="Phone" val={v.contact_phone} />
+              <Field label="Website" val={v.website} />
+              <Field label="Instagram" val={v.instagram} />
+              <Field label="Facebook" val={m.facebook} />
+              <Field label="TikTok" val={m.tiktok} />
+              <Field label="Other Social" val={m.otherSocial} />
+              <Field label="Years Active" val={m.yearsActive} />
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Categories & Details</div>
+              <Field label="Categories" val={cats.join(', ')} />
+              <Field label="Subcategories" val={(v.subcategories||[]).length>0 ? v.subcategories.join(', ') : null} />
+              <Field label="Event Types" val={(v.tags||[]).length>0 ? v.tags.join(', ') : null} />
+              <Field label="Description" val={v.description} />
+              <Field label="Home Zip" val={v.home_zip} />
+              <Field label="Travel Radius" val={`${v.radius} miles`} />
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Booth & Logistics</div>
+              <Field label="Insurance" val={v.insurance ? '✓ Yes — has COI' : '✗ No'} />
+              <Field label="Minimum Purchase" val={v.has_min_purchase ? `Yes — $${v.min_purchase_amt} minimum` : 'No minimum'} />
+              <Field label="Private Event Fee" val={v.charges_private_fee ? `Yes — $${v.private_event_fee}` : 'No fee'} />
+              <Field label="Setup Time" val={m.setupTime ? `${m.setupTime} min` : null} />
+              <Field label="Table Size" val={m.tableSize} />
+              <Field label="Needs Electric" val={m.needsElectric ? 'Yes' : 'No'} />
+              <Field label="Response Time" val={m.responseTime} />
+              <Field label="Booking Lead Time" val={m.bookingLeadTime} />
+              <Field label="Event Frequency" val={m.eventFrequency} />
+            </div>
+          </div>
+
+          {/* Uploaded files */}
+          {(photos.length > 0 || coiUrl || lookbookUrl) && (
+            <div style={{marginTop:20,borderTop:'1px solid #e8ddd0',paddingTop:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12}}>Uploaded Files</div>
+              {photos.length > 0 && (
+                <div style={{marginBottom:16}}>
+                  <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:8}}>Business Photos ({photos.length})</div>
+                  <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+                    {photos.map((url,i) => (
+                      <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{display:'block'}}>
+                        <img src={url} alt={`Photo ${i+1}`} style={{width:120,height:120,objectFit:'cover',borderRadius:8,border:'1px solid #e0d5c5',cursor:'pointer'}} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+                {coiUrl && (
+                  <a href={coiUrl} target="_blank" rel="noopener noreferrer"
+                    style={{display:'flex',alignItems:'center',gap:8,background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'10px 16px',fontSize:13,color:'#1a6b3a',fontWeight:600,textDecoration:'none'}}>
+                    📄 Certificate of Insurance
+                  </a>
+                )}
+                {lookbookUrl && (
+                  <a href={lookbookUrl} target="_blank" rel="noopener noreferrer"
+                    style={{display:'flex',alignItems:'center',gap:8,background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'10px 16px',fontSize:13,color:'#1a4a6b',fontWeight:600,textDecoration:'none'}}>
+                    📋 Price Menu / Lookbook
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Bottom action bar */}
+          <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid #e8ddd0',display:'flex',gap:10,justifyContent:'flex-end'}}>
+            <button onClick={onApprove}
+              style={{background:'#2e7d32',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              ✓ Approve Vendor
+            </button>
+            <button onClick={onReject}
+              style={{background:'#c62828',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+              ✗ Reject
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
@@ -1474,43 +1609,24 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Pending Vendor Applications</h3>
       {pendingVendors.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
-        : <table className="admin-table">
-            <thead><tr><th>Business</th><th>Owner</th><th>Email</th><th>Home Zip</th><th>Radius</th><th>Categories</th><th>Actions</th></tr></thead>
-            <tbody>
-              {pendingVendors.map(v=>(
-                <tr key={v.id}>
-                  <td><strong>{v.name}</strong></td>
-                  <td>{v.contact_name||"—"}</td>
-                  <td>{v.contact_email||"—"}</td>
-                  <td>{v.home_zip}</td>
-                  <td>{v.radius} mi</td>
-                  <td>{(v.metadata?.allCategories||[v.category]).join(", ")||"—"}</td>
-                  <td style={{whiteSpace:'nowrap'}}>
-                    <button
-                      onClick={async()=>{
-                        const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
-                        if(error){alert('Error approving vendor. Please try again.');return;}
-                        setPendingVendors(p=>p.filter(x=>x.id!==v.id));
-                        setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
-                      }}
-                      style={{background:'#2e7d32',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:13,fontWeight:600,cursor:'pointer',marginRight:6,fontFamily:'DM Sans,sans-serif'}}>
-                      ✓ Approve
-                    </button>
-                    <button
-                      onClick={async()=>{
-                        if(!window.confirm(`Reject "${v.name}"? This cannot be undone.`))return;
-                        const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
-                        if(error){alert('Error rejecting vendor. Please try again.');return;}
-                        setPendingVendors(p=>p.filter(x=>x.id!==v.id));
-                      }}
-                      style={{background:'#c62828',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                      ✗ Reject
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        : <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            {pendingVendors.map(v=>(
+              <PendingVendorCard key={v.id} v={v}
+                onApprove={async()=>{
+                  const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+                  if(error){alert('Error approving vendor. Please try again.');return;}
+                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                  setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
+                }}
+                onReject={async()=>{
+                  if(!window.confirm(`Reject "${v.name}"? This cannot be undone.`))return;
+                  const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
+                  if(error){alert('Error rejecting vendor. Please try again.');return;}
+                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                }}
+              />
+            ))}
+          </div>
       }
     </div>
   );
