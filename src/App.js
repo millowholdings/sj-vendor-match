@@ -2572,10 +2572,70 @@ export default function App() {
   return <AppInner />;
 }
 
+// ─── Message Helpers ──────────────────────────────────────────────────────────
+const URL_REGEX = /(https?:\/\/[^\s<>"')\]]+)/g;
+
+function MessageContent({ text, isHost }) {
+  if (!text) return null;
+  const parts = text.split(URL_REGEX);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        URL_REGEX.test(part)
+          ? <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+              style={{ color: isHost ? '#c8a84b' : '#1a6b3a', textDecoration:'underline', wordBreak:'break-all' }}>{part}</a>
+          : <span key={i}>{part}</span>
+      )}
+    </span>
+  );
+}
+
+function AttachmentBubble({ att, isHost }) {
+  const isImage = att.type && att.type.startsWith('image/');
+  const fmtSize = (bytes) => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  };
+  const iconForType = (type, name) => {
+    if (type?.startsWith('image/')) return '🖼️';
+    if (type?.includes('pdf') || name?.endsWith('.pdf')) return '📄';
+    if (type?.includes('spreadsheet') || type?.includes('excel') || name?.match(/\.(xlsx?|csv)$/)) return '📊';
+    if (type?.includes('word') || type?.includes('document') || name?.match(/\.docx?$/)) return '📝';
+    if (type?.includes('zip') || name?.endsWith('.zip')) return '📦';
+    return '📎';
+  };
+  return (
+    <a href={att.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:'none' }}>
+      <div style={{
+        background: isHost ? '#2d2118' : '#fdf9f5',
+        border: '1px solid ' + (isHost ? '#3d3020' : '#e8ddd0'),
+        borderRadius:8, padding: isImage ? 4 : '8px 12px', overflow:'hidden',
+        maxWidth: isImage ? 280 : undefined,
+      }}>
+        {isImage ? (
+          <img src={att.url} alt={att.name}
+            style={{ display:'block', maxWidth:'100%', borderRadius:6 }} />
+        ) : (
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:20 }}>{iconForType(att.type, att.name)}</span>
+            <div style={{ overflow:'hidden' }}>
+              <div style={{ fontSize:13, fontWeight:600, color: isHost ? '#e8c97a' : '#1a1410', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{att.name}</div>
+              {att.size && <div style={{ fontSize:11, color:'#a89a8a' }}>{fmtSize(att.size)}</div>}
+            </div>
+          </div>
+        )}
+      </div>
+    </a>
+  );
+}
+
 // ─── Messages Page ────────────────────────────────────────────────────────────
 function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests }) {
   const [draft, setDraft] = useState('');
   const [senderName, setSenderName] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const activeConvo = conversations.find(c => c.id === activeConvoId);
@@ -2584,20 +2644,54 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [activeConvo?.messages?.length]);
 
-  const sendMessage = () => {
-    if (!draft.trim()) return;
-    if (!senderName.trim()) { alert('Please enter your name before sending.'); return; }
+  const addMessage = (text, attachments) => {
     setConversations(convos => convos.map(c => {
       if (c.id !== activeConvoId) return c;
       return {
         ...c,
         messages: [...c.messages, {
-          id: Date.now(), from: 'host', senderName, text: draft.trim(),
-          ts: new Date().toISOString()
+          id: Date.now(), from: 'host', senderName, text: text || '',
+          ts: new Date().toISOString(),
+          ...(attachments && attachments.length > 0 ? { attachments } : {})
         }]
       };
     }));
+  };
+
+  const sendMessage = () => {
+    if (!draft.trim()) return;
+    if (!senderName.trim()) { alert('Please enter your name before sending.'); return; }
+    addMessage(draft.trim());
     setDraft('');
+  };
+
+  const handleFileUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    if (!senderName.trim()) { alert('Please enter your name before sharing files.'); return; }
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const oversized = files.find(f => f.size > maxSize);
+    if (oversized) { alert(`"${oversized.name}" is too large. Maximum file size is 10MB.`); return; }
+    setUploading(true);
+    const bucket = 'vendor-files';
+    const convoId = activeConvoId;
+    const attachments = [];
+    for (const file of files) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const path = `messages/${convoId}/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) { console.error('Upload error:', upErr); continue; }
+      const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      attachments.push({ name: file.name, url, type: file.type, size: file.size });
+    }
+    if (attachments.length > 0) {
+      addMessage(draft.trim() || '', attachments);
+      setDraft('');
+    } else {
+      alert('File upload failed. Please try again.');
+    }
+    setUploading(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const fmtTs = ts => {
@@ -2727,7 +2821,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
             🔒 <strong>Secure platform messaging.</strong> Contact info is shared only after a booking is confirmed. All interactions are covered by our <a href="#tos" style={{color:'#c8a84b',textDecoration:'none',fontWeight:600}} onClick={e=>{e.preventDefault();}}>Terms of Service</a>.
           </div>
 
-          {/* Messages — msg.text is rendered as JSX text (React-escaped), not innerHTML — XSS safe */}
+          {/* Messages */}
           <div style={{ flex:1, overflowY:'auto', padding:24, display:'flex', flexDirection:'column', gap:12 }}>
             {activeConvo.messages.map(msg => (
               <div key={msg.id} style={{
@@ -2752,8 +2846,15 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                       borderRadius: msg.from==='host' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                       padding:'10px 14px', fontSize:14, lineHeight:1.6
                     }}>
-                      {msg.text}
+                      <MessageContent text={msg.text} isHost={msg.from==='host'} />
                     </div>
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div style={{ display:'flex', flexDirection:'column', gap:6, marginTop:6 }}>
+                        {msg.attachments.map((att, i) => (
+                          <AttachmentBubble key={i} att={att} isHost={msg.from==='host'} />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -2770,9 +2871,17 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                 style={{ flex:1, border:'1px solid #e0d5c5', borderRadius:6, padding:'6px 10px', fontSize:13, fontFamily:'DM Sans,sans-serif', background:'#fdf9f5', outline:'none' }} />
             </div>
             <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>fileInputRef.current?.click()} disabled={uploading}
+                title="Share a file or document"
+                style={{ background:'#f5f0ea', color:'#7a6a5a', border:'1px solid #e0d5c5', borderRadius:8, padding:'0 12px', fontSize:18, cursor:'pointer', flexShrink:0, opacity:uploading?0.5:1 }}>
+                {uploading ? '⏳' : '📎'}
+              </button>
+              <input ref={fileInputRef} type="file" multiple onChange={handleFileUpload}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.zip"
+                style={{ display:'none' }} />
               <textarea value={draft} onChange={e=>setDraft(e.target.value)}
                 onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }}}
-                placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
+                placeholder="Type a message or share a link... (Enter to send)"
                 rows={2}
                 style={{ flex:1, border:'1.5px solid #e0d5c5', borderRadius:8, padding:'10px 14px', fontSize:14, fontFamily:'DM Sans,sans-serif', resize:'none', outline:'none', background:'#fdf9f5' }} />
               <button onClick={sendMessage}
@@ -2781,7 +2890,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
               </button>
             </div>
             <div style={{ fontSize:11, color:'#a89a8a', marginTop:6 }}>
-              💡 Keep all booking conversations here to stay protected under the Non-Circumvention Agreement.
+              📎 Share documents, images, or links · 💡 All conversations are protected under the Non-Circumvention Agreement.
             </div>
           </div>
         </div>
