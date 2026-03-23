@@ -499,8 +499,8 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
   );
 }
 
-function UploadZone({ label, hint, accept, onChange }) {
-  const [fileName, setFileName] = useState(null);
+function UploadZone({ label, hint, accept, onChange, multiple }) {
+  const [fileNames, setFileNames] = useState([]);
   const inputRef = useRef(null);
   return (
     <div className="upload-zone" onClick={() => inputRef.current?.click()}>
@@ -508,16 +508,22 @@ function UploadZone({ label, hint, accept, onChange }) {
         ref={inputRef}
         type="file"
         accept={accept}
+        multiple={!!multiple}
         style={{ display:'none' }}
         onChange={e => {
-          const file = e.target.files[0];
-          if (!file) return;
-          setFileName(file.name);
-          onChange && onChange(file);
+          const files = multiple ? Array.from(e.target.files) : [e.target.files[0]];
+          const valid = files.filter(Boolean);
+          if (!valid.length) return;
+          setFileNames(valid.map(f => f.name));
+          onChange && onChange(multiple ? valid : valid[0]);
         }}
       />
-      <div className="upload-icon">{fileName ? '✅' : '📎'}</div>
-      <div style={{ fontWeight:600, marginBottom:4 }}>{fileName ? fileName : `Upload ${label}`}</div>
+      <div className="upload-icon">{fileNames.length > 0 ? '✅' : '📎'}</div>
+      <div style={{ fontWeight:600, marginBottom:4 }}>
+        {fileNames.length > 0
+          ? (multiple && fileNames.length > 1 ? `${fileNames.length} files selected` : fileNames[0])
+          : `Upload ${label}`}
+      </div>
       <div style={{ fontSize:13, color:'#a89a8a' }}>{hint}</div>
     </div>
   );
@@ -607,6 +613,10 @@ const DEFAULT_VENDOR_FORM = {
 function VendorForm({ onSubmit, setTab }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [coiFile, setCoiFile] = useState(null);
+  const [lookbookFile, setLookbookFile] = useState(null);
   const [hasDraft] = useState(() => !!localStorage.getItem(VENDOR_DRAFT_KEY));
   const [otherSubcategories, setOtherSubcategories] = useState(() => {
     try { return JSON.parse(localStorage.getItem(VENDOR_DRAFT_SUBS_KEY) || '{}'); }
@@ -829,11 +839,11 @@ function VendorForm({ onSubmit, setTab }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Documents & Photos</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" accept="image/*" hint="JPG, PNG — products, booth setup, branding" /></div>
+        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" accept="image/*" hint="JPG, PNG — up to 6 photos of products, booth, or branding" multiple onChange={files => setPhotoFiles(files.slice(0,6))} /></div>
         {form.insurance && (
-          <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" accept=".pdf,image/*" hint="PDF or image — required for many events" /></div>
+          <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" accept=".pdf,image/*" hint="PDF or image — required for many events" onChange={file => setCoiFile(file)} /></div>
         )}
-        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" accept=".pdf,image/*" hint="PDF — helps hosts understand your offerings" /></div>
+        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" accept=".pdf,image/*" hint="PDF — helps hosts understand your offerings" onChange={file => setLookbookFile(file)} /></div>
       </div>
 
       
@@ -844,7 +854,7 @@ function VendorForm({ onSubmit, setTab }) {
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
           <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that contacting or booking hosts discovered through this platform outside of South Jersey Vendor Market within 12 months is prohibited and subject to a finder's fee.</span>
         </label>
-        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(VENDOR_DRAFT_KEY); localStorage.removeItem(VENDOR_DRAFT_SUBS_KEY); onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Submit Vendor Profile →</button>
+        <button className="btn-submit" disabled={submitting} onClick={async ()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(VENDOR_DRAFT_KEY); localStorage.removeItem(VENDOR_DRAFT_SUBS_KEY); setSubmitting(true); await onSubmit(form, { photoFiles, coiFile, lookbookFile }); setSubmitting(false); }} style={{ opacity: tosAgreed&&!submitting?1:0.5 }}>{submitting ? 'Submitting…' : 'Submit Vendor Profile →'}</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. <strong style={{ color:'#e8c97a' }}>Pay nothing until your first booking!</strong> Then just $15/month.</p>
       </div>
     </div>
@@ -1980,8 +1990,7 @@ export default function App() {
     setTab("messages");
   };
 
-  const handleVendorSubmit = async form => {
-    // Fix 3: Strengthened validation
+  const handleVendorSubmit = async (form, files = {}) => {
     if (!form.businessName || !form.email || form.categories.length === 0) {
       alert("Please fill in Business Name, Email, and at least one Category.");
       return;
@@ -1998,9 +2007,22 @@ export default function App() {
       alert("Please enter a valid 5-digit home zip code.");
       return;
     }
-    // Fix 4: Save all collected fields including previously-missing ones
+    const metadataPayload = {
+      facebook: form.facebook || null,
+      tiktok: form.tiktok || null,
+      otherSocial: form.otherSocial || null,
+      responseTime: form.responseTime,
+      bookingLeadTime: form.bookingLeadTime,
+      eventFrequency: form.eventFrequency,
+      setupTime: form.setupTime,
+      tableSize: form.tableSize,
+      needsElectric: form.needsElectric,
+      yearsActive: form.yearsActive || null,
+      acceptsDirectBooking: form.acceptsDirectBooking,
+      requiresTicketedEvents: form.requiresTicketedEvents,
+      allCategories: form.categories,
+    };
     const { data: newVendor, error } = await supabase.from('vendors').insert({
-      status:              'pending',
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
       category:            form.categories[0],
@@ -2008,7 +2030,6 @@ export default function App() {
       home_zip:            form.homeZip,
       radius:              form.radius,
       tags:                form.eventTypes    || [],
-      price:               form.price         || null,
       description:         form.description,
       insurance:           form.insurance,
       has_min_purchase:    form.hasMinPurchase,
@@ -2019,36 +2040,45 @@ export default function App() {
       contact_phone:       form.phone       || null,
       website:             form.website     || null,
       instagram:           form.instagram   || null,
-      // Extra fields stored in metadata until dedicated columns are added
-      metadata: {
-        facebook: form.facebook || null,
-        tiktok: form.tiktok || null,
-        otherSocial: form.otherSocial || null,
-        responseTime: form.responseTime,
-        bookingLeadTime: form.bookingLeadTime,
-        eventFrequency: form.eventFrequency,
-        setupTime: form.setupTime,
-        tableSize: form.tableSize,
-        needsElectric: form.needsElectric,
-        yearsActive: form.yearsActive || null,
-        acceptsDirectBooking: form.acceptsDirectBooking,
-        requiresTicketedEvents: form.requiresTicketedEvents,
-        allCategories: form.categories,
-      },
+      metadata:            metadataPayload,
     }).select('id').single();
-    // Fix 1: Surface errors to the user instead of silently logging
     if (error) {
       console.error('Vendor submit error:', error);
-      alert('Something went wrong submitting your profile. Please try again.');
+      alert(`Submission failed: ${error.message}\n\nIf this keeps happening, please contact support@sjvendormarket.com`);
       return;
     }
-    // Fix #14: save vendor ID so My Calendar tab shows this vendor's calendar
+
+    // Upload files to Supabase Storage
     if (newVendor?.id) {
-      setCalendarVendorId(newVendor.id);
-      localStorage.setItem('sjvm_calendar_vendor_id', newVendor.id);
+      const bucket = 'vendor-assets';
+      const vid = newVendor.id;
+      const uploadFile = async (file, path) => {
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+        if (upErr) { console.error('File upload error:', upErr); return null; }
+        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      };
+      const { photoFiles = [], coiFile = null, lookbookFile = null } = files;
+      const fileUrls = {};
+      if (photoFiles.length > 0) {
+        const urls = await Promise.all(photoFiles.map((f, i) => uploadFile(f, `${vid}/photos/${i}-${f.name}`)));
+        fileUrls.photoUrls = urls.filter(Boolean);
+      }
+      if (coiFile) {
+        const url = await uploadFile(coiFile, `${vid}/coi/${coiFile.name}`);
+        if (url) fileUrls.coiUrl = url;
+      }
+      if (lookbookFile) {
+        const url = await uploadFile(lookbookFile, `${vid}/lookbook/${lookbookFile.name}`);
+        if (url) fileUrls.lookbookUrl = url;
+      }
+      if (Object.keys(fileUrls).length > 0) {
+        await supabase.from('vendors').update({ metadata: { ...metadataPayload, ...fileUrls } }).eq('id', vid);
+      }
+      setCalendarVendorId(vid);
+      localStorage.setItem('sjvm_calendar_vendor_id', vid);
     }
+
     setVendorSubs(v => [form, ...v]);
-    // Add to pending list for admin review
     if (newVendor?.id) {
       setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories[0], home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories }, subcategories: form.subcategories || [] }, ...p]);
     }
