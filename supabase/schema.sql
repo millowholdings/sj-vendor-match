@@ -98,6 +98,9 @@ alter table vendors add column if not exists metadata     jsonb default '{}';
 -- ─── Events: photo URL ────────────────────────────────────────────────────────
 alter table events add column if not exists photo_url text;
 
+-- ─── Events: duplicate category preference ────────────────────────────────────
+alter table events add column if not exists allow_duplicate_categories boolean not null default true;
+
 -- ─── Booking Requests ─────────────────────────────────────────────────────────
 create table if not exists booking_requests (
   id                   bigint       primary key,
