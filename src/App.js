@@ -149,6 +149,7 @@ function dbEventToApp(e) {
     notes:            e.notes             || "",
     source:           e.source            || "Host Submitted",
     photoUrl:         e.photo_url         || "",
+    vendorDiscovery:  e.vendor_discovery  || "both",
   };
 }
 
@@ -874,7 +875,8 @@ const DEFAULT_HOST_FORM = {
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, allowDuplicateCategories:true,
-  budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false
+  budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
+  vendorDiscovery:'both'
 };
 
 function HostForm({ onSubmit, setTab }) {
@@ -1084,6 +1086,34 @@ function HostForm({ onSubmit, setTab }) {
         otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
         otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />How Would You Like to Find Vendors?</h3>
+      <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
+        {[
+          { val:'browse', label:'Browse & Invite Only', desc:'You browse matched vendors and send invitations yourself.' },
+          { val:'apply', label:'Allow Vendors to Apply', desc:'Vendors who match your event can apply directly. You review and confirm.' },
+          { val:'both', label:'Both (Recommended)', desc:'You can browse and invite vendors, plus vendors can find and apply to your event.' },
+        ].map(opt => (
+          <div key={opt.val}
+            onClick={()=>set('vendorDiscovery',opt.val)}
+            style={{
+              background: form.vendorDiscovery===opt.val ? '#1a1410' : '#fff',
+              border: `2px solid ${form.vendorDiscovery===opt.val ? '#e8c97a' : '#e8ddd0'}`,
+              borderRadius:10, padding:'14px 18px', cursor:'pointer', transition:'all 0.2s'
+            }}>
+            <label style={{display:'flex',alignItems:'flex-start',gap:10,cursor:'pointer',margin:0}}>
+              <input type="radio" name="vendorDiscovery" checked={form.vendorDiscovery===opt.val}
+                onChange={()=>set('vendorDiscovery',opt.val)}
+                style={{width:18,height:18,marginTop:2,flexShrink:0,accentColor:'#e8c97a'}} />
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:form.vendorDiscovery===opt.val?'#e8c97a':'#1a1410'}}>{opt.label}</div>
+                <div style={{fontSize:12,color:form.vendorDiscovery===opt.val?'#c8b898':'#7a6a5a',marginTop:2}}>{opt.desc}</div>
+              </div>
+            </label>
+          </div>
+        ))}
+      </div>
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Full Service Booking</h3>
@@ -1859,11 +1889,119 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
 
 
 // ─── Opportunities Page ───────────────────────────────────────────────────────
+// ─── Vendor Application Modal ─────────────────────────────────────────────────
+function VendorApplyModal({ opp, onClose }) {
+  const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'' });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+
+  const handleSubmit = async () => {
+    if (!form.vendorName || !form.email || !form.contactName) { alert('Please fill in your business name, contact name, and email.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) { alert('Please enter a valid email.'); return; }
+    setSubmitting(true);
+    const responseToken = crypto.randomUUID();
+    const { error } = await supabase.from('booking_requests').insert({
+      id: Date.now(), session_id: 'vendor-application',
+      vendor_id: null, vendor_name: form.vendorName,
+      vendor_emoji: '', vendor_category: form.category || '',
+      host_name: opp.contactName, host_email: opp.contactEmail,
+      event_name: opp.eventName, event_type: opp.eventType,
+      event_zip: opp.zip, event_date: opp.date,
+      start_time: opp.startTime, end_time: opp.endTime,
+      address: '', attendance: '', vendor_count: String(opp.spots || ''),
+      budget: opp.boothFee || '', notes: form.message,
+      status: 'pending', sent_at: new Date().toISOString(),
+      response_token: responseToken,
+    });
+    if (error) {
+      console.error('Application error:', error);
+      alert('Failed to submit application. Please try again.');
+      setSubmitting(false);
+      return;
+    }
+    // Email the host about the vendor application
+    try {
+      await fetch('/api/send-booking-email', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorEmail: opp.contactEmail,
+          vendorName: opp.contactName,
+          hostName: form.vendorName,
+          hostEmail: form.email,
+          eventName: opp.eventName, eventType: opp.eventType,
+          eventDate: opp.date, startTime: opp.startTime, endTime: opp.endTime,
+          eventZip: opp.zip, notes: `Vendor Application from ${form.vendorName} (${form.contactName})\n\nEmail: ${form.email}${form.phone ? '\nPhone: '+form.phone : ''}${form.category ? '\nCategory: '+form.category : ''}${form.message ? '\n\nMessage: '+form.message : ''}`,
+          responseToken,
+        }),
+      });
+    } catch (emailErr) { console.error('Failed to send application email:', emailErr); }
+    setSubmitted(true);
+    setSubmitting(false);
+  };
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:520,width:'100%',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{background:'#1a1410',padding:'20px 28px',borderRadius:'16px 16px 0 0'}}>
+          <div style={{fontSize:14,color:'#a89a8a'}}>Apply to Vend</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{opp.eventName}</div>
+          <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{fmtDate(opp.date)} · {opp.eventType} · Zip {opp.zip}</div>
+        </div>
+        <div style={{padding:'24px 28px'}}>
+          {submitted ? (
+            <div style={{textAlign:'center',padding:'20px 0'}}>
+              <div style={{fontSize:32,marginBottom:12}}>✅</div>
+              <div style={{fontSize:18,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>Application Sent!</div>
+              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:16}}>The host has been notified and will review your application. They'll reach out if they'd like to confirm your spot.</div>
+              <button onClick={onClose} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
+          ) : (
+            <>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                <div className="form-group"><label>Business Name *</label><input value={form.vendorName} onChange={e=>set('vendorName',e.target.value)} placeholder="Your business name" /></div>
+                <div className="form-group"><label>Contact Name *</label><input value={form.contactName} onChange={e=>set('contactName',e.target.value)} placeholder="Your name" /></div>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" /></div>
+                <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="(555) 555-5555" /></div>
+              </div>
+              <div className="form-group" style={{marginBottom:12}}>
+                <label>Your Category</label>
+                <select value={form.category} onChange={e=>set('category',e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid #e0d5c5',borderRadius:6,fontSize:14,fontFamily:'DM Sans,sans-serif'}}>
+                  <option value="">Select your category</option>
+                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{marginBottom:16}}>
+                <label>Message to Host (optional)</label>
+                <textarea value={form.message} onChange={e=>set('message',e.target.value)} rows={3}
+                  placeholder="Tell the host about your products, experience, or any questions..." />
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button onClick={handleSubmit} disabled={submitting}
+                  style={{flex:2,background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:submitting?0.5:1}}>
+                  {submitting ? 'Submitting...' : 'Submit Application'}
+                </button>
+                <button onClick={onClose}
+                  style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function OpportunitiesPage({ opps }) {
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [myZip, setMyZip] = useState("");
   const [saved, setSaved] = useState([]);
+  const [applyOpp, setApplyOpp] = useState(null);
   const zipOk = myZip.length===5 && isKnownZip(myZip);
 
   const todayStr = new Date().toISOString().split('T')[0];
@@ -1964,6 +2102,11 @@ function OpportunitiesPage({ opps }) {
                     </div>
                   )}
                   <div style={{ display:"flex", gap:10 }}>
+                    {(opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
+                      <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
+                        Apply to Vend
+                      </button>
+                    )}
                     {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
                     <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                       {saved.includes(opp.id)?"\u2713 Saved":"Save"}
@@ -1975,6 +2118,7 @@ function OpportunitiesPage({ opps }) {
           </div>
         )}
       </div>
+      {applyOpp && <VendorApplyModal opp={applyOpp} onClose={()=>setApplyOpp(null)} />}
     </>
   );
 }
@@ -2602,6 +2746,7 @@ function AppInner() {
       notes: form.notes || null,
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
+      vendor_discovery: form.vendorDiscovery || 'both',
     }).select().single();
     if (eventErr) {
       console.error('Event submit error:', eventErr);

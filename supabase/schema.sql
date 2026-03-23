@@ -107,6 +107,10 @@ alter table events add column if not exists photo_url text;
 -- ─── Events: duplicate category preference ────────────────────────────────────
 alter table events add column if not exists allow_duplicate_categories boolean not null default true;
 
+-- ─── Events: vendor discovery preference ─────────────────────────────────────
+-- 'browse' = host browses only, 'apply' = vendors can apply, 'both' = both
+alter table events add column if not exists vendor_discovery text not null default 'both';
+
 -- ─── Booking Requests ─────────────────────────────────────────────────────────
 create table if not exists booking_requests (
   id                   bigint       primary key,
