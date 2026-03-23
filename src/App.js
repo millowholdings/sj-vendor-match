@@ -1850,8 +1850,9 @@ export default function App() {
       else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
 
       // Load pending vendors for admin review
-      const { data: pendingRows } = await supabase.from('vendors').select('*').eq('status', 'pending').order('created_at', { ascending: false });
-      if (pendingRows) setPendingVendors(pendingRows);
+      const { data: pendingRows, error: pErr } = await supabase.from('vendors').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      if (pErr) console.error('Failed to load pending vendors:', pErr);
+      else if (pendingRows) setPendingVendors(pendingRows);
       if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
       else if (eventRows) setOpps(eventRows.map(dbEventToApp));
 
@@ -2031,6 +2032,7 @@ export default function App() {
       website:             form.website     || null,
       instagram:           form.instagram   || null,
       metadata:            metadataPayload,
+      status:              'pending',
     }).select('id').single();
     if (error) {
       console.error('Vendor submit error:', error);
