@@ -410,8 +410,7 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
     const addedCats   = newCats.filter(c => !categories.includes(c));
     const removedCats = categories.filter(c => !newCats.includes(c));
     const kept    = subcategories.filter(s => !removedCats.some(c => (SUBCATEGORIES[c]||[]).includes(s)));
-    const autoAdd = addedCats.flatMap(c => SUBCATEGORIES[c] || []);
-    const merged  = [...new Set([...kept, ...autoAdd])];
+    const merged  = kept;
     onCategoriesChange(newCats);
     onSubcategoriesChange(merged);
     // Show the Other text input for any newly added category whose subcats include Other
