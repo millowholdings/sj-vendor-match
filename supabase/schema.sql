@@ -95,6 +95,12 @@ create policy "Anon update events"
 alter table vendors add column if not exists contact_name text;
 alter table vendors add column if not exists metadata     jsonb default '{}';
 
+-- ─── Vendors: approval status ────────────────────────────────────────────────
+-- 'pending' = awaiting admin review, 'approved' = live on site, 'rejected' = hidden
+alter table vendors add column if not exists status text not null default 'pending';
+-- Backfill existing vendors as approved so they stay visible
+update vendors set status = 'approved' where status = 'pending';
+
 -- ─── Events: photo URL ────────────────────────────────────────────────────────
 alter table events add column if not exists photo_url text;
 

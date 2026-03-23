@@ -1479,7 +1479,7 @@ function PricingPage({ setTab }) {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
-function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
+function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{} }) {
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('sjvm_admin') === '1');
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
@@ -1518,8 +1518,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
       <p className="section-sub">Manage vendors, hosts, and bookings across South Jersey.</p>
       <div className="admin-grid">
         <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Opportunities</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">{vendorSubs.length}</div><div className="admin-stat-label">Vendor Submissions</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Active Vendors</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Pending Review</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
         <div className="admin-stat"><div className="admin-stat-num">$0</div><div className="admin-stat-label">Monthly Revenue</div></div>
       </div>
       <AdminPostForm onPost={async opp => {
@@ -1562,24 +1562,47 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[] }) {
             </tbody>
           </table>
       }
-      {vendorSubs.length>0 && (
-        <>
-          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Recent Vendor Submissions</h3>
-          <table className="admin-table">
-            <thead><tr><th>Business</th><th>Owner</th><th>Home Zip</th><th>Radius</th><th>Categories</th><th>Status</th></tr></thead>
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Pending Vendor Applications</h3>
+      {pendingVendors.length===0
+        ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
+        : <table className="admin-table">
+            <thead><tr><th>Business</th><th>Owner</th><th>Email</th><th>Home Zip</th><th>Radius</th><th>Categories</th><th>Actions</th></tr></thead>
             <tbody>
-              {vendorSubs.map((v,i)=>(
-                <tr key={i}>
-                  <td><strong>{v.businessName}</strong></td><td>{v.ownerName}</td>
-                  <td>{v.homeZip}</td><td>{v.radius} mi</td>
-                  <td>{(v.categories||[]).join(", ")||"—"}</td>
-                  <td><span className="status-pill status-pending">Review</span></td>
+              {pendingVendors.map(v=>(
+                <tr key={v.id}>
+                  <td><strong>{v.name}</strong></td>
+                  <td>{v.contact_name||"—"}</td>
+                  <td>{v.contact_email||"—"}</td>
+                  <td>{v.home_zip}</td>
+                  <td>{v.radius} mi</td>
+                  <td>{(v.metadata?.allCategories||[v.category]).join(", ")||"—"}</td>
+                  <td style={{whiteSpace:'nowrap'}}>
+                    <button
+                      onClick={async()=>{
+                        const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+                        if(error){alert('Error approving vendor. Please try again.');return;}
+                        setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                        setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
+                      }}
+                      style={{background:'#2e7d32',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:13,fontWeight:600,cursor:'pointer',marginRight:6,fontFamily:'DM Sans,sans-serif'}}>
+                      ✓ Approve
+                    </button>
+                    <button
+                      onClick={async()=>{
+                        if(!window.confirm(`Reject "${v.name}"? This cannot be undone.`))return;
+                        const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
+                        if(error){alert('Error rejecting vendor. Please try again.');return;}
+                        setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                      }}
+                      style={{background:'#c62828',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                      ✗ Reject
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </>
-      )}
+      }
     </div>
   );
 }
@@ -1788,6 +1811,7 @@ export default function App() {
   const [vendors, setVendors] = useState([]);
   const [opps, setOpps] = useState([]);
   const [vendorSubs, setVendorSubs] = useState([]);
+  const [pendingVendors, setPendingVendors] = useState([]);
 
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -1795,11 +1819,15 @@ export default function App() {
   useEffect(() => {
     async function fetchData() {
       const [{ data: vendorRows, error: vErr }, { data: eventRows, error: eErr }] = await Promise.all([
-        supabase.from('vendors').select('*').order('created_at', { ascending: false }),
+        supabase.from('vendors').select('*').eq('status', 'approved').order('created_at', { ascending: false }),
         supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }),
       ]);
       if (vErr) { console.error('Failed to load vendors:', vErr); setLoadError('Could not load vendor data. Please refresh.'); }
       else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
+
+      // Load pending vendors for admin review
+      const { data: pendingRows } = await supabase.from('vendors').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      if (pendingRows) setPendingVendors(pendingRows);
       if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
       else if (eventRows) setOpps(eventRows.map(dbEventToApp));
 
@@ -1949,6 +1977,7 @@ export default function App() {
     }
     // Fix 4: Save all collected fields including previously-missing ones
     const { data: newVendor, error } = await supabase.from('vendors').insert({
+      status:              'pending',
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
       category:            form.categories[0],
@@ -1997,6 +2026,10 @@ export default function App() {
       localStorage.setItem('sjvm_calendar_vendor_id', newVendor.id);
     }
     setVendorSubs(v => [form, ...v]);
+    // Add to pending list for admin review
+    if (newVendor?.id) {
+      setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories[0], home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories }, subcategories: form.subcategories || [] }, ...p]);
+    }
     setVendorConfirm({ ref: generateRef(), email: form.email, name: form.businessName });
     setVendorSuccess(true);
     window.scrollTo({top:0, behavior:"smooth"});
@@ -2231,7 +2264,7 @@ export default function App() {
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
