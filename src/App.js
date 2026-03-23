@@ -1842,16 +1842,30 @@ export default function App() {
 
   useEffect(() => {
     async function fetchData() {
-      const [{ data: vendorRows, error: vErr }, { data: eventRows, error: eErr }] = await Promise.all([
+      // Try loading approved vendors; if status column doesn't exist yet, load all vendors
+      let vendorRows, vErr;
+      const [approvedResult, eventResult] = await Promise.all([
         supabase.from('vendors').select('*').eq('status', 'approved').order('created_at', { ascending: false }),
         supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }),
       ]);
+      vendorRows = approvedResult.data;
+      vErr = approvedResult.error;
+      const { data: eventRows, error: eErr } = eventResult;
+
+      // Fallback: if status column doesn't exist, fetch all vendors
+      if (vErr && vErr.code === '42703') {
+        console.warn('vendors.status column not found — loading all vendors');
+        const fallback = await supabase.from('vendors').select('*').order('created_at', { ascending: false });
+        vendorRows = fallback.data;
+        vErr = fallback.error;
+      }
+
       if (vErr) { console.error('Failed to load vendors:', vErr); setLoadError('Could not load vendor data. Please refresh.'); }
       else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
 
-      // Load pending vendors for admin review
+      // Load pending vendors for admin review (skip if status column doesn't exist)
       const { data: pendingRows, error: pErr } = await supabase.from('vendors').select('*').eq('status', 'pending').order('created_at', { ascending: false });
-      if (pErr) console.error('Failed to load pending vendors:', pErr);
+      if (pErr && pErr.code !== '42703') console.error('Failed to load pending vendors:', pErr);
       else if (pendingRows) setPendingVendors(pendingRows);
       if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
       else if (eventRows) setOpps(eventRows.map(dbEventToApp));
@@ -2013,7 +2027,7 @@ export default function App() {
       yearsActive: form.yearsActive || null,
       allCategories: form.categories,
     };
-    const { data: newVendor, error } = await supabase.from('vendors').insert({
+    const vendorPayload = {
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
       category:            form.categories[0],
@@ -2033,7 +2047,13 @@ export default function App() {
       instagram:           form.instagram   || null,
       metadata:            metadataPayload,
       status:              'pending',
-    }).select('id').single();
+    };
+    let { data: newVendor, error } = await supabase.from('vendors').insert(vendorPayload).select('id').single();
+    // Retry without status if the column doesn't exist yet
+    if (error && error.code === '42703') {
+      const { status: _s, ...payloadWithoutStatus } = vendorPayload;
+      ({ data: newVendor, error } = await supabase.from('vendors').insert(payloadWithoutStatus).select('id').single());
+    }
     if (error) {
       console.error('Vendor submit error:', error);
       alert(`Submission failed: ${error.message}\n\nIf this keeps happening, please contact support@sjvendormarket.com`);
