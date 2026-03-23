@@ -2000,6 +2000,7 @@ function AppInner() {
 
   useEffect(() => {
     async function fetchData() {
+      try {
       // Try loading approved vendors; if status column doesn't exist yet, load all vendors
       let vendorRows, vErr;
       const [approvedResult, eventResult] = await Promise.all([
@@ -2052,7 +2053,12 @@ function AppInner() {
           vendorMessage: r.vendor_message || '',
         })));
       }
-      setLoading(false);
+      } catch (err) {
+        console.error('fetchData error:', err);
+        setLoadError('Something went wrong loading data. Please refresh.');
+      } finally {
+        setLoading(false);
+      }
     }
     fetchData();
   }, []);
@@ -2355,7 +2361,7 @@ function AppInner() {
         return;
       }
     }
-    const { error: eventErr } = await supabase.from('events').insert({
+    const { data: newEvent, error: eventErr } = await supabase.from('events').insert({
       event_name: form.eventName || form.eventType,
       event_type: form.eventType,
       zip: form.eventZip,
@@ -2371,12 +2377,14 @@ function AppInner() {
       notes: form.notes || null,
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
-    });
+    }).select().single();
     if (eventErr) {
       console.error('Event submit error:', eventErr);
       alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@sjvendormarket.com`);
       return;
     }
+    // Add the new event to opportunities so it appears immediately
+    if (newEvent) setOpps(prev => [dbEventToApp(newEvent), ...prev]);
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
     setHostSuccess(true);
