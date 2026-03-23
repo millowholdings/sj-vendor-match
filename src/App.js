@@ -593,7 +593,7 @@ const DEFAULT_VENDOR_FORM = {
   categories:[], subcategories:[],
   description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
   eventTypes:[],
-  price:'', priceMax:0,
+  priceMax:0,
   insurance:false,
   hasMinPurchase:false, minPurchaseAmt:25,
   chargesPrivateFee:false, privateEventFee:150,
@@ -694,20 +694,6 @@ function VendorForm({ onSubmit, setTab }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
       <div className="form-grid">
-        <div className="form-group"><label>Your Pricing Range *</label>
-          <select value={form.price} onChange={e=>set('price',e.target.value)}>
-            <option value="">Select a range...</option>
-            <option>Under $50</option>
-            <option>$50–$100</option>
-            <option>$100–$200</option>
-            <option>$200–$300</option>
-            <option>$300–$500</option>
-            <option>$500–$1,000</option>
-            <option>$1,000+</option>
-            <option>Contact for pricing</option>
-          </select>
-          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>What hosts will see on your vendor profile card.</div>
-        </div>
         <div className="form-group">
           <label>Do You Carry Liability Insurance?</label>
           <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
@@ -1968,10 +1954,6 @@ export default function App() {
     }
     if (!form.homeZip || !/^\d{5}$/.test(form.homeZip)) {
       alert("Please enter a valid 5-digit home zip code.");
-      return;
-    }
-    if (!form.price) {
-      alert("Please select a pricing range.");
       return;
     }
     // Fix 4: Save all collected fields including previously-missing ones
