@@ -86,6 +86,7 @@ function distanceMiles(zip1, zip2) {
 
 function isValidZip(zip) { return /^\d{5}$/.test(zip); }
 function isKnownZip(zip) { return !!ZIP_COORDS[zip]; }
+function generateRef() { return 'SJVM-' + Date.now().toString(36).toUpperCase().slice(-4) + Math.random().toString(36).slice(2,5).toUpperCase(); }
 
 // ─── Supabase row → app shape converters ─────────────────────────────────────
 function dbVendorToApp(v) {
@@ -1180,8 +1181,8 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
           <div className="vendor-name">{v.name}</div>
         ) : (
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-            <div className="vendor-name" style={{filter:'blur(5px)',userSelect:'none',letterSpacing:2}}>{'█'.repeat((v.name||'').length)}</div>
-            <span style={{fontSize:10,background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:10,padding:'1px 7px',fontWeight:700,whiteSpace:'nowrap'}}>🔒 Unlock</span>
+            <div className="vendor-name" style={{color:'#a89a8a',fontStyle:'italic',fontFamily:'DM Sans,sans-serif',fontSize:15}}>🔒 Name hidden</div>
+            <span style={{fontSize:10,background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:10,padding:'1px 7px',fontWeight:700,whiteSpace:'nowrap'}}>Unlock</span>
           </div>
         )}
         <div className="vendor-category">
@@ -1195,8 +1196,8 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         </div>
         <p style={{ fontSize:13, color:'#7a6a5a', lineHeight:1.5, marginBottom:10 }}>{v.description}</p>
         <div className="vendor-meta">
-          <div className="vendor-price">{isPaidHost ? v.price : <span style={{filter:'blur(4px)',userSelect:'none'}}>$███–$███/day</span>}</div>
-          <div className="vendor-location">📍 {isPaidHost ? v.homeZip : '█████'} · travels {v.radius}mi</div>
+          <div className="vendor-price">{isPaidHost ? v.price : <span style={{color:'#a89a8a',fontStyle:'italic'}}>🔒 Price hidden</span>}</div>
+          <div className="vendor-location">📍 {isPaidHost ? v.homeZip : '·····'} · travels {v.radius}mi</div>
         </div>
         <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:8}}>
           {v.hasMinPurchase && <span className="vendor-tag" style={{background:'#fff3cd',color:'#7a5a10',borderColor:'#ffd966'}}>Min purchase: ${v.minPurchaseAmt}</span>}
@@ -1580,7 +1581,9 @@ function OpportunitiesPage({ opps }) {
   const [saved, setSaved] = useState([]);
   const zipOk = myZip.length===5 && isKnownZip(myZip);
 
+  const todayStr = new Date().toISOString().split('T')[0];
   const list = opps
+    .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
     .map(o => {
@@ -1631,8 +1634,8 @@ function OpportunitiesPage({ opps }) {
           </div>
         </div>
         <div className="results-header">
-          <div className="results-count"><strong>{list.length}</strong> opportunities available</div>
-          <div style={{ fontSize:13, color:"#a89a8a" }}>Updated regularly</div>
+          <div className="results-count"><strong>{list.length}</strong> upcoming opportunities</div>
+          <div style={{ fontSize:13, color:"#a89a8a" }}>Past events hidden</div>
         </div>
         {list.length===0
           ? <div className="empty-state"><div className="big">📭</div><p>No opportunities match your filters.</p></div>
@@ -1765,7 +1768,9 @@ function AdminPostForm({ onPost }) {
 export default function App() {
   const [tab, setTab] = useState("home");
   const [vendorSuccess, setVendorSuccess] = useState(false);
+  const [vendorConfirm, setVendorConfirm] = useState(null); // { ref, email, name }
   const [hostSuccess,   setHostSuccess]   = useState(false);
+  const [hostConfirm,   setHostConfirm]   = useState(null); // { ref, email, eventName }
   const [hostEvent,     setHostEvent]     = useState(null);
   const [hostPaid,      setHostPaid]      = useState(false);
   const [vendors, setVendors] = useState([]);
@@ -1779,7 +1784,7 @@ export default function App() {
     async function fetchData() {
       const [{ data: vendorRows, error: vErr }, { data: eventRows, error: eErr }] = await Promise.all([
         supabase.from('vendors').select('*').order('created_at', { ascending: false }),
-        supabase.from('events').select('*').order('date', { ascending: true }),
+        supabase.from('events').select('*').gte('date', new Date().toISOString().split('T')[0]).order('date', { ascending: true }),
       ]);
       if (vErr) { console.error('Failed to load vendors:', vErr); setLoadError('Could not load vendor data. Please refresh.'); }
       else if (vendorRows) setVendors(vendorRows.map(dbVendorToApp));
@@ -1972,6 +1977,7 @@ export default function App() {
       localStorage.setItem('sjvm_calendar_vendor_id', newVendor.id);
     }
     setVendorSubs(v => [form, ...v]);
+    setVendorConfirm({ ref: generateRef(), email: form.email, name: form.businessName });
     setVendorSuccess(true);
     window.scrollTo({top:0, behavior:"smooth"});
   };
@@ -1990,6 +1996,7 @@ export default function App() {
       return;
     }
     setHostEvent(form);
+    setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
     setHostSuccess(true);
     setTab('host-calendar');
     window.scrollTo({top:0, behavior:'smooth'});
@@ -2098,9 +2105,33 @@ export default function App() {
                 <div className="success-banner">
                   <div className="success-icon">🎉</div>
                   <h2>You're in the network!</h2>
-                  <p>Your vendor profile has been submitted. We'll review and activate your listing within <span className="success-highlight">24 hours</span>. Welcome to South Jersey Vendor Market.</p>
+                  <p>Your vendor profile has been submitted and is under review. We'll activate your listing within <span className="success-highlight">24 hours</span>.</p>
+                  {vendorConfirm && (
+                    <div style={{ marginTop:20, background:'rgba(255,255,255,0.08)', borderRadius:8, padding:'16px 20px', display:'inline-block', minWidth:280 }}>
+                      <div style={{ fontSize:12, color:'#a89a8a', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Confirmation Number</div>
+                      <div style={{ fontSize:22, fontWeight:700, color:'#e8c97a', letterSpacing:3, marginBottom:12 }}>{vendorConfirm.ref}</div>
+                      <div style={{ fontSize:13, color:'#a89a8a', marginBottom:12 }}>Save this for your records.</div>
+                      <a href={`mailto:${vendorConfirm.email}?subject=Your SJVM Vendor Registration — ${vendorConfirm.ref}&body=Hi ${vendorConfirm.name},%0A%0AThank you for registering with South Jersey Vendor Market!%0A%0AYour confirmation number is: ${vendorConfirm.ref}%0A%0AWhat happens next:%0A• Your listing will be reviewed within 24 hours%0A• You'll be matched with nearby events automatically%0A• Check Messages for booking requests from hosts%0A%0A— South Jersey Vendor Market%0Asupport@sjvendormarket.com`}
+                        style={{ display:'inline-block', background:'#e8c97a', color:'#1a1410', padding:'9px 20px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', fontFamily:'DM Sans,sans-serif' }}>
+                        📧 Email yourself a copy
+                      </a>
+                    </div>
+                  )}
                 </div>
-                <button className="btn-submit" onClick={()=>setVendorSuccess(false)}>Submit Another Profile</button>
+                <div style={{ background:'#fff', border:'1px solid #e8ddd0', borderRadius:10, padding:'24px 28px', marginTop:24 }}>
+                  <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, marginBottom:16 }}>What happens next</div>
+                  {[
+                    { icon:'🔍', title:'Profile Review', desc:"Our team reviews your submission within 24 hours and activates your listing." },
+                    { icon:'📅', title:'Event Matching', desc:"When a host posts an event in your area and categories, you'll appear in their vendor list." },
+                    { icon:'💬', title:'Booking Requests', desc:"Hosts send booking requests directly through the platform. Check your Messages tab." },
+                  ].map(s => (
+                    <div key={s.title} style={{ display:'flex', gap:14, marginBottom:16 }}>
+                      <div style={{ fontSize:24, flexShrink:0 }}>{s.icon}</div>
+                      <div><div style={{ fontWeight:600, fontSize:14, marginBottom:2 }}>{s.title}</div><div style={{ fontSize:13, color:'#7a6a5a' }}>{s.desc}</div></div>
+                    </div>
+                  ))}
+                </div>
+                <button className="btn-submit" style={{ marginTop:20 }} onClick={()=>{setVendorSuccess(false);setVendorConfirm(null);}}>Submit Another Profile</button>
               </>
             ) : (
               <>
@@ -2141,7 +2172,7 @@ export default function App() {
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
-        {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} />}
+        {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
       </div>
     </>
   );
@@ -2935,7 +2966,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 }
 
 // ─── Host Calendar Page ────────────────────────────────────────────────────────
-function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
+function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, clearHostConfirm }) {
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -3200,6 +3231,19 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
 
   return (
     <div style={{padding:'24px 24px 48px',maxWidth:1200,margin:'0 auto'}}>
+
+      {/* Host submission confirmation banner */}
+      {hostConfirm && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
+          <div>
+            <div style={{fontWeight:700,color:'#1a6b3a',fontSize:15,marginBottom:4}}>✅ Event submitted — you're all set!</div>
+            <div style={{fontSize:13,color:'#2d7a50'}}>
+              Confirmation <strong>{hostConfirm.ref}</strong> sent to {hostConfirm.email} · <a href={`mailto:${hostConfirm.email}?subject=Your SJVM Event Submission — ${hostConfirm.ref}&body=Hi,%0A%0AYour event has been submitted to South Jersey Vendor Market.%0A%0AConfirmation: ${hostConfirm.ref}%0AEvent: ${hostConfirm.eventName}%0A%0ANext steps:%0A• Browse vendors using the Browse Vendors tab%0A• Send booking requests to vendors you want%0A• Check this calendar for responses%0A%0A— South Jersey Vendor Market%0Asupport@sjvendormarket.com`} style={{color:'#1a6b3a',fontWeight:700}}>Email copy →</a>
+            </div>
+          </div>
+          <button onClick={clearHostConfirm} style={{background:'none',border:'none',color:'#1a6b3a',fontSize:18,cursor:'pointer',padding:4}}>✕</button>
+        </div>
+      )}
 
       {/* Top bar */}
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:20}}>
