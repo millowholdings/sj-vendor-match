@@ -600,6 +600,9 @@ const DEFAULT_VENDOR_FORM = {
   description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
   eventTypes:[],
   insurance:false,
+  hasMinPurchase:false, minPurchaseAmt:25,
+  chargesPrivateFee:false, privateEventFee:150,
+  priceMax:0,
   otherCategory:'', otherEventType:'',
   responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
   setupTime:30, tableSize:'6ft', needsElectric:false,
@@ -707,6 +710,40 @@ function VendorForm({ onSubmit, setTab }) {
             <option value="yes">Yes — I have a certificate of insurance (COI)</option>
           </select>
           <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
+        </div>
+        <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
+          <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
+            <option value={0}>Free / No fee</option>
+            <option value={25}>$25/day</option>
+            <option value={50}>$50/day</option>
+            <option value={75}>$75/day</option>
+            <option value={100}>$100/day</option>
+            <option value={125}>$125/day</option>
+            <option value={150}>$150/day</option>
+            <option value={200}>$200/day</option>
+            <option value={250}>$250/day</option>
+            <option value={300}>$300/day</option>
+            <option value={400}>$400/day</option>
+            <option value={500}>$500/day</option>
+            <option value={750}>$750/day</option>
+            <option value={1000}>$1,000/day</option>
+          </select>
+        </div>
+        <div className="form-group">
+          <label>Minimum Purchase Requirement?</label>
+          <select value={form.hasMinPurchase?'yes':'no'} onChange={e=>set('hasMinPurchase',e.target.value==='yes')}>
+            <option value="no">No minimum purchase</option>
+            <option value="yes">Yes — I require a minimum</option>
+          </select>
+          {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
+        </div>
+        <div className="form-group">
+          <label>Private Event Fee?</label>
+          <select value={form.chargesPrivateFee?'yes':'no'} onChange={e=>set('chargesPrivateFee',e.target.value==='yes')}>
+            <option value="no">No private event fee</option>
+            <option value="yes">Yes — I charge extra for private events</option>
+          </select>
+          {form.chargesPrivateFee && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Private event fee</div><select value={form.privateEventFee} onChange={e=>set('privateEventFee',+e.target.value)}>{[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
         </div>
         <div className="form-group"><label>Setup Time Needed</label>
           <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
