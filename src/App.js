@@ -815,7 +815,7 @@ const DEFAULT_HOST_FORM = {
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, allowDuplicateCategories:true,
-  budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:''
+  budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false
 };
 
 function HostForm({ onSubmit, setTab }) {
@@ -1026,9 +1026,36 @@ function HostForm({ onSubmit, setTab }) {
         otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
 
-      <div className="form-group" style={{ marginTop:20 }}>
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Full Service Booking</h3>
+      <div
+        onClick={()=>set('fullServiceBooking',!form.fullServiceBooking)}
+        style={{
+          background: form.fullServiceBooking ? '#1a1410' : '#fff',
+          border: `2px solid ${form.fullServiceBooking ? '#e8c97a' : '#e8ddd0'}`,
+          borderRadius:12, padding:'20px 24px', cursor:'pointer', transition:'all 0.2s', marginBottom:16
+        }}>
+        <label style={{display:'flex',alignItems:'flex-start',gap:12,cursor:'pointer',margin:0}}>
+          <input type="checkbox" checked={form.fullServiceBooking} onChange={e=>set('fullServiceBooking',e.target.checked)}
+            style={{width:20,height:20,marginTop:2,flexShrink:0,accentColor:'#e8c97a'}} />
+          <div>
+            <div style={{fontWeight:700,fontSize:16,color:form.fullServiceBooking?'#e8c97a':'#1a1410',marginBottom:4}}>
+              Let us handle everything
+            </div>
+            <div style={{fontSize:13,color:form.fullServiceBooking?'#c8b898':'#7a6a5a',lineHeight:1.5}}>
+              Our team will select, contact, confirm, and coordinate all vendors for your event. You sit back and relax — we'll handle the rest. A flat concierge fee applies.
+            </div>
+          </div>
+        </label>
+      </div>
+      {form.fullServiceBooking && (
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
+          <strong>How it works:</strong> After you submit, our team will review your event details, hand-pick the best vendors, and handle all outreach and confirmations on your behalf. We'll reach out within 24 hours to discuss your event and our concierge fee.
+        </div>
+      )}
+      <div className="form-group" style={{ marginTop:4 }}>
         <label>Additional Notes</label>
-        <textarea placeholder="Anything else vendors or our team should know..." value={form.notes} onChange={e=>set('notes',e.target.value)} />
+        <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Anything else vendors or our team should know..."} value={form.notes} onChange={e=>set('notes',e.target.value)} />
       </div>
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
@@ -1134,6 +1161,11 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
           <strong>{hostConfirm?.eventName}</strong> has been received. Ref: <strong>{hostConfirm?.ref}</strong>
         </p>
         <p style={{fontSize:13,color:'#2d7a50',marginBottom:16}}>A confirmation was sent to {hostConfirm?.email}</p>
+        {hostEvent?.fullServiceBooking && (
+          <div style={{background:'#1a1410',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#e8c97a',lineHeight:1.5}}>
+            <strong>Concierge Request received!</strong> Our team will review your event and reach out within 24 hours to discuss vendor selection and coordination.
+          </div>
+        )}
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           <button onClick={()=>setTab('host-calendar')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
             📅 View My Event Calendar
@@ -1330,9 +1362,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
       <p className="section-sub">Manage vendors, hosts, and bookings across South Jersey.</p>
       <div className="admin-grid">
         <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Opportunities</div></div>
+        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{opps.filter(o=>o.source==='Concierge Request').length}</div><div className="admin-stat-label">Concierge Requests</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Pending Review</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">$0</div><div className="admin-stat-label">Monthly Revenue</div></div>
       </div>
       <AdminPostForm onPost={async opp => {
         const { data, error } = await supabase.from('events').insert({
@@ -1358,6 +1390,28 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
         setOpps(prev => [dbEventToApp(data), ...prev]);
         return true;
       }} />
+      {opps.filter(o=>o.source==='Concierge Request').length > 0 && (
+        <>
+          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Concierge Requests</h3>
+          <p style={{fontSize:13,color:'#7a5a10',marginBottom:12}}>These hosts requested full-service vendor coordination. Reach out within 24 hours.</p>
+          <table className="admin-table" style={{border:'2px solid #e8c97a'}}>
+            <thead><tr style={{background:'#1a1410'}}><th style={{color:'#e8c97a'}}>Event</th><th style={{color:'#e8c97a'}}>Type</th><th style={{color:'#e8c97a'}}>Contact</th><th style={{color:'#e8c97a'}}>Zip</th><th style={{color:'#e8c97a'}}>Date</th><th style={{color:'#e8c97a'}}>Categories</th><th style={{color:'#e8c97a'}}>Status</th></tr></thead>
+            <tbody>
+              {opps.filter(o=>o.source==='Concierge Request').map(o=>(
+                <tr key={o.id} style={{background:'#fdf9f0'}}>
+                  <td><strong>{o.eventName}</strong></td>
+                  <td>{o.eventType}</td>
+                  <td>{o.contactName}<br/><span style={{fontSize:11,color:'#7a6a5a'}}>{o.contactEmail}</span></td>
+                  <td>{o.zip}</td>
+                  <td>{fmtDate(o.date)}</td>
+                  <td style={{fontSize:12}}>{(o.categoriesNeeded||[]).join(', ')||'—'}</td>
+                  <td><span style={{background:'#1a1410',color:'#e8c97a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Concierge</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Opportunities</h3>
       {opps.length===0
         ? <div className="empty-state"><div className="big">&#128221;</div><p>No opportunities posted yet.</p></div>
@@ -1365,10 +1419,12 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
             <thead><tr><th>Event</th><th>Type</th><th>Zip</th><th>Date</th><th>Source</th><th>Status</th></tr></thead>
             <tbody>
               {opps.map(o=>(
-                <tr key={o.id}>
+                <tr key={o.id} style={o.source==='Concierge Request'?{background:'#fdf9f0'}:{}}>
                   <td><strong>{o.eventName}</strong></td><td>{o.eventType}</td><td>{o.zip}</td>
                   <td>{fmtDate(o.date)}</td><td>{o.source}</td>
-                  <td><span className="status-pill status-active">Live</span></td>
+                  <td>{o.source==='Concierge Request'
+                    ? <span style={{background:'#1a1410',color:'#e8c97a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700}}>Concierge</span>
+                    : <span className="status-pill status-active">Live</span>}</td>
                 </tr>
               ))}
             </tbody>
@@ -1912,7 +1968,7 @@ export default function App() {
       contact_email: form.email,
       contact_phone: form.phone || null,
       notes: form.notes || null,
-      source: 'Host Submitted',
+      source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
     });
     setHostEvent(form);
