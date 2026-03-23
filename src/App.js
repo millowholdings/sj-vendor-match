@@ -1278,7 +1278,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
             </div>
             {!accepted && (
               <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>
-                Send a booking request and the vendor's contact info will be shared once they accept.
+                Invite this vendor to your event and their contact info will be shared once they accept.
               </div>
             )}
           </div>
@@ -1288,7 +1288,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
             {hostEvent && sendBookingRequest && !req && (
               <button onClick={()=>{sendBookingRequest(v, hostEvent); onClose();}}
                 style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                📋 Request to Book
+                📋 Invite to My Event
               </button>
             )}
             {req && (
@@ -1298,7 +1298,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
                 color: req.status==='accepted'?'#1a6b3a':req.status==='declined'?'#8b1a1a':'#7a5a10',
                 border: '1px solid '+(req.status==='accepted'?'#b8e8c8':req.status==='declined'?'#f5c6c6':'#ffd966')
               }}>
-                {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
+                {req.status==='pending' && '⏳ Invited — Awaiting Response'}
                 {req.status==='accepted' && '✅ Booking Accepted!'}
                 {req.status==='declined' && '❌ Vendor Declined'}
               </div>
@@ -1312,7 +1312,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
             {!hostEvent && sendBookingRequest && (
               <button onClick={()=>{setTab('host'); onClose();}}
                 style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                Post Event to Book
+                Post an Event First
               </button>
             )}
           </div>
@@ -1371,21 +1371,21 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 color: req.status==='accepted'?'#1a6b3a': req.status==='declined'?'#8b1a1a':'#7a5a10',
                 border: '1px solid ' + (req.status==='accepted'?'#b8e8c8': req.status==='declined'?'#f5c6c6':'#ffd966')
               }}>
-                {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
+                {req.status==='pending' && '⏳ Invited — Awaiting Response'}
                 {req.status==='accepted' && '✅ Booking Accepted! Check Messages.'}
                 {req.status==='declined' && '❌ Vendor Declined — Try Another Vendor'}
                 {req.status==='cancelled' && '↩ Request Cancelled'}
               </div>
             ) : (
               <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
-                📋 Request to Book
+                📋 Invite to My Event
               </button>
             )
           )}
           {!hostEvent && sendBookingRequest && (
-            <div style={{fontSize:12,color:'#a89a8a',textAlign:'center',padding:'6px 0'}}>
-              <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:12,fontFamily:'DM Sans,sans-serif'}} onClick={()=>setTab('host')}>Post your event first</button> to request bookings
-            </div>
+            <button className="contact-btn" style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontWeight:600,fontSize:13}} onClick={()=>setTab('host')}>
+              Post an Event First
+            </button>
           )}
           <div style={{display:'flex',gap:6}}>
             <button className="contact-btn" style={{flex:2,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setShowProfile(true)}>
