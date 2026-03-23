@@ -1252,6 +1252,73 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
   );
 }
 
+// ─── Host Success + Matched Vendors ──────────────────────────────────────────
+function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, sendBookingRequest, bookingRequests, isPaidHost, setHostPaid, setTab, vendorCalendars, setVendorCalendars, onSubmitAnother }) {
+  const [contacted, setContacted] = useState([]);
+  const neededCats = hostEvent?.vendorCategories || [];
+  const eventZip   = hostEvent?.eventZip || '';
+  const hasZip     = isValidZip(eventZip) && isKnownZip(eventZip);
+
+  const matched = vendors
+    .filter(v => neededCats.length === 0 || (v.allCategories || [v.category]).some(c => neededCats.includes(c)))
+    .map(v => {
+      const dist    = hasZip ? distanceMiles(v.homeZip, eventZip) : null;
+      const inRange = !hasZip ? true : (dist === null ? true : dist <= v.radius);
+      return { ...v, dist, inRange };
+    })
+    .filter(v => v.inRange)
+    .sort((a, b) => (a.dist ?? 999) - (b.dist ?? 999));
+
+  return (
+    <div>
+      <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:12,padding:'24px 28px',marginBottom:32}}>
+        <div style={{fontSize:32,marginBottom:8}}>✅</div>
+        <h2 style={{fontFamily:'Playfair Display,serif',fontSize:24,color:'#1a6b3a',marginBottom:8}}>Event submitted!</h2>
+        <p style={{fontSize:14,color:'#2d7a50',marginBottom:4}}>
+          <strong>{hostConfirm?.eventName}</strong> has been received. Ref: <strong>{hostConfirm?.ref}</strong>
+        </p>
+        <p style={{fontSize:13,color:'#2d7a50',marginBottom:16}}>A confirmation was sent to {hostConfirm?.email}</p>
+        <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+          <button onClick={()=>setTab('host-calendar')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            📅 View My Event Calendar
+          </button>
+          <button onClick={onSubmitAnother} style={{background:'none',border:'1.5px solid #1a6b3a',color:'#1a6b3a',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            + Submit Another Event
+          </button>
+        </div>
+      </div>
+
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:22,marginBottom:6}}>
+        {matched.length > 0
+          ? `${matched.length} Vendor${matched.length !== 1 ? 's' : ''} Match Your Event`
+          : 'No Matching Vendors Yet'}
+      </h3>
+      <p style={{fontSize:14,color:'#7a6a5a',marginBottom:20}}>
+        {neededCats.length > 0
+          ? `Vendors in ${neededCats.join(', ')} within travel range of ${eventZip}.`
+          : `All approved vendors within travel range of ${eventZip}.`}
+        {' '}Send a booking request to any vendor below.
+      </p>
+
+      {!isPaidHost && (
+        <div style={{background:'#1a1410',borderRadius:10,padding:'12px 18px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
+          <div style={{fontSize:13,color:'#a89a8a'}}>🔒 Vendor names &amp; contact info hidden. <span style={{color:'#e8c97a'}}>Unlock to send booking requests.</span></div>
+          <button onClick={()=>setTab('pricing')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>🔓 View Plans</button>
+        </div>
+      )}
+
+      {matched.length === 0
+        ? <div className="empty-state"><div className="big">🔍</div><p>No approved vendors match your categories yet — check back as more sign up!</p></div>
+        : <div className="vendor-grid">
+            {matched.map(v => (
+              <VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />
+            ))}
+          </div>
+      }
+    </div>
+  );
+}
+
 // ─── Matches Page ─────────────────────────────────────────────────────────────
 function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, isPaidHost, setHostPaid, vendorCalendars, setVendorCalendars }) {
   const [filterCategory, setFilterCategory] = useState('');
@@ -2049,7 +2116,6 @@ export default function App() {
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
     setHostSuccess(true);
-    setTab('host-calendar');
     window.scrollTo({top:0, behavior:'smooth'});
   };
 
@@ -2195,13 +2261,22 @@ export default function App() {
         )}
 
         {tab==='host' && (
-          <div className="section">
+          <div className="section" style={{maxWidth: hostSuccess ? 1060 : undefined}}>
             {hostSuccess ? (
-              <div className="success-banner">
-                <div className="success-icon">✅</div>
-                <h2>Event submitted!</h2>
-                <p>We've matched your event with the best available South Jersey vendors. <span className="success-highlight">Check the Browse tab</span> to see your results.</p>
-              </div>
+              <HostSuccessMatches
+                hostEvent={hostEvent}
+                hostConfirm={hostConfirm}
+                vendors={vendors}
+                openMessage={openMessage}
+                sendBookingRequest={sendBookingRequest}
+                bookingRequests={bookingRequests}
+                isPaidHost={hostPaid}
+                setHostPaid={setHostPaid}
+                setTab={setTab}
+                vendorCalendars={vendorCalendars}
+                setVendorCalendars={setVendorCalendars}
+                onSubmitAnother={() => { setHostSuccess(false); setHostEvent(null); setHostConfirm(null); }}
+              />
             ) : (
               <>
                 <div className="section-title">Host an Event</div>
