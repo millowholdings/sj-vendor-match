@@ -1890,6 +1890,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
 
 // ─── Opportunities Page ───────────────────────────────────────────────────────
 // ─── Vendor Application Modal ─────────────────────────────────────────────────
+// TODO: When Supabase Auth is added, logged-in vendors should see a one-click
+// "Apply to Vend" button (no form) — auto-attach their profile ID and info.
+// Host receives accept/deny/pending review options with vendor's full profile.
 function VendorApplyModal({ opp, onClose }) {
   const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'' });
   const [submitting, setSubmitting] = useState(false);
@@ -2291,17 +2294,19 @@ function VendorResponsePage({ token }) {
               {/* Already responded */}
               {(request.status !== 'pending' || submitted) && (
                 <div style={{
-                  background: request.status==='accepted'?'#d4f4e0':'#fdecea',
-                  border: '1px solid '+(request.status==='accepted'?'#b8e8c8':'#f5c6c6'),
+                  background: request.status==='accepted'?'#d4f4e0':request.status==='reviewing'?'#fdf4dc':'#fdecea',
+                  border: '1px solid '+(request.status==='accepted'?'#b8e8c8':request.status==='reviewing'?'#ffd966':'#f5c6c6'),
                   borderRadius:10,padding:'20px 24px',textAlign:'center',marginBottom:20
                 }}>
-                  <div style={{fontSize:28,marginBottom:8}}>{request.status==='accepted'?'✅':'❌'}</div>
-                  <div style={{fontSize:16,fontWeight:700,color:request.status==='accepted'?'#1a6b3a':'#8b1a1a'}}>
+                  <div style={{fontSize:28,marginBottom:8}}>{request.status==='accepted'?'✅':request.status==='reviewing'?'🔍':'❌'}</div>
+                  <div style={{fontSize:16,fontWeight:700,color:request.status==='accepted'?'#1a6b3a':request.status==='reviewing'?'#7a5a10':'#8b1a1a'}}>
                     {request.status==='accepted'
                       ? 'You accepted this booking!'
                       : request.status==='declined'
                         ? 'You declined this booking.'
-                        : `This request has been ${request.status}.`}
+                        : request.status==='reviewing'
+                          ? 'Marked as Pending Review'
+                          : `This request has been ${request.status}.`}
                   </div>
                   {request.vendor_message && (
                     <div style={{fontSize:13,color:'#7a6a5a',marginTop:8}}>Your message: "{request.vendor_message}"</div>
@@ -2309,6 +2314,11 @@ function VendorResponsePage({ token }) {
                   {request.status==='accepted' && request.host_email && (
                     <div style={{marginTop:12,fontSize:13,color:'#2d7a50'}}>
                       The host ({request.host_email}) has been notified. They'll be in touch to confirm details.
+                    </div>
+                  )}
+                  {request.status==='reviewing' && (
+                    <div style={{marginTop:12,fontSize:13,color:'#7a5a10'}}>
+                      You can return to this page later to accept or decline.
                     </div>
                   )}
                 </div>
@@ -2337,22 +2347,29 @@ function VendorResponsePage({ token }) {
                 <Field label="Email" val={request.status==='accepted' ? request.host_email : '(shared after you accept)'} />
               </div>
 
-              {/* Response actions — only if still pending */}
-              {request.status === 'pending' && !submitted && (
+              {/* Response actions — show if pending or reviewing */}
+              {(request.status === 'pending' || request.status === 'reviewing') && !submitted && (
                 <div style={{borderTop:'2px solid #e8ddd0',paddingTop:20}}>
                   {!responding ? (
-                    <div style={{display:'flex',gap:12}}>
-                      <button onClick={()=>setResponding('accept')} style={{flex:1,background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
-                        ✓ Accept Booking
-                      </button>
-                      <button onClick={()=>setResponding('decline')} style={{flex:1,background:'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
-                        ✗ Decline
-                      </button>
+                    <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                      <div style={{display:'flex',gap:12}}>
+                        <button onClick={()=>setResponding('accept')} style={{flex:1,background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                          ✓ Accept
+                        </button>
+                        <button onClick={()=>setResponding('decline')} style={{flex:1,background:'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                          ✗ Decline
+                        </button>
+                      </div>
+                      {request.status === 'pending' && (
+                        <button onClick={()=>handleRespond('reviewing')} style={{background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                          🔍 Pending Review — Decide Later
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div>
                       <div style={{fontSize:14,fontWeight:600,color:'#1a1410',marginBottom:8}}>
-                        {responding==='accept' ? '✅ Add a message for the host (optional):' : '❌ Reason for declining (optional):'}
+                        {responding==='accept' ? '✅ Add a message (optional):' : '❌ Reason for declining (optional):'}
                       </div>
                       <textarea value={vendorMsg} onChange={e=>setVendorMsg(e.target.value)}
                         placeholder={responding==='accept' ? "Looking forward to it! I'll arrive 30 min early to set up." : "Already booked on this date."}
