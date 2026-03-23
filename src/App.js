@@ -874,7 +874,7 @@ const DEFAULT_HOST_FORM = {
   isRecurring:false, recurrenceFrequency:'weekly', recurrenceDay:'Saturday', recurrenceWeekInterval:1, recurrenceMonthType:'dayofweek', recurrenceMonthWeek:'1st', recurrenceMonthDay:'Saturday', recurrenceEndType:'never', recurrenceEndDate:'', recurrenceCount:4, recurrenceNotes:'',
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
-  electricAvailable:true, tableProvided:false, allowDuplicateCategories:true,
+  electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
   budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
   vendorDiscovery:'both'
 };
@@ -1071,6 +1071,7 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
         <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
         <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
+        <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
         <div className="form-group"><label>Allow Multiple Vendors in Same Category?</label><select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>set('allowDuplicateCategories',e.target.value==='yes')}><option value="yes">Yes — multiple vendors per category OK</option><option value="no">No — one vendor per category only</option></select></div>
         <div className="form-group"><label>Vendor Booth Fee Offered</label><select value={form.budget} onChange={e=>set('budget',e.target.value)}><option value="">Select...</option><option>Free (vendor keeps all sales)</option><option>$25–$50/vendor</option><option>$50–$100/vendor</option><option>$100–$200/vendor</option><option>$200+/vendor</option></select></div>
       </div>
