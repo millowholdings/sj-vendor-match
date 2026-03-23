@@ -90,11 +90,12 @@ function generateRef() { return 'SJVM-' + Date.now().toString(36).toUpperCase().
 
 // ─── Supabase row → app shape converters ─────────────────────────────────────
 function dbVendorToApp(v) {
+  const m = v.metadata || {};
   return {
     id:                v.id,
     name:              v.name,
     category:          v.category,
-    allCategories:     v.metadata?.allCategories || [v.category],
+    allCategories:     m.allCategories || [v.category],
     subcategories:     v.subcategories  || [],
     homeZip:           v.home_zip,
     radius:            v.radius,
@@ -108,6 +109,23 @@ function dbVendorToApp(v) {
     chargesPrivateFee: v.charges_private_fee || false,
     privateEventFee:   v.private_event_fee   || 0,
     matchScore:        100,
+    contactName:       v.contact_name   || "",
+    contactEmail:      v.contact_email  || "",
+    contactPhone:      v.contact_phone  || "",
+    website:           v.website        || "",
+    instagram:         v.instagram      || "",
+    facebook:          m.facebook       || "",
+    tiktok:            m.tiktok         || "",
+    otherSocial:       m.otherSocial    || "",
+    photoUrls:         m.photoUrls      || [],
+    lookbookUrl:       m.lookbookUrl    || "",
+    yearsActive:       m.yearsActive    || "",
+    setupTime:         m.setupTime      || "",
+    tableSize:         m.tableSize      || "",
+    needsElectric:     m.needsElectric  || false,
+    responseTime:      m.responseTime   || "",
+    bookingLeadTime:   m.bookingLeadTime|| "",
+    eventFrequency:    m.eventFrequency || "",
   };
 }
 
@@ -1110,15 +1128,221 @@ function HostForm({ onSubmit, setTab }) {
   );
 }
 
+// ─── Vendor Profile Modal ─────────────────────────────────────────────────────
+function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, hostEvent, bookingRequests, openMessage, setTab }) {
+  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+  const accepted = bookingAccepted || req?.status === 'accepted';
+  const cats = v.allCategories || [v.category];
+  const photos = v.photoUrls || [];
+  const socials = [
+    v.website && { icon: '🌐', label: 'Website', url: v.website },
+    v.instagram && { icon: '📸', label: 'Instagram', url: v.instagram },
+    v.facebook && { icon: '👤', label: 'Facebook', url: v.facebook },
+    v.tiktok && { icon: '🎵', label: 'TikTok', url: v.tiktok },
+    v.otherSocial && { icon: '🔗', label: 'Other', url: v.otherSocial },
+  ].filter(Boolean);
+
+  const Field = ({label, val}) => val ? (
+    <div style={{marginBottom:10}}>
+      <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>{label}</div>
+      <div style={{fontSize:14,color:'#1a1410'}}>{val}</div>
+    </div>
+  ) : null;
+
+  const BlurredField = ({label, val}) => (
+    <div style={{marginBottom:10}}>
+      <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>{label}</div>
+      {accepted && val
+        ? <div style={{fontSize:14,color:'#1a1410'}}>{val}</div>
+        : <div style={{fontSize:14,color:'#c8c0b4',filter:'blur(5px)',userSelect:'none',pointerEvents:'none'}}>{'vendor@email.com'}</div>
+      }
+    </div>
+  );
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:720,width:'100%',maxHeight:'90vh',overflowY:'auto',position:'relative'}}>
+
+        {/* Close button */}
+        <button onClick={onClose} style={{position:'sticky',top:12,float:'right',marginRight:12,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:'50%',width:36,height:36,fontSize:18,cursor:'pointer',zIndex:10,fontFamily:'DM Sans,sans-serif',lineHeight:'36px',textAlign:'center'}}>✕</button>
+
+        {/* Header with photos */}
+        {photos.length > 0 ? (
+          <div style={{position:'relative',height:220,overflow:'hidden',borderRadius:'16px 16px 0 0'}}>
+            <div style={{display:'flex',height:'100%',overflowX:'auto',scrollSnapType:'x mandatory',gap:0}}>
+              {photos.map((url,i) => (
+                <img key={i} src={url} alt={`${v.name} photo ${i+1}`}
+                  style={{minWidth:'100%',height:'100%',objectFit:'cover',scrollSnapAlign:'start'}} />
+              ))}
+            </div>
+            {photos.length > 1 && (
+              <div style={{position:'absolute',bottom:10,left:'50%',transform:'translateX(-50%)',display:'flex',gap:6}}>
+                {photos.map((_,i) => <div key={i} style={{width:8,height:8,borderRadius:'50%',background:'rgba(255,255,255,0.7)'}} />)}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{height:120,background:'linear-gradient(135deg,#1a1410,#2d2118)',borderRadius:'16px 16px 0 0',display:'flex',alignItems:'center',justifyContent:'center'}}>
+            <span style={{fontSize:64}}>{v.emoji}</span>
+          </div>
+        )}
+
+        <div style={{padding:'24px 32px 32px'}}>
+          {/* Name + category header */}
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16,flexWrap:'wrap',marginBottom:20}}>
+            <div>
+              <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:4}}>
+                {photos.length > 0 && <span style={{fontSize:28}}>{v.emoji}</span>}
+                <h2 style={{fontFamily:'Playfair Display,serif',fontSize:26,color:'#1a1410',margin:0}}>{v.name}</h2>
+              </div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}}>
+                {cats.map(c => <span key={c} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:20,padding:'3px 12px',fontSize:12,color:'#7a6a5a',fontWeight:600}}>{c}</span>)}
+              </div>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:6}}>
+              <div style={{background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'8px 14px',fontSize:14,fontWeight:700}}>{v.matchScore}% match</div>
+            </div>
+          </div>
+
+          {/* Tags */}
+          {v.tags.length > 0 && (
+            <div style={{display:'flex',flexWrap:'wrap',gap:6,marginBottom:16}}>
+              {v.tags.map(t=><span key={t} className="vendor-tag">{t}</span>)}
+              {v.insurance && <span className="vendor-tag" style={{background:'#d4f4e0',color:'#1a6b3a',borderColor:'#b8e8c8'}}>✓ Insured</span>}
+            </div>
+          )}
+
+          {/* Description */}
+          {v.description && (
+            <div style={{fontSize:15,color:'#4a3a28',lineHeight:1.7,marginBottom:24,padding:'16px 20px',background:'#fdf9f5',borderRadius:10,border:'1px solid #f0e8dc'}}>
+              {v.description}
+            </div>
+          )}
+
+          {/* Two-column details */}
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 32px',marginBottom:24}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>About</div>
+              <Field label="Location" val={`📍 ${v.homeZip} · travels ${v.radius}mi`} />
+              {v.contactName && <Field label="Owner / Contact" val={v.contactName} />}
+              <Field label="Years Active" val={v.yearsActive} />
+              <Field label="Event Types" val={v.tags.length > 0 ? v.tags.join(', ') : null} />
+              {v.subcategories.length > 0 && <Field label="Specialties" val={v.subcategories.join(', ')} />}
+            </div>
+            <div>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>Booth & Logistics</div>
+              <Field label="Insurance" val={v.insurance ? '✓ Has Certificate of Insurance' : 'Not insured'} />
+              {v.hasMinPurchase && <Field label="Minimum Purchase" val={`$${v.minPurchaseAmt}`} />}
+              {v.chargesPrivateFee && <Field label="Private Event Fee" val={`$${v.privateEventFee}`} />}
+              <Field label="Setup Time" val={v.setupTime ? `${v.setupTime} min` : null} />
+              <Field label="Table Size" val={v.tableSize} />
+              <Field label="Needs Electric" val={v.needsElectric ? 'Yes' : null} />
+              <Field label="Response Time" val={v.responseTime} />
+              <Field label="Booking Lead Time" val={v.bookingLeadTime} />
+            </div>
+          </div>
+
+          {/* Social links */}
+          {socials.length > 0 && (
+            <div style={{marginBottom:24}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>Links & Social</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                {socials.map(s => (
+                  <a key={s.label} href={s.url.startsWith('http') ? s.url : 'https://'+s.url} target="_blank" rel="noopener noreferrer"
+                    style={{display:'inline-flex',alignItems:'center',gap:6,background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 14px',fontSize:13,fontWeight:600,color:'#1a1410',textDecoration:'none'}}>
+                    <span>{s.icon}</span> {s.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Lookbook */}
+          {v.lookbookUrl && (
+            <div style={{marginBottom:24}}>
+              <a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer"
+                style={{display:'inline-flex',alignItems:'center',gap:8,background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'10px 18px',fontSize:13,fontWeight:700,textDecoration:'none'}}>
+                📄 View Lookbook / Menu
+              </a>
+            </div>
+          )}
+
+          {/* Contact info — blurred until accepted */}
+          <div style={{marginBottom:24,padding:'16px 20px',background:accepted?'#d4f4e0':'#f5f0ea',borderRadius:10,border:'1px solid '+(accepted?'#b8e8c8':'#e8ddd0')}}>
+            <div style={{fontSize:13,fontWeight:700,color:accepted?'#1a6b3a':'#1a1410',marginBottom:12}}>
+              {accepted ? '✅ Contact Info (Booking Accepted)' : '🔒 Contact Info — Available After Booking Accepted'}
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 24px'}}>
+              <BlurredField label="Email" val={v.contactEmail} />
+              <BlurredField label="Phone" val={v.contactPhone} />
+            </div>
+            {!accepted && (
+              <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>
+                Send a booking request and the vendor's contact info will be shared once they accept.
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons */}
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            {hostEvent && sendBookingRequest && !req && (
+              <button onClick={()=>{sendBookingRequest(v, hostEvent); onClose();}}
+                style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                📋 Request to Book
+              </button>
+            )}
+            {req && (
+              <div style={{
+                padding:'10px 16px', borderRadius:8, fontSize:13, fontWeight:600,
+                background: req.status==='accepted'?'#d4f4e0':req.status==='declined'?'#fdecea':'#fdf4dc',
+                color: req.status==='accepted'?'#1a6b3a':req.status==='declined'?'#8b1a1a':'#7a5a10',
+                border: '1px solid '+(req.status==='accepted'?'#b8e8c8':req.status==='declined'?'#f5c6c6':'#ffd966')
+              }}>
+                {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
+                {req.status==='accepted' && '✅ Booking Accepted!'}
+                {req.status==='declined' && '❌ Vendor Declined'}
+              </div>
+            )}
+            {openMessage && (
+              <button onClick={()=>{openMessage(v); onClose();}}
+                style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                💬 Message
+              </button>
+            )}
+            {!hostEvent && sendBookingRequest && (
+              <button onClick={()=>{setTab('host'); onClose();}}
+                style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                Post Event to Book
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
 function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars }) {
+  const [showProfile, setShowProfile] = useState(false);
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+  const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
   return (
-    <div className="vendor-card">
-      <div className="vendor-card-top">
-        {v.emoji}
-        <div className="match-score">{v.matchScore}% match</div>
-      </div>
+    <>
+    <div className="vendor-card" style={{cursor:'pointer'}} onClick={()=>setShowProfile(true)}>
+      {hasPhotos ? (
+        <div style={{position:'relative',height:120,overflow:'hidden',borderRadius:'12px 12px 0 0'}}>
+          <img src={v.photoUrls[0]} alt={v.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
+          <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 40%,rgba(26,20,16,0.5) 100%)'}} />
+          <div style={{position:'absolute',top:10,left:10,fontSize:24}}>{v.emoji}</div>
+          <div className="match-score" style={{position:'absolute',top:10,right:10}}>{v.matchScore}% match</div>
+        </div>
+      ) : (
+        <div className="vendor-card-top">
+          {v.emoji}
+          <div className="match-score">{v.matchScore}% match</div>
+        </div>
+      )}
       <div className="vendor-card-body">
         <div className="vendor-name">{v.name}</div>
         <div className="vendor-category">
@@ -1139,7 +1363,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             ? <div className="vendor-no-match">✗ {v.dist!==null?`${v.dist.toFixed(1)} mi away`:'distance unknown'} — outside travel range</div>
             : <div className="vendor-distance">✓ {v.dist!==null?`${v.dist.toFixed(1)} mi from your event`:'within range (zip unverified)'}</div>
         )}
-        <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}}>
+        <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}} onClick={e=>e.stopPropagation()}>
           {hostEvent && sendBookingRequest && (
             req ? (
               <div style={{
@@ -1165,7 +1389,9 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             </div>
           )}
           <div style={{display:'flex',gap:6}}>
-            {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a',fontSize:12}} onClick={()=>openMessage(v)}>💬 Message</button>}
+            <button className="contact-btn" style={{flex:2,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setShowProfile(true)}>
+              View Profile
+            </button>
             <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
               {contacted.includes(v.id)?'✓ Saved':'Save'}
             </button>
@@ -1173,6 +1399,12 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         </div>
       </div>
     </div>
+    {showProfile && (
+      <VendorProfileModal v={v} onClose={()=>setShowProfile(false)}
+        sendBookingRequest={sendBookingRequest} hostEvent={hostEvent}
+        bookingRequests={bookingRequests} openMessage={openMessage} setTab={setTab} />
+    )}
+    </>
   );
 }
 
