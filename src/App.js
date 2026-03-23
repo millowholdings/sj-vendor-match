@@ -1924,25 +1924,26 @@ export default function App() {
 
     // Upload files to Supabase Storage
     if (newVendor?.id) {
-      const bucket = 'vendor-assets';
+      const bucket = 'vendor-files';
       const vid = newVendor.id;
+      const safeName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
       const uploadFile = async (file, path) => {
-        const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
         if (upErr) { console.error('File upload error:', upErr); return null; }
         return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
       };
       const { photoFiles = [], coiFile = null, lookbookFile = null } = files;
       const fileUrls = {};
       if (photoFiles.length > 0) {
-        const urls = await Promise.all(photoFiles.map((f, i) => uploadFile(f, `${vid}/photos/${i}-${f.name}`)));
+        const urls = await Promise.all(photoFiles.map((f, i) => uploadFile(f, `${vid}/photos/${i}-${safeName(f.name)}`)));
         fileUrls.photoUrls = urls.filter(Boolean);
       }
       if (coiFile) {
-        const url = await uploadFile(coiFile, `${vid}/coi/${coiFile.name}`);
+        const url = await uploadFile(coiFile, `${vid}/coi/${safeName(coiFile.name)}`);
         if (url) fileUrls.coiUrl = url;
       }
       if (lookbookFile) {
-        const url = await uploadFile(lookbookFile, `${vid}/lookbook/${lookbookFile.name}`);
+        const url = await uploadFile(lookbookFile, `${vid}/lookbook/${safeName(lookbookFile.name)}`);
         if (url) fileUrls.lookbookUrl = url;
       }
       if (Object.keys(fileUrls).length > 0) {

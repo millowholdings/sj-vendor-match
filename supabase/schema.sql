@@ -157,6 +157,29 @@ create policy "Anon insert booking requests"
 create policy "Anon update booking requests"
   on booking_requests for update using (true);
 
+-- ─── Supabase Storage: vendor-files bucket ───────────────────────────────────
+-- Run these in the Supabase SQL Editor to create the storage bucket + policies.
+-- This creates a PUBLIC bucket so vendor photos are viewable by anyone.
+
+insert into storage.buckets (id, name, public)
+values ('vendor-files', 'vendor-files', true)
+on conflict (id) do nothing;
+
+-- Allow anyone to read files (public photos/lookbooks)
+create policy "Public read vendor files"
+  on storage.objects for select
+  using (bucket_id = 'vendor-files');
+
+-- Allow anon uploads (vendors submit without auth)
+create policy "Anon upload vendor files"
+  on storage.objects for insert
+  with check (bucket_id = 'vendor-files');
+
+-- Allow anon to overwrite their own uploads (upsert)
+create policy "Anon update vendor files"
+  on storage.objects for update
+  using (bucket_id = 'vendor-files');
+
 -- ─── Optional: seed the sample data ─────────────────────────────────────────
 -- Uncomment to load the sample vendors from the app
 
