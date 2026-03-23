@@ -599,7 +599,7 @@ const DEFAULT_VENDOR_FORM = {
   chargesPrivateFee:false, privateEventFee:150,
   acceptsDirectBooking:false, requiresTicketedEvents:false,
   otherCategory:'', otherEventType:'',
-  preferredContact:[], responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
+  responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
   setupTime:30, tableSize:'6ft', needsElectric:false,
   yearsActive:''
 };
@@ -776,31 +776,6 @@ function VendorForm({ onSubmit, setTab }) {
       <h3 className="form-section-title"><span className="dot" />Communication & Availability</h3>
       <div className="form-grid">
 
-        <div className="form-group full">
-          <label>Preferred Contact Method(s)</label>
-          <div style={{display:'flex',flexWrap:'wrap',gap:8,marginTop:4}}>
-            {[
-              {val:'platform',  label:'💬 Platform Messaging'},
-              {val:'email',     label:'📧 Email'},
-              {val:'phone',     label:'📞 Phone Call'},
-              {val:'text',      label:'💬 Text / SMS'},
-              {val:'facebook',  label:'📘 Facebook Messenger'},
-              {val:'instagram', label:'📷 Instagram DM'},
-              {val:'whatsapp',  label:'📱 WhatsApp'},
-            ].map(({val,label}) => {
-              const on = form.preferredContact.includes(val);
-              return (
-                <div key={val} onClick={()=>set('preferredContact', on ? form.preferredContact.filter(v=>v!==val) : [...form.preferredContact,val])}
-                  style={{padding:'8px 14px',borderRadius:20,cursor:'pointer',fontSize:13,fontWeight:600,userSelect:'none',transition:'all 0.15s',
-                    background:on?'#1a1410':'#f5f0ea', color:on?'#e8c97a':'#4a3a28',
-                    border:`2px solid ${on?'#c8a84b':'#e0d5c5'}`}}>
-                  {label}
-                </div>
-              );
-            })}
-          </div>
-          <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>Select all that apply — hosts will see your preferred ways to connect.</div>
-        </div>
 
         <div className="form-group">
           <label>Typical Response Time</label>
@@ -1982,7 +1957,6 @@ export default function App() {
         facebook: form.facebook || null,
         tiktok: form.tiktok || null,
         otherSocial: form.otherSocial || null,
-        preferredContact: form.preferredContact,
         responseTime: form.responseTime,
         bookingLeadTime: form.bookingLeadTime,
         eventFrequency: form.eventFrequency,
