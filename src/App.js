@@ -599,11 +599,7 @@ const DEFAULT_VENDOR_FORM = {
   categories:[], subcategories:[],
   description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
   eventTypes:[],
-  priceMax:0,
   insurance:false,
-  hasMinPurchase:false, minPurchaseAmt:25,
-  chargesPrivateFee:false, privateEventFee:150,
-  acceptsDirectBooking:false, requiresTicketedEvents:false,
   otherCategory:'', otherEventType:'',
   responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
   setupTime:30, tableSize:'6ft', needsElectric:false,
@@ -712,40 +708,6 @@ function VendorForm({ onSubmit, setTab }) {
           </select>
           <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
         </div>
-        <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
-          <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
-            <option value={0}>Free / No fee</option>
-            <option value={25}>$25/day</option>
-            <option value={50}>$50/day</option>
-            <option value={75}>$75/day</option>
-            <option value={100}>$100/day</option>
-            <option value={125}>$125/day</option>
-            <option value={150}>$150/day</option>
-            <option value={200}>$200/day</option>
-            <option value={250}>$250/day</option>
-            <option value={300}>$300/day</option>
-            <option value={400}>$400/day</option>
-            <option value={500}>$500/day</option>
-            <option value={750}>$750/day</option>
-            <option value={1000}>$1,000/day</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Minimum Purchase Requirement?</label>
-          <select value={form.hasMinPurchase?'yes':'no'} onChange={e=>set('hasMinPurchase',e.target.value==='yes')}>
-            <option value="no">No minimum purchase</option>
-            <option value="yes">Yes — I require a minimum</option>
-          </select>
-          {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
-        </div>
-        <div className="form-group">
-          <label>Private Event Fee? (payable to you)</label>
-          <select value={form.chargesPrivateFee?'yes':'no'} onChange={e=>set('chargesPrivateFee',e.target.value==='yes')}>
-            <option value="no">No private event fee</option>
-            <option value="yes">Yes — I charge extra for private events (payable to you)</option>
-          </select>
-          {form.chargesPrivateFee && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Private event fee</div><select value={form.privateEventFee} onChange={e=>set('privateEventFee',+e.target.value)}>{[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
-        </div>
         <div className="form-group"><label>Setup Time Needed</label>
           <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
             <option value={10}>10 minutes</option>
@@ -762,25 +724,6 @@ function VendorForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
       </div>
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Booking Preferences</h3>
-      <div className="form-grid">
-        <div className="form-group">
-          <label>Accept Direct Bookings?</label>
-          <select value={form.acceptsDirectBooking?'yes':'no'} onChange={e=>set('acceptsDirectBooking',e.target.value==='yes')}>
-            <option value="no">No — I prefer to review requests first</option>
-            <option value="yes">Yes — hosts may direct book me when I'm available</option>
-          </select>
-          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>If yes, hosts can instantly book open slots on your calendar without waiting for approval.</div>
-        </div>
-        <div className="form-group">
-          <label>Ticketed Events Required?</label>
-          <select value={form.requiresTicketedEvents?'yes':'no'} onChange={e=>set('requiresTicketedEvents',e.target.value==='yes')}>
-            <option value="no">No — I'm open to ticketed and non-ticketed events</option>
-            <option value="yes">Yes — I only participate in ticketed events</option>
-          </select>
-        </div>
-      </div>
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Communication & Availability</h3>
@@ -872,8 +815,7 @@ const DEFAULT_HOST_FORM = {
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, allowDuplicateCategories:true,
-  budget:'', minPurchaseCover:0, isPrivateEvent:false, privatePerVendor:0, privateTotalBudget:0,
-  isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', managedBooking:false
+  budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:''
 };
 
 function HostForm({ onSubmit, setTab }) {
@@ -1070,40 +1012,6 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
         <div className="form-group"><label>Allow Multiple Vendors in Same Category?</label><select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>set('allowDuplicateCategories',e.target.value==='yes')}><option value="yes">Yes — multiple vendors per category OK</option><option value="no">No — one vendor per category only</option></select></div>
         <div className="form-group"><label>Vendor Booth Fee Offered</label><select value={form.budget} onChange={e=>set('budget',e.target.value)}><option value="">Select...</option><option>Free (vendor keeps all sales)</option><option>$25–$50/vendor</option><option>$50–$100/vendor</option><option>$100–$200/vendor</option><option>$200+/vendor</option></select></div>
-        <div className="form-group">
-          <label>Willing to Cover Vendor Minimums?</label>
-          <select value={form.minPurchaseCover} onChange={e=>set('minPurchaseCover',+e.target.value)}>
-            <option value={0}>Not willing to cover minimums</option>
-            <option value={10}>Up to $10 per vendor</option>
-            <option value={25}>Up to $25 per vendor</option>
-            <option value={50}>Up to $50 per vendor</option>
-            <option value={100}>Up to $100 per vendor</option>
-            <option value={9999}>Will cover any minimum</option>
-          </select>
-        </div>
-        <div className="form-group full">
-          <label>Is this a Private Event?</label>
-          <select value={form.isPrivateEvent?'yes':'no'} onChange={e=>set('isPrivateEvent',e.target.value==='yes')}>
-            <option value="no">No — public event / market</option>
-            <option value="yes">Yes — private event (birthday, wedding, corporate, etc.)</option>
-          </select>
-        </div>
-        {form.isPrivateEvent && <>
-          <div className="form-group">
-            <label>Budget Per Vendor (Private Event)</label>
-            <select value={form.privatePerVendor} onChange={e=>set('privatePerVendor',+e.target.value)}>
-              <option value={0}>Not specified</option>
-              {[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a} per vendor</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Total Vendor Budget (Private Event)</label>
-            <select value={form.privateTotalBudget} onChange={e=>set('privateTotalBudget',+e.target.value)}>
-              <option value={0}>Not specified</option>
-              {[200,300,400,500,750,1000,1500,2000,2500,3000,5000].map(a=><option key={a} value={a}>${a} total</option>)}
-            </select>
-          </div>
-        </>}
       </div>
 
       <hr className="form-divider" />
@@ -1118,20 +1026,6 @@ function HostForm({ onSubmit, setTab }) {
         otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Service Level</h3>
-      <div className="service-grid">
-        <label className={`checkbox-item${!form.managedBooking?' checked':''}`} style={{ flexDirection:'column', alignItems:'flex-start', padding:20, cursor:'pointer' }} onClick={()=>set('managedBooking',false)}>
-          <div style={{ fontWeight:600, marginBottom:4 }}>Self-Serve Matching</div>
-          <div style={{ fontSize:13, color:'#7a6a5a' }}>Get a curated list of matched vendors. You reach out and book directly.</div>
-          <div style={{ marginTop:8, color:'#e8c97a', fontWeight:700 }}>$25 one-time or $49/mo</div>
-        </label>
-        <label className={`checkbox-item${form.managedBooking?' checked':''}`} style={{ flexDirection:'column', alignItems:'flex-start', padding:20, cursor:'pointer' }} onClick={()=>set('managedBooking',true)}>
-          <div style={{ fontWeight:600, marginBottom:4 }}>Managed Booking</div>
-          <div style={{ fontSize:13, color:'#7a6a5a' }}>We contact, confirm, and coordinate all your vendors for you. Completely hands-off.</div>
-          <div style={{ marginTop:8, color:'#e8c97a', fontWeight:700 }}>$150–$300/event</div>
-        </label>
-      </div>
       <div className="form-group" style={{ marginTop:20 }}>
         <label>Additional Notes</label>
         <textarea placeholder="Anything else vendors or our team should know..." value={form.notes} onChange={e=>set('notes',e.target.value)} />
@@ -1149,7 +1043,8 @@ function HostForm({ onSubmit, setTab }) {
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, isPaidHost, setTab, vendorCalendars, setVendorCalendars }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars }) {
+  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
   return (
     <div className="vendor-card">
       <div className="vendor-card-top">
@@ -1157,14 +1052,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         <div className="match-score">{v.matchScore}% match</div>
       </div>
       <div className="vendor-card-body">
-        {isPaidHost ? (
-          <div className="vendor-name">{v.name}</div>
-        ) : (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
-            <div className="vendor-name" style={{color:'#a89a8a',fontStyle:'italic',fontFamily:'DM Sans,sans-serif',fontSize:15}}>🔒 Name hidden</div>
-            <span style={{fontSize:10,background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:10,padding:'1px 7px',fontWeight:700,whiteSpace:'nowrap'}}>Unlock</span>
-          </div>
-        )}
+        <div className="vendor-name">{v.name}</div>
         <div className="vendor-category">
           {(v.allCategories || [v.category]).length > 1
             ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
@@ -1176,94 +1064,52 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         </div>
         <p style={{ fontSize:13, color:'#7a6a5a', lineHeight:1.5, marginBottom:10 }}>{v.description}</p>
         <div className="vendor-meta">
-          <div className="vendor-price">{isPaidHost ? v.price : <span style={{color:'#a89a8a',fontStyle:'italic'}}>🔒 Price hidden</span>}</div>
-          <div className="vendor-location">📍 {isPaidHost ? v.homeZip : '·····'} · travels {v.radius}mi</div>
-        </div>
-        <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:8}}>
-          {v.hasMinPurchase && <span className="vendor-tag" style={{background:'#fff3cd',color:'#7a5a10',borderColor:'#ffd966'}}>Min purchase: ${v.minPurchaseAmt}</span>}
-          {v.chargesPrivateFee && <span className="vendor-tag" style={{background:'#e8f4fd',color:'#1a4a6b',borderColor:'#b8d8f0'}}>Private event fee: ${v.privateEventFee}</span>}
-          {!v.hasMinPurchase && !v.chargesPrivateFee && <span className="vendor-tag" style={{background:'#d4f4e0',color:'#1a6b3a',borderColor:'#b8e8c8'}}>No minimums or extra fees</span>}
+          <div className="vendor-location">📍 {v.homeZip} · travels {v.radius}mi</div>
         </div>
         {showDist && (
           outOfRange
             ? <div className="vendor-no-match">✗ {v.dist!==null?`${v.dist.toFixed(1)} mi away`:'distance unknown'} — outside travel range</div>
             : <div className="vendor-distance">✓ {v.dist!==null?`${v.dist.toFixed(1)} mi from your event`:'within range (zip unverified)'}</div>
         )}
-        {(() => {
-          const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
-          if (!isPaidHost) return (
-            <div style={{marginTop:10}}>
-              <button onClick={()=>setTab('pricing')} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                🔓 Unlock Vendor Info — View Plans
-              </button>
-              <div style={{fontSize:11,color:'#a89a8a',textAlign:'center',marginTop:5}}>Category, tags &amp; range visible. Name, price &amp; contact unlocked after signup.</div>
-            </div>
-          );
-          return (
-            <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}}>
-              {hostEvent && sendBookingRequest && (
-                req ? (
-                  <div style={{
-                    padding:'8px 12px', borderRadius:8, fontSize:13, fontWeight:600, textAlign:'center',
-                    background: req.status==='accepted'?'#d4f4e0': req.status==='declined'?'#fdecea':'#fdf4dc',
-                    color: req.status==='accepted'?'#1a6b3a': req.status==='declined'?'#8b1a1a':'#7a5a10',
-                    border: '1px solid ' + (req.status==='accepted'?'#b8e8c8': req.status==='declined'?'#f5c6c6':'#ffd966')
-                  }}>
-                    {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
-                    {req.status==='accepted' && '✅ Booking Accepted! Check Messages.'}
-                    {req.status==='declined' && '❌ Vendor Declined — Try Another Vendor'}
-                    {req.status==='cancelled' && '↩ Request Cancelled'}
-                  </div>
-                ) : (
-                  <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
-                    {v.price === 'Contact for pricing' ? '💬 Inquire About Pricing & Availability' : '📋 Request to Book'}
-                  </button>
-                )
-              )}
-              {!hostEvent && sendBookingRequest && (
-                <div style={{fontSize:12,color:'#a89a8a',textAlign:'center',padding:'6px 0'}}>
-                  <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:12,fontFamily:'DM Sans,sans-serif'}} onClick={()=>setTab('host')}>Post your event first</button> to request bookings
-                </div>
-              )}
-              {isPaidHost && hostEvent && vendorCalendars && (() => {
-                const cal = vendorCalendars[v.id];
-                const eventDate = hostEvent.date;
-                if (!cal || !eventDate) return null;
-                const isAvail = cal.availability && cal.availability[eventDate] === 'available';
-                const isBooked = cal.bookedDates && cal.bookedDates.includes(eventDate);
-                if (isBooked) return (
-                  <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px',fontSize:12,color:'#8b1a1a',textAlign:'center'}}>
-                    📅 Already booked on {eventDate}
-                  </div>
-                );
-                if (isAvail) return (
-                  <button className="contact-btn" style={{background:'#1a6b3a',color:'#fff',fontWeight:700,fontSize:13}} onClick={()=>{
-                    if (!window.confirm(`Confirm direct booking with ${v.name} for ${eventDate}?\n\nThis will mark the date as booked and send them a booking request.`)) return;
-                    const newCal = {...(vendorCalendars[v.id]||{}), bookedDates:[...(vendorCalendars[v.id]?.bookedDates||[]), eventDate]};
-                    setVendorCalendars(prev=>({...prev,[v.id]:newCal}));
-                    sendBookingRequest(v, {...hostEvent, directBook:true});
-                  }}>
-                    ⚡ Direct Book — {eventDate}
-                  </button>
-                );
-                return null;
-              })()}
-              <div style={{display:'flex',gap:6}}>
-                {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a',fontSize:12}} onClick={()=>openMessage(v)}>💬 Message</button>}
-                <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
-                  {contacted.includes(v.id)?'✓ Saved':'Save'}
-                </button>
+        <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:10}}>
+          {hostEvent && sendBookingRequest && (
+            req ? (
+              <div style={{
+                padding:'8px 12px', borderRadius:8, fontSize:13, fontWeight:600, textAlign:'center',
+                background: req.status==='accepted'?'#d4f4e0': req.status==='declined'?'#fdecea':'#fdf4dc',
+                color: req.status==='accepted'?'#1a6b3a': req.status==='declined'?'#8b1a1a':'#7a5a10',
+                border: '1px solid ' + (req.status==='accepted'?'#b8e8c8': req.status==='declined'?'#f5c6c6':'#ffd966')
+              }}>
+                {req.status==='pending' && '⏳ Request Sent — Awaiting Response'}
+                {req.status==='accepted' && '✅ Booking Accepted! Check Messages.'}
+                {req.status==='declined' && '❌ Vendor Declined — Try Another Vendor'}
+                {req.status==='cancelled' && '↩ Request Cancelled'}
               </div>
+            ) : (
+              <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
+                📋 Request to Book
+              </button>
+            )
+          )}
+          {!hostEvent && sendBookingRequest && (
+            <div style={{fontSize:12,color:'#a89a8a',textAlign:'center',padding:'6px 0'}}>
+              <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:12,fontFamily:'DM Sans,sans-serif'}} onClick={()=>setTab('host')}>Post your event first</button> to request bookings
             </div>
-          );
-        })()}
+          )}
+          <div style={{display:'flex',gap:6}}>
+            {openMessage && <button className="contact-btn" style={{flex:2,background:'#1a1410',color:'#e8c97a',fontSize:12}} onClick={()=>openMessage(v)}>💬 Message</button>}
+            <button className="contact-btn" style={{flex:1,background:contacted.includes(v.id)?'#1a6b3a':'#f5f0ea',color:contacted.includes(v.id)?'#fff':'#1a1410',border:'1px solid #e0d5c5',fontSize:12}} onClick={()=>setContacted(c=>c.includes(v.id)?c:[...c,v.id])}>
+              {contacted.includes(v.id)?'✓ Saved':'Save'}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 // ─── Host Success + Matched Vendors ──────────────────────────────────────────
-function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, sendBookingRequest, bookingRequests, isPaidHost, setHostPaid, setTab, vendorCalendars, setVendorCalendars, onSubmitAnother }) {
+function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, sendBookingRequest, bookingRequests, setTab, vendorCalendars, setVendorCalendars, onSubmitAnother }) {
   const [contacted, setContacted] = useState([]);
   const neededCats = hostEvent?.vendorCategories || [];
   const eventZip   = hostEvent?.eventZip || '';
@@ -1310,18 +1156,11 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
         {' '}Send a booking request to any vendor below.
       </p>
 
-      {!isPaidHost && (
-        <div style={{background:'#1a1410',borderRadius:10,padding:'12px 18px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
-          <div style={{fontSize:13,color:'#a89a8a'}}>🔒 Vendor names &amp; contact info hidden. <span style={{color:'#e8c97a'}}>Unlock to send booking requests.</span></div>
-          <button onClick={()=>setTab('pricing')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>🔓 View Plans</button>
-        </div>
-      )}
-
       {matched.length === 0
         ? <div className="empty-state"><div className="big">🔍</div><p>No approved vendors match your categories yet — check back as more sign up!</p></div>
         : <div className="vendor-grid">
             {matched.map(v => (
-              <VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />
+              <VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />
             ))}
           </div>
       }
@@ -1330,57 +1169,29 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, isPaidHost, setHostPaid, vendorCalendars, setVendorCalendars }) {
+function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
-  const [filterPrivate, setFilterPrivate] = useState('no');
-  const [hostMinCover, setHostMinCover] = useState(0);
   const [hostZip, setHostZip] = useState(hostEvent?.eventZip || '');
   const [contacted, setContacted] = useState([]);
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
-  const isPrivate = filterPrivate === 'yes';
 
   const enriched = vendors
     .filter(v => !filterCategory  || (v.allCategories || [v.category]).includes(filterCategory))
     .filter(v => !filterInsurance || (filterInsurance==='yes' ? v.insurance : !v.insurance))
     .map(v => {
-      const dist = hasZip ? distanceMiles(v.homeZip, hostZip) : null;
-      const inRange = !hasZip ? true : (dist===null ? true : dist <= v.radius);
-      const minOk      = !v.hasMinPurchase || hostMinCover===9999 || hostMinCover >= (v.minPurchaseAmt||0);
-      const privateOk  = !isPrivate || !v.chargesPrivateFee;
-      const ticketedOk = !v.requiresTicketedEvents || (hostEvent && hostEvent.isTicketedEvent);
-      const flagged    = !minOk || !privateOk || !ticketedOk;
-      return {...v, dist, inRange, minOk, privateOk, flagged};
+      const dist    = hasZip ? distanceMiles(v.homeZip, hostZip) : null;
+      const inRange = !hasZip ? true : (dist === null ? true : dist <= v.radius);
+      return { ...v, dist, inRange };
     });
 
-  const inRange  = enriched.filter(v => v.inRange && !v.flagged).sort((a,b)=>(a.dist??999)-(b.dist??999)||b.matchScore-a.matchScore);
-  const flagged  = enriched.filter(v => v.inRange && v.flagged);
+  const inRange  = enriched.filter(v => v.inRange).sort((a,b)=>(a.dist??999)-(b.dist??999)||b.matchScore-a.matchScore);
   const outRange = enriched.filter(v => !v.inRange);
 
   return (
     <div className="section" style={{ maxWidth:1060 }}>
       <div className="section-title">Vendor Directory</div>
       <p className="section-sub">Browse all active South Jersey vendors. Enter your event zip code to see who can travel to you.</p>
-      {!isPaidHost && (
-        <div style={{background:'#1a1410',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12}}>
-          <div>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#e8c97a',marginBottom:3}}>🔒 You're browsing in preview mode</div>
-            <div style={{fontSize:13,color:'#a89a8a'}}>Vendor names, pricing &amp; contact info are hidden. Unlock everything — Pay nothing until your first booking!</div>
-          </div>
-          <button onClick={()=>setTab('pricing')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>🔓 View Plans</button>
-        </div>
-      )}
-      {isPaidHost && (
-        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'10px 20px',marginBottom:20,fontSize:13,color:'#1a6b3a',fontWeight:600}}>
-          ✅ Full access — vendor names, pricing &amp; contact info are visible.
-        </div>
-      )}
-      <div style={{marginBottom:12,display:'flex',alignItems:'center',gap:10}}>
-        <span style={{fontSize:12,color:'#a89a8a'}}>Demo:</span>
-        <button onClick={()=>setHostPaid(p=>!p)} style={{background:isPaidHost?'#1a6b3a':'#7a6a5a',color:'#fff',border:'none',borderRadius:20,padding:'4px 14px',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-          {isPaidHost?'✅ Paid Host (click to preview unpaid)':'🔒 Unpaid Preview (click to simulate paid)'}
-        </button>
-      </div>
       <div className="match-filters">
         <div className="match-filter-group" style={{ maxWidth:200 }}>
           <label>{hostEvent ? 'Event Zip Code' : 'My Zip Code'}</label>
@@ -1401,32 +1212,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
             <option value="">Any</option><option value="yes">Insured Only</option><option value="no">Not Required</option>
           </select>
         </div>
-        <div className="match-filter-group">
-          <label>Event Type</label>
-          <select value={filterPrivate} onChange={e=>setFilterPrivate(e.target.value)}>
-            <option value="no">Public / Market</option>
-            <option value="yes">Private Event</option>
-          </select>
-        </div>
-        <div className="match-filter-group">
-          <label>I Will Cover Minimums Up To</label>
-          <select value={hostMinCover} onChange={e=>setHostMinCover(+e.target.value)}>
-            <option value={0}>Not willing to cover</option>
-            <option value={10}>$10 per vendor</option>
-            <option value={25}>$25 per vendor</option>
-            <option value={50}>$50 per vendor</option>
-            <option value={100}>$100 per vendor</option>
-            <option value={9999}>Any amount</option>
-          </select>
-        </div>
       </div>
-      {(isPrivate || hostMinCover > 0) && (
-        <div className="info-box" style={{marginBottom:16}}>
-          {isPrivate && <span>🔒 Showing vendors <strong>without</strong> private event fees. </span>}
-          {hostMinCover > 0 && hostMinCover < 9999 && <span>✓ Filtering to vendors whose minimums you can cover (up to <strong>${hostMinCover}</strong>). </span>}
-          {hostMinCover === 9999 && <span>✓ You will cover any vendor minimum. </span>}
-        </div>
-      )}
 
       <div className="results-header">
         <div className="results-count"><strong>{inRange.length}</strong> {hasZip?'vendors within travel range':'vendors found'}</div>
@@ -1435,20 +1221,9 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />)}</div>
       }
 
-      {flagged.length>0 && (
-        <>
-          <div style={{ marginTop:40, marginBottom:16, borderTop:'2px dashed #ffd966', paddingTop:28 }}>
-            <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:4, color:'#7a5a10' }}>⚠ Potential Conflicts</div>
-            <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are in range but may have minimum purchase or private event fee requirements that don't match your filters.</p>
-          </div>
-          <div className="vendor-grid" style={{ opacity:0.75 }}>
-            {flagged.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}
-          </div>
-        </>
-      )}
       {hasZip && outRange.length>0 && (
         <>
           <div style={{ marginTop:48, marginBottom:16, borderTop:'2px dashed #e0d5c5', paddingTop:32 }}>
@@ -1456,7 +1231,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are beyond their stated travel radius for zip {hostZip}.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.5 }}>
-            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} isPaidHost={isPaidHost} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} hostEvent={hostEvent} />)}
+            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />)}
           </div>
         </>
       )}
@@ -1844,7 +1619,6 @@ export default function App() {
   const [hostSuccess,   setHostSuccess]   = useState(false);
   const [hostConfirm,   setHostConfirm]   = useState(null); // { ref, email, eventName }
   const [hostEvent,     setHostEvent]     = useState(null);
-  const [hostPaid,      setHostPaid]      = useState(false);
   const [vendors, setVendors] = useState([]);
   const [opps, setOpps] = useState([]);
   const [vendorSubs, setVendorSubs] = useState([]);
@@ -2018,8 +1792,6 @@ export default function App() {
       tableSize: form.tableSize,
       needsElectric: form.needsElectric,
       yearsActive: form.yearsActive || null,
-      acceptsDirectBooking: form.acceptsDirectBooking,
-      requiresTicketedEvents: form.requiresTicketedEvents,
       allCategories: form.categories,
     };
     const { data: newVendor, error } = await supabase.from('vendors').insert({
@@ -2300,8 +2072,6 @@ export default function App() {
                 openMessage={openMessage}
                 sendBookingRequest={sendBookingRequest}
                 bookingRequests={bookingRequests}
-                isPaidHost={hostPaid}
-                setHostPaid={setHostPaid}
                 setTab={setTab}
                 vendorCalendars={vendorCalendars}
                 setVendorCalendars={setVendorCalendars}
@@ -2319,7 +2089,7 @@ export default function App() {
 
         {tab==="matches"      && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
-          : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />)}
+          : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} />)}
