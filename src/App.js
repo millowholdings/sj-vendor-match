@@ -1558,12 +1558,6 @@ function PricingPage({ setTab }) {
           <div className="pricing-price">$15</div><div className="pricing-period">per month</div>
           <ul className="pricing-features"><li>Profile in vendor directory</li><li>Photo gallery (up to 6)</li><li>Insurance & doc uploads</li><li>Matched to events in your radius</li><li>Lead notifications by email</li></ul>
         </div>
-        <div className="pricing-card featured">
-          <div className="pricing-badge">MOST POPULAR</div>
-          <div className="pricing-type">Vendor</div><div className="pricing-name">Featured</div>
-          <div className="pricing-price">$25</div><div className="pricing-period">per month — or $250/year</div>
-          <ul className="pricing-features"><li>Everything in Basic</li><li>Top placement in search results</li><li>Featured on homepage</li><li>Priority match notifications</li><li>Social media feature (monthly)</li></ul>
-        </div>
       </div>
       <h3 style={{ fontSize:13, marginBottom:20, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR HOSTS & EVENT ORGANIZERS</h3>
       <div className="pricing-grid">
@@ -1578,10 +1572,10 @@ function PricingPage({ setTab }) {
           <ul className="pricing-features"><li>Unlimited event submissions</li><li>Unlimited vendor matching</li><li>Early access to new vendors</li><li>Event calendar listing</li><li>Priority support</li></ul>
         </div>
         <div className="pricing-card featured">
-          <div className="pricing-badge">WHITE GLOVE</div>
-          <div className="pricing-type">Host</div><div className="pricing-name">Managed Booking</div>
+          <div className="pricing-badge">FULL SERVICE</div>
+          <div className="pricing-type">Host</div><div className="pricing-name">Concierge</div>
           <div className="pricing-price">$150+</div><div className="pricing-period">per event</div>
-          <ul className="pricing-features"><li>We contact every vendor for you</li><li>Confirmations & follow-ups handled</li><li>Day-of coordination checklist</li><li>Vendor contract management</li><li>Dedicated event coordinator</li></ul>
+          <ul className="pricing-features"><li>We find & book vendors for you</li><li>Curated vendor recommendations</li><li>Confirmations & follow-ups handled</li><li>Day-of coordination checklist</li><li>Dedicated event coordinator</li></ul>
         </div>
       </div>
       <div style={{ textAlign:'center', marginTop:48 }}>
