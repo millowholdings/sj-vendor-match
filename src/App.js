@@ -1351,7 +1351,6 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             : v.category}
         </div>
         <div className="vendor-tags">
-          {v.tags.map(t=><span key={t} className="vendor-tag">{t}</span>)}
           {v.insurance && <span className="vendor-tag" style={{ background:'#d4f4e0', color:'#1a6b3a', borderColor:'#b8e8c8' }}>✓ Insured</span>}
         </div>
         <p style={{ fontSize:13, color:'#7a6a5a', lineHeight:1.5, marginBottom:10 }}>{v.description}</p>
