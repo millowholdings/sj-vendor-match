@@ -93,6 +93,7 @@ function dbVendorToApp(v) {
     id:                v.id,
     name:              v.name,
     category:          v.category,
+    allCategories:     v.metadata?.allCategories || [v.category],
     subcategories:     v.subcategories  || [],
     homeZip:           v.home_zip,
     radius:            v.radius,
@@ -1026,7 +1027,7 @@ function HostForm({ onSubmit, setTab }) {
                   <div className="form-group">
                     <label>Day of Month</label>
                     <select value={form.recurrenceMonthWeek} onChange={e=>set('recurrenceMonthWeek',e.target.value)}>
-                      {Array.from({length:28},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}{['st','nd','rd'][((n%10)-1)]||'th'}</option>)}
+                      {Array.from({length:28},(_,i)=>i+1).map(n=><option key={n} value={n}>{n}{(n>=11&&n<=13)?'th':(['st','nd','rd'][(n%10)-1]||'th')}</option>)}
                     </select>
                   </div>
                 )}
@@ -1183,7 +1184,11 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             <span style={{fontSize:10,background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:10,padding:'1px 7px',fontWeight:700,whiteSpace:'nowrap'}}>🔒 Unlock</span>
           </div>
         )}
-        <div className="vendor-category">{v.category}</div>
+        <div className="vendor-category">
+          {(v.allCategories || [v.category]).length > 1
+            ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
+            : v.category}
+        </div>
         <div className="vendor-tags">
           {v.tags.map(t=><span key={t} className="vendor-tag">{t}</span>)}
           {v.insurance && <span className="vendor-tag" style={{ background:'#d4f4e0', color:'#1a6b3a', borderColor:'#b8e8c8' }}>✓ Insured</span>}
@@ -1287,7 +1292,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   const isPrivate = filterPrivate === 'yes';
 
   const enriched = vendors
-    .filter(v => !filterCategory  || v.category === filterCategory)
+    .filter(v => !filterCategory  || (v.allCategories || [v.category]).includes(filterCategory))
     .filter(v => !filterInsurance || (filterInsurance==='yes' ? v.insurance : !v.insurance))
     .map(v => {
       const dist = hasZip ? distanceMiles(v.homeZip, hostZip) : null;
@@ -1768,6 +1773,7 @@ export default function App() {
   const [vendorSubs, setVendorSubs] = useState([]);
 
   const [loadError, setLoadError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
@@ -1804,6 +1810,7 @@ export default function App() {
           vendorMessage: r.vendor_message || '',
         })));
       }
+      setLoading(false);
     }
     fetchData();
   }, []);
@@ -1817,8 +1824,8 @@ export default function App() {
   }, [conversations]);
 
   const [activeConvoId, setActiveConvoId] = useState(null);
-  const [tosTab, setTosTab] = useState(null);
   const [bookingRequests, setBookingRequests] = useState([]);
+  const [calendarVendorId, setCalendarVendorId] = useState(() => localStorage.getItem('sjvm_calendar_vendor_id') || null);
 
   // Vendor calendars: persist to localStorage
   const [vendorCalendars, setVendorCalendars] = useState(() => {
@@ -1916,7 +1923,7 @@ export default function App() {
       return;
     }
     // Fix 4: Save all collected fields including previously-missing ones
-    const { error } = await supabase.from('vendors').insert({
+    const { data: newVendor, error } = await supabase.from('vendors').insert({
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
       category:            form.categories[0],
@@ -1952,12 +1959,17 @@ export default function App() {
         requiresTicketedEvents: form.requiresTicketedEvents,
         allCategories: form.categories,
       },
-    });
+    }).select('id').single();
     // Fix 1: Surface errors to the user instead of silently logging
     if (error) {
       console.error('Vendor submit error:', error);
       alert('Something went wrong submitting your profile. Please try again.');
       return;
+    }
+    // Fix #14: save vendor ID so My Calendar tab shows this vendor's calendar
+    if (newVendor?.id) {
+      setCalendarVendorId(newVendor.id);
+      localStorage.setItem('sjvm_calendar_vendor_id', newVendor.id);
     }
     setVendorSubs(v => [form, ...v]);
     setVendorSuccess(true);
@@ -2053,10 +2065,10 @@ export default function App() {
               </div>
             </div>
             <div className="stats-bar">
-              <div className="stat"><div className="stat-num">47+</div><div className="stat-label">Active Vendors</div></div>
-              <div className="stat"><div className="stat-num">18</div><div className="stat-label">Categories</div></div>
-              <div className="stat"><div className="stat-num">19</div><div className="stat-label">Event Types</div></div>
-              <div className="stat"><div className="stat-num">95%</div><div className="stat-label">Match Satisfaction</div></div>
+              <div className="stat"><div className="stat-num">{vendors.length || '—'}</div><div className="stat-label">Active Vendors</div></div>
+              <div className="stat"><div className="stat-num">{CATEGORIES.length - 1}</div><div className="stat-label">Categories</div></div>
+              <div className="stat"><div className="stat-num">{EVENT_TYPES.length - 1}</div><div className="stat-label">Event Types</div></div>
+              <div className="stat"><div className="stat-num">{opps.length || '—'}</div><div className="stat-label">Live Events</div></div>
             </div>
             <div className="section" style={{ textAlign:'center' }}>
               <div className="section-title">How It Works</div>
@@ -2118,13 +2130,17 @@ export default function App() {
           </div>
         )}
 
-        {tab==="matches"      && <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
-        {tab==="opportunities" && <OpportunitiesPage opps={opps} />}
+        {tab==="matches"      && (loading
+          ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
+          : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} isPaidHost={hostPaid} setHostPaid={setHostPaid} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />)}
+        {tab==="opportunities" && (loading
+          ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
+          : <OpportunitiesPage opps={opps} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
-        {tab==="tos"           && <TosPage tosTab={tosTab} setTosTab={setTosTab} setTab={setTab} />}
-        {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId || 1} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
+        {tab==="tos"           && <TosPage setTab={setTab} />}
+        {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} />}
       </div>
     </>
@@ -2281,7 +2297,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
             🔒 <strong>Protected by South Jersey Vendor Market Non-Circumvention Agreement.</strong> Direct booking outside this platform within 12 months is prohibited and subject to a finder's fee.
           </div>
 
-          {/* Messages */}
+          {/* Messages — msg.text is rendered as JSX text (React-escaped), not innerHTML — XSS safe */}
           <div style={{ flex:1, overflowY:'auto', padding:24, display:'flex', flexDirection:'column', gap:12 }}>
             {activeConvo.messages.map(msg => (
               <div key={msg.id} style={{
@@ -2352,18 +2368,7 @@ function TosPage({ setTab }) {
       <div className="section-title">Terms of Service</div>
       <p className="section-sub">South Jersey Vendor Market Platform Agreement — effective upon registration</p>
 
-      {[
-        { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on South Jersey Vendor Market, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and South Jersey Vendor Market." },
-        { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through South Jersey Vendor Market — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through South Jersey Vendor Market, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. South Jersey Vendor Market reserves the right to remove violating users from the platform permanently." },
-        { title: "3. Vendor Responsibilities", body: "Vendors agree to: (a) provide accurate information about their business, products, pricing, insurance status, and availability; (b) honor commitments made through in-app messaging and booking; (c) maintain current and valid certificates of insurance where applicable; (d) conduct all platform communications through the in-app messaging system; (e) pay the applicable monthly subscription fee to maintain an active listing." },
-        { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
-        { title: "5. In-App Messaging & Communication", body: "South Jersey Vendor Market provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. South Jersey Vendor Market does not read private messages but may access them if a dispute is filed." },
-        { title: "6. Privacy & Data Protection", body: "South Jersey Vendor Market collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
-        { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $10/month or $100/year (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
-        { title: "8. Limitation of Liability", body: "South Jersey Vendor Market is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to South Jersey Vendor Market in the 3 months preceding any claim." },
-        { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@sjvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
-        { title: "10. Modifications & Termination", body: "South Jersey Vendor Market reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
-      ].map(({ title, body }) => (
+      {TOS_SECTIONS.map(({ title, body }) => (
         <div key={title} style={{ marginBottom:28 }}>
           <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410', marginBottom:8 }}>{title}</div>
           {body.split('\n\n').map((para, i) => (
@@ -2492,6 +2497,15 @@ function BookingRequestCard({ req, respondToBooking }) {
 
 // ─── Vendor Calendar Page ─────────────────────────────────────────────────────
 function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
+  if (!vendorId) {
+    return (
+      <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
+        <div style={{ fontFamily:'Playfair Display,serif', fontSize:28, marginBottom:12, color:'#1a1410' }}>Your Vendor Calendar</div>
+        <p style={{ fontSize:16, maxWidth:440, margin:'0 auto' }}>Register as a vendor to unlock your personal availability calendar and manage bookings.</p>
+      </div>
+    );
+  }
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
@@ -2596,7 +2610,9 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
   const downloadICal = () => {
     const blob = new Blob([generateICal()], {type:'text/calendar'});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormarket-calendar.ics'; a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='sjvendormarket-calendar.ics'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   const statusStyle = (ds) => {
@@ -3016,7 +3032,9 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab }) {
 
   const downloadICal = () => {
     const blob = new Blob([generateICal()], {type:'text/calendar'});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='sjvendormarket-host-calendar.ics'; a.click();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href=url; a.download='sjvendormarket-host-calendar.ics'; a.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── Day view ─────────────────────────────────────────────────────────────────
