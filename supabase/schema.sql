@@ -144,7 +144,11 @@ create table if not exists booking_requests (
   created_at           timestamptz  not null default now()
 );
 
+-- Unique token for vendor response links (no auth needed)
+alter table booking_requests add column if not exists response_token text unique;
+
 create index if not exists booking_requests_session_idx on booking_requests (session_id);
+create index if not exists booking_requests_token_idx   on booking_requests (response_token);
 
 alter table booking_requests enable row level security;
 

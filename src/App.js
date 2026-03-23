@@ -1824,8 +1824,166 @@ function AdminPostForm({ onPost }) {
   );
 }
 
+// ─── Vendor Response Page (accessed via unique link) ──────────────────────────
+function VendorResponsePage({ token }) {
+  const [request, setRequest] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [responding, setResponding] = useState(null); // 'accept' | 'decline'
+  const [vendorMsg, setVendorMsg] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    async function loadRequest() {
+      const { data, error: fetchErr } = await supabase
+        .from('booking_requests').select('*').eq('response_token', token).single();
+      if (fetchErr || !data) { setError('This booking request link is invalid or has expired.'); setLoading(false); return; }
+      setRequest(data);
+      setLoading(false);
+    }
+    loadRequest();
+  }, [token]);
+
+  const handleRespond = async (status) => {
+    const respondedAt = new Date().toISOString();
+    const { error: updateErr } = await supabase.from('booking_requests')
+      .update({ status, vendor_message: vendorMsg, responded_at: respondedAt })
+      .eq('response_token', token);
+    if (updateErr) { alert('Failed to save your response. Please try again.'); return; }
+    setRequest(r => ({ ...r, status, vendor_message: vendorMsg, responded_at: respondedAt }));
+    setSubmitted(true);
+    setResponding(null);
+  };
+
+  const fmtDate = d => { if (!d) return ''; try { const [y,m,day] = d.split('-'); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[parseInt(m,10)-1]} ${parseInt(day,10)}, ${y}`; } catch { return d; } };
+  const fmtTime = t => { if (!t) return ''; const [h,m] = t.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; };
+
+  const Field = ({label, val}) => val ? (
+    <div style={{display:'flex',borderBottom:'1px solid #f0e8dc',padding:'10px 0'}}>
+      <div style={{width:160,fontSize:12,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5}}>{label}</div>
+      <div style={{flex:1,fontSize:14,color:'#1a1410'}}>{val}</div>
+    </div>
+  ) : null;
+
+  return (
+    <div style={{minHeight:'100vh',background:'#f5f0ea',fontFamily:"'DM Sans','Helvetica Neue',Arial,sans-serif"}}>
+      <div style={{background:'#1a1410',padding:'16px 24px',textAlign:'center'}}>
+        <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',letterSpacing:-0.5}}>South Jersey Vendor Market</div>
+      </div>
+      <div style={{maxWidth:600,margin:'0 auto',padding:'32px 16px'}}>
+        {loading && <div style={{textAlign:'center',padding:60,color:'#7a6a5a'}}>Loading booking request...</div>}
+        {error && (
+          <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:12,padding:32,textAlign:'center'}}>
+            <div style={{fontSize:32,marginBottom:12}}>😕</div>
+            <div style={{fontSize:16,fontWeight:700,color:'#8b1a1a',marginBottom:8}}>{error}</div>
+            <a href="/" style={{color:'#c8a84b',fontSize:14}}>Go to South Jersey Vendor Market</a>
+          </div>
+        )}
+        {request && !loading && (
+          <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',overflow:'hidden'}}>
+            <div style={{background:'#1a1410',padding:'24px 28px',textAlign:'center'}}>
+              <div style={{fontSize:14,color:'#a89a8a',marginBottom:4}}>Booking Request</div>
+              <div style={{fontSize:22,fontWeight:700,color:'#e8c97a'}}>{request.event_name || request.event_type || 'Event'}</div>
+              {request.host_name && <div style={{fontSize:13,color:'#a89a8a',marginTop:6}}>from {request.host_name}</div>}
+            </div>
+
+            <div style={{padding:'24px 28px'}}>
+              {/* Already responded */}
+              {(request.status !== 'pending' || submitted) && (
+                <div style={{
+                  background: request.status==='accepted'?'#d4f4e0':'#fdecea',
+                  border: '1px solid '+(request.status==='accepted'?'#b8e8c8':'#f5c6c6'),
+                  borderRadius:10,padding:'20px 24px',textAlign:'center',marginBottom:20
+                }}>
+                  <div style={{fontSize:28,marginBottom:8}}>{request.status==='accepted'?'✅':'❌'}</div>
+                  <div style={{fontSize:16,fontWeight:700,color:request.status==='accepted'?'#1a6b3a':'#8b1a1a'}}>
+                    {request.status==='accepted'
+                      ? 'You accepted this booking!'
+                      : request.status==='declined'
+                        ? 'You declined this booking.'
+                        : `This request has been ${request.status}.`}
+                  </div>
+                  {request.vendor_message && (
+                    <div style={{fontSize:13,color:'#7a6a5a',marginTop:8}}>Your message: "{request.vendor_message}"</div>
+                  )}
+                  {request.status==='accepted' && request.host_email && (
+                    <div style={{marginTop:12,fontSize:13,color:'#2d7a50'}}>
+                      The host ({request.host_email}) has been notified. They'll be in touch to confirm details.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Event details */}
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#1a1410',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Event Details</div>
+                <Field label="Event Type" val={request.event_type} />
+                <Field label="Date" val={fmtDate(request.event_date)} />
+                <Field label="Time" val={request.start_time ? `${fmtTime(request.start_time)}${request.end_time ? ' – '+fmtTime(request.end_time) : ''}` : null} />
+                <Field label="Location" val={request.address} />
+                <Field label="Zip Code" val={request.event_zip} />
+                <Field label="Attendance" val={request.attendance} />
+                <Field label="Vendor Spots" val={request.vendor_count} />
+                <Field label="Budget" val={request.budget} />
+                <Field label="Notes" val={request.notes} />
+                {request.is_recurring && (
+                  <Field label="Recurring" val={`${request.recurrence_frequency || 'Yes'}${request.recurrence_day ? ' ('+request.recurrence_day+')' : ''}`} />
+                )}
+              </div>
+
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#1a1410',marginBottom:12,textTransform:'uppercase',letterSpacing:1}}>Host Info</div>
+                <Field label="Host Name" val={request.host_name} />
+                <Field label="Email" val={request.status==='accepted' ? request.host_email : '(shared after you accept)'} />
+              </div>
+
+              {/* Response actions — only if still pending */}
+              {request.status === 'pending' && !submitted && (
+                <div style={{borderTop:'2px solid #e8ddd0',paddingTop:20}}>
+                  {!responding ? (
+                    <div style={{display:'flex',gap:12}}>
+                      <button onClick={()=>setResponding('accept')} style={{flex:1,background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                        ✓ Accept Booking
+                      </button>
+                      <button onClick={()=>setResponding('decline')} style={{flex:1,background:'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                        ✗ Decline
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{fontSize:14,fontWeight:600,color:'#1a1410',marginBottom:8}}>
+                        {responding==='accept' ? '✅ Add a message for the host (optional):' : '❌ Reason for declining (optional):'}
+                      </div>
+                      <textarea value={vendorMsg} onChange={e=>setVendorMsg(e.target.value)}
+                        placeholder={responding==='accept' ? "Looking forward to it! I'll arrive 30 min early to set up." : "Already booked on this date."}
+                        rows={3} style={{width:'100%',border:'1px solid #e0d5c5',borderRadius:8,padding:'10px 12px',fontSize:14,fontFamily:"DM Sans,sans-serif",resize:'none',boxSizing:'border-box'}} />
+                      <div style={{display:'flex',gap:10,marginTop:12}}>
+                        <button onClick={()=>handleRespond(responding==='accept'?'accepted':'declined')}
+                          style={{flex:2,background:responding==='accept'?'#1a6b3a':'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                          {responding==='accept'?'Confirm Acceptance':'Confirm Decline'}
+                        </button>
+                        <button onClick={()=>{setResponding(null);setVendorMsg('');}}
+                          style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:"DM Sans,sans-serif"}}>
+                          Back
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        <div style={{textAlign:'center',marginTop:24}}>
+          <a href="/" style={{color:'#c8a84b',fontSize:13,textDecoration:'none'}}>← South Jersey Vendor Market</a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Root App ─────────────────────────────────────────────────────────────────
-export default function App() {
+function AppInner() {
   const [tab, setTab] = useState("home");
   const [vendorSuccess, setVendorSuccess] = useState(false);
   const [vendorConfirm, setVendorConfirm] = useState(null); // { ref, email, name }
@@ -1899,6 +2057,26 @@ export default function App() {
     fetchData();
   }, []);
 
+  // Poll for booking request status updates (vendor responses via email link)
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const sid = getSessionId();
+      const { data: rows } = await supabase
+        .from('booking_requests').select('id,status,vendor_message,responded_at')
+        .eq('session_id', sid);
+      if (rows) {
+        setBookingRequests(prev => prev.map(r => {
+          const updated = rows.find(u => u.id === r.id);
+          if (updated && updated.status !== r.status) {
+            return { ...r, status: updated.status, vendorMessage: updated.vendor_message || '', respondedAt: updated.responded_at };
+          }
+          return r;
+        }));
+      }
+    }, 30000); // every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Conversations: persist to localStorage so they survive page refresh
   const [conversations, setConversations] = useState(() => {
     try { return JSON.parse(localStorage.getItem(CONVERSATIONS_LS_KEY) || '[]'); } catch { return []; }
@@ -1920,6 +2098,7 @@ export default function App() {
   }, [vendorCalendars]);
 
   const sendBookingRequest = async (vendor, eventDetails) => {
+    const responseToken = crypto.randomUUID();
     const req = {
       id: Date.now(),
       vendorId: vendor.id,
@@ -1952,6 +2131,7 @@ export default function App() {
       sentAt: new Date().toISOString(),
       respondedAt: null,
       vendorMessage: '',
+      responseToken,
     };
     setBookingRequests(r => [req, ...r]);
     // Persist to Supabase so the request survives page refreshes
@@ -1971,8 +2151,39 @@ export default function App() {
       recurrence_count: req.recurrenceCount, recurrence_notes: req.recurrenceNotes,
       categories_needed: req.categoriesNeeded, subcategories_needed: req.subcategoriesNeeded,
       status: req.status, sent_at: req.sentAt,
+      response_token: responseToken,
     });
     if (brErr) console.error('Failed to persist booking request:', brErr);
+
+    // Look up vendor email and send notification
+    if (!brErr) {
+      const { data: vendorRow } = await supabase.from('vendors').select('contact_email').eq('id', vendor.id).single();
+      const vendorEmail = vendorRow?.contact_email;
+      if (vendorEmail) {
+        try {
+          await fetch('/api/send-booking-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              vendorEmail, vendorName: vendor.name,
+              hostName: req.hostName, hostEmail: req.hostEmail,
+              eventName: req.eventName, eventType: req.eventType,
+              eventDate: req.eventDate, startTime: req.startTime,
+              endTime: req.endTime, eventZip: req.eventZip,
+              address: req.address, attendance: req.attendance,
+              vendorCount: req.vendorCount, budget: req.budget,
+              notes: req.notes, isRecurring: req.isRecurring,
+              recurrenceFrequency: req.recurrenceFrequency,
+              recurrenceDay: req.recurrenceDay,
+              responseToken,
+            }),
+          });
+        } catch (emailErr) {
+          console.error('Failed to send booking email:', emailErr);
+        }
+      }
+    }
+
     openMessage(vendor);
   };
 
@@ -2353,6 +2564,12 @@ export default function App() {
       </div>
     </>
   );
+}
+
+export default function App() {
+  const respondToken = new URLSearchParams(window.location.search).get('respond');
+  if (respondToken) return <VendorResponsePage token={respondToken} />;
+  return <AppInner />;
 }
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
