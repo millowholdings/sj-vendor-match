@@ -646,7 +646,16 @@ function VendorForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
         <div className="form-group"><label>Phone Number</label><input placeholder="(609) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <ZipInput label="Home Base Zip Code *" value={form.homeZip} onChange={v=>set('homeZip',v)} hint="Your primary location — used to calculate travel distance to events" />
-        <div className="form-group"><label>Years in Business</label><input placeholder="e.g. 3" value={form.yearsActive} onChange={e=>set('yearsActive',e.target.value)} /></div>
+        <div className="form-group"><label>Years in Business</label>
+          <select value={form.yearsActive} onChange={e=>set('yearsActive',e.target.value)}>
+            <option value="">Select…</option>
+            <option value="<1">Less than 1 year</option>
+            <option value="1-2">1–2 years</option>
+            <option value="3-5">3–5 years</option>
+            <option value="6-10">6–10 years</option>
+            <option value="10+">10+ years</option>
+          </select>
+        </div>
         <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special..." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
         <div className="form-group"><label>Website URL</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
         <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
@@ -1236,7 +1245,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                   </div>
                 ) : (
                   <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
-                    📋 Request to Book
+                    {v.price === 'Contact for pricing' ? '💬 Inquire About Pricing & Availability' : '📋 Request to Book'}
                   </button>
                 )
               )}
@@ -1258,6 +1267,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 );
                 if (isAvail) return (
                   <button className="contact-btn" style={{background:'#1a6b3a',color:'#fff',fontWeight:700,fontSize:13}} onClick={()=>{
+                    if (!window.confirm(`Confirm direct booking with ${v.name} for ${eventDate}?\n\nThis will mark the date as booked and send them a booking request.`)) return;
                     const newCal = {...(vendorCalendars[v.id]||{}), bookedDates:[...(vendorCalendars[v.id]?.bookedDates||[]), eventDate]};
                     setVendorCalendars(prev=>({...prev,[v.id]:newCal}));
                     sendBookingRequest(v, {...hostEvent, directBook:true});
@@ -1287,7 +1297,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterPrivate, setFilterPrivate] = useState('no');
   const [hostMinCover, setHostMinCover] = useState(0);
-  const [hostZip, setHostZip] = useState('');
+  const [hostZip, setHostZip] = useState(hostEvent?.eventZip || '');
   const [contacted, setContacted] = useState([]);
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
   const isPrivate = filterPrivate === 'yes';
@@ -1335,9 +1345,10 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
       </div>
       <div className="match-filters">
         <div className="match-filter-group" style={{ maxWidth:200 }}>
-          <label>Event Zip Code</label>
+          <label>{hostEvent ? 'Event Zip Code' : 'My Zip Code'}</label>
           <input placeholder="e.g. 08033" value={hostZip} maxLength={5} onChange={e=>setHostZip(e.target.value.replace(/\D/g,'').slice(0,5))} />
           {hasZip && <div className={`zip-feedback ${isKnownZip(hostZip)?'zip-ok':'zip-warn'}`}>{isKnownZip(hostZip)?'✓ Showing vendors in range':'⚠ Zip unverified — results may vary'}</div>}
+          {!hostEvent && !hasZip && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>Enter zip to filter by distance</div>}
         </div>
         <div className="match-filter-group">
           <label>Category</label>
@@ -1905,7 +1916,7 @@ export default function App() {
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
       hostName: "You (Host)", status: "active",
       messages: [{
-        id: 1, from: "system", text: `Conversation started with ${vendor.name}. All communications are protected under the South Jersey Vendor Market Non-Circumvention Agreement. Direct booking outside this platform within 12 months is prohibited.`, ts: new Date().toISOString()
+        id: 1, from: "system", text: `Conversation started with ${vendor.name}. This is a protected platform conversation — contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`, ts: new Date().toISOString()
       }]
     };
     setConversations(c => [newConvo, ...c]);
@@ -1917,6 +1928,14 @@ export default function App() {
     // Fix 3: Strengthened validation
     if (!form.businessName || !form.email || form.categories.length === 0) {
       alert("Please fill in Business Name, Email, and at least one Category.");
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+    if (form.phone && form.phone.replace(/\D/g,'').length < 10) {
+      alert("Please enter a valid 10-digit phone number, or leave it blank.");
       return;
     }
     if (!form.homeZip || !/^\d{5}$/.test(form.homeZip)) {
@@ -1987,6 +2006,14 @@ export default function App() {
       alert('Please fill in Contact Name, Email, and Event Type.');
       return;
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      alert('Please enter a valid email address.');
+      return;
+    }
+    if (form.phone && form.phone.replace(/\D/g,'').length < 10) {
+      alert('Please enter a valid 10-digit phone number, or leave it blank.');
+      return;
+    }
     if (!form.date) {
       alert('Please select an event date.');
       return;
@@ -1994,6 +2021,24 @@ export default function App() {
     if (!form.eventZip || !/^\d{5}$/.test(form.eventZip)) {
       alert('Please enter a valid 5-digit event zip code.');
       return;
+    }
+    if (form.isRecurring) {
+      if (!form.recurrenceFrequency) {
+        alert('Please select how often the event recurs.');
+        return;
+      }
+      if (form.recurrenceEndType === 'date' && !form.recurrenceEndDate) {
+        alert('Please select an end date for your recurring event series.');
+        return;
+      }
+      if (form.recurrenceEndType === 'count' && (!form.recurrenceCount || Number(form.recurrenceCount) < 1)) {
+        alert('Please enter a valid number of occurrences (minimum 1).');
+        return;
+      }
+      if (form.recurrenceFrequency === 'monthly' && form.recurrenceMonthType === 'dayofweek' && !form.recurrenceMonthDay) {
+        alert('Please select the day of the week for your monthly recurring event.');
+        return;
+      }
     }
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
@@ -2030,7 +2075,7 @@ export default function App() {
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
                 <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
-                  Messages{conversations.length>0?` (${conversations.length})`:""}
+                  Messages{(()=>{const p=bookingRequests.filter(r=>r.status==='pending').length;return p>0?` (${p} pending)`:conversations.length>0?` (${conversations.length})`:"";})()}
                 </button>
                 <button className={`nav-tab${tab==="host-calendar"?" active":""}`} onClick={()=>{setTab("host-calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
@@ -2323,9 +2368,9 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
             </div>
           </div>
 
-          {/* ToS notice banner */}
-          <div style={{ background:'#fdf4dc', borderBottom:'1px solid #ffd966', padding:'8px 24px', fontSize:12, color:'#7a5a10', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-            🔒 <strong>Protected by South Jersey Vendor Market Non-Circumvention Agreement.</strong> Direct booking outside this platform within 12 months is prohibited and subject to a finder's fee.
+          {/* Platform protection notice */}
+          <div style={{ background:'#fdf9f5', borderBottom:'1px solid #e8ddd0', padding:'7px 24px', fontSize:12, color:'#7a6a5a', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
+            🔒 <strong>Secure platform messaging.</strong> Contact info is shared only after a booking is confirmed. All interactions are covered by our <a href="#tos" style={{color:'#c8a84b',textDecoration:'none',fontWeight:600}} onClick={e=>{e.preventDefault();}}>Terms of Service</a>.
           </div>
 
           {/* Messages — msg.text is rendered as JSX text (React-escaped), not innerHTML — XSS safe */}
@@ -2566,8 +2611,9 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
   const firstDay   = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth= new Date(viewYear, viewMonth+1, 0).getDate();
-  const prevMonth  = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
-  const nextMonth  = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+  const MIN_YEAR = 2024; const MAX_YEAR = today.getFullYear() + 3;
+  const prevMonth  = () => { if(viewYear<=MIN_YEAR&&viewMonth===0)return; if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth  = () => { if(viewYear>=MAX_YEAR&&viewMonth===11)return; if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
   const dateStr    = (d) => `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
   const isPast     = (d) => new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
@@ -2979,8 +3025,9 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
 
   const firstDay    = new Date(viewYear, viewMonth, 1).getDay();
   const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
-  const prevMonth   = () => { if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
-  const nextMonth   = () => { if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
+  const MIN_YEAR = 2024; const MAX_YEAR = today.getFullYear() + 3;
+  const prevMonth   = () => { if(viewYear<=MIN_YEAR&&viewMonth===0)return; if(viewMonth===0){setViewMonth(11);setViewYear(y=>y-1);}else setViewMonth(m=>m-1); };
+  const nextMonth   = () => { if(viewYear>=MAX_YEAR&&viewMonth===11)return; if(viewMonth===11){setViewMonth(0);setViewYear(y=>y+1);}else setViewMonth(m=>m+1); };
   const dateStr     = (d) => `${viewYear}-${String(viewMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
 
   const fmt12 = (t) => {
@@ -3306,6 +3353,20 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
             style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,
               padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
             Post an Event →
+          </button>
+        </div>
+      )}
+
+      {/* Next-step CTA: event posted but no requests sent yet */}
+      {hostEvent && bookingRequests.length === 0 && (
+        <div style={{background:'linear-gradient(135deg,#1a1410,#2d2118)',borderRadius:12,padding:'20px 28px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
+          <div>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a',marginBottom:4}}>Ready to find your vendors?</div>
+            <div style={{fontSize:13,color:'#a89a8a',maxWidth:420}}>Your event is on the calendar. Now browse vendors in your area and send booking requests — they'll show up here when they respond.</div>
+          </div>
+          <button onClick={()=>setTab('matches')}
+            style={{background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
+            Browse Vendors →
           </button>
         </div>
       )}
