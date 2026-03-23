@@ -499,6 +499,8 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
   );
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 function UploadZone({ label, hint, accept, onChange, multiple }) {
   const [fileNames, setFileNames] = useState([]);
   const inputRef = useRef(null);
@@ -514,6 +516,8 @@ function UploadZone({ label, hint, accept, onChange, multiple }) {
           const files = multiple ? Array.from(e.target.files) : [e.target.files[0]];
           const valid = files.filter(Boolean);
           if (!valid.length) return;
+          const oversized = valid.find(f => f.size > MAX_FILE_SIZE);
+          if (oversized) { alert(`"${oversized.name}" is too large (${(oversized.size/1024/1024).toFixed(1)}MB). Maximum file size is 5MB.`); e.target.value=''; return; }
           setFileNames(valid.map(f => f.name));
           onChange && onChange(multiple ? valid : valid[0]);
         }}
@@ -905,7 +909,7 @@ function HostForm({ onSubmit, setTab }) {
         )}
         <ZipInput label="Event Zip Code *" value={form.eventZip} onChange={v=>set('eventZip',v)} hint="Vendors whose travel radius covers this zip will be matched to your event" />
         <div className="form-group"><label>Venue Address</label><input placeholder="Street address" value={form.address} onChange={e=>set('address',e.target.value)} /></div>
-        <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} onChange={e=>set('date',e.target.value)} /></div>
+        <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
         <div className="form-group full">
@@ -1862,7 +1866,7 @@ export default function App() {
       alert("Please fill in Business Name, Email, and at least one Category.");
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) {
       alert("Please enter a valid email address.");
       return;
     }
@@ -1873,6 +1877,11 @@ export default function App() {
     if (!form.homeZip || !/^\d{5}$/.test(form.homeZip)) {
       alert("Please enter a valid 5-digit home zip code.");
       return;
+    }
+    // Check for duplicate vendor email
+    const { data: existing } = await supabase.from('vendors').select('id').eq('contact_email', form.email).limit(1);
+    if (existing && existing.length > 0) {
+      if (!window.confirm('A vendor profile with this email already exists. Submit another profile anyway?')) return;
     }
     const metadataPayload = {
       facebook: form.facebook || null,
@@ -1937,7 +1946,8 @@ export default function App() {
         if (url) fileUrls.lookbookUrl = url;
       }
       if (Object.keys(fileUrls).length > 0) {
-        await supabase.from('vendors').update({ metadata: { ...metadataPayload, ...fileUrls } }).eq('id', vid);
+        const { error: metaErr } = await supabase.from('vendors').update({ metadata: { ...metadataPayload, ...fileUrls } }).eq('id', vid);
+        if (metaErr) console.error('Failed to save file URLs:', metaErr);
       }
       setCalendarVendorId(vid);
       localStorage.setItem('sjvm_calendar_vendor_id', vid);
@@ -1957,7 +1967,7 @@ export default function App() {
       alert('Please fill in Contact Name, Email, and Event Type.');
       return;
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) {
       alert('Please enter a valid email address.');
       return;
     }
@@ -1967,6 +1977,10 @@ export default function App() {
     }
     if (!form.date) {
       alert('Please select an event date.');
+      return;
+    }
+    if (form.date < new Date().toISOString().split('T')[0]) {
+      alert('Event date cannot be in the past.');
       return;
     }
     if (!form.eventZip || !/^\d{5}$/.test(form.eventZip)) {
@@ -1991,7 +2005,7 @@ export default function App() {
         return;
       }
     }
-    await supabase.from('events').insert({
+    const { error: eventErr } = await supabase.from('events').insert({
       event_name: form.eventName || form.eventType,
       event_type: form.eventType,
       zip: form.eventZip,
@@ -2008,6 +2022,11 @@ export default function App() {
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
     });
+    if (eventErr) {
+      console.error('Event submit error:', eventErr);
+      alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@sjvendormarket.com`);
+      return;
+    }
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
     setHostSuccess(true);
@@ -2233,14 +2252,19 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
   const respondToBooking = async (reqId, status, vendorMsg='') => {
     const respondedAt = new Date().toISOString();
-    setBookingRequests(reqs => reqs.map(r =>
-      r.id === reqId ? {...r, status, vendorMessage: vendorMsg, respondedAt} : r
-    ));
-    // Persist status change to Supabase
+    // Persist status change to Supabase first
     const { error } = await supabase.from('booking_requests')
       .update({ status, vendor_message: vendorMsg, responded_at: respondedAt })
       .eq('id', reqId);
-    if (error) console.error('Failed to update booking request status:', error);
+    if (error) {
+      console.error('Failed to update booking request status:', error);
+      alert('Failed to update booking status. Please try again.');
+      return;
+    }
+    // Only update UI after DB confirms
+    setBookingRequests(reqs => reqs.map(r =>
+      r.id === reqId ? {...r, status, vendorMessage: vendorMsg, respondedAt} : r
+    ));
     // Add system message to conversation thread
     const req = bookingRequests.find(r => r.id === reqId);
     if (req) {
