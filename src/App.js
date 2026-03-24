@@ -4175,22 +4175,24 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
   };
 
   return (
-    <div className="section" style={{maxWidth:960}}>
-      <div className="section-title">My Availability Calendar</div>
-      <p className="section-sub">Set your available dates and times so hosts can see when you're open and direct-book you instantly.</p>
-
-      {/* Stats */}
-      <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
-        {[
-          {label:'Available',count:availCount,  bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
-          {label:'Booked',   count:bookedCount,  bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
-          {label:'Blocked',  count:blockedCount, bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6'},
-        ].map(({label,count,bg,color,border})=>(
-          <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:10,padding:'10px 20px',textAlign:'center',minWidth:110}}>
-            <div style={{fontSize:22,fontWeight:700,color,fontFamily:'Playfair Display,serif'}}>{count}</div>
-            <div style={{fontSize:12,color,fontWeight:600}}>{label} Dates</div>
-          </div>
-        ))}
+    <div style={{padding:'24px 24px 48px',maxWidth:1200,margin:'0 auto'}}>
+      {/* Top bar */}
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:20}}>
+        <div>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:30,color:'#1a1410',lineHeight:1.1}}>My Availability Calendar</div>
+          <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>Set your available dates so hosts can see when you're open.</div>
+        </div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
+          {[
+            {label:'Available',count:availCount,  bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
+            {label:'Booked',   count:bookedCount,  bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
+            {label:'Blocked',  count:blockedCount, bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6'},
+          ].map(({label,count,bg,color,border})=>(
+            <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:700,color}}>
+              {count} {label.toLowerCase()}
+            </div>
+          ))}
+        </div>
       </div>
 
       <div style={{display:'flex',gap:20,flexWrap:'wrap',alignItems:'flex-start'}}>
@@ -4300,29 +4302,6 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
             ))}
           </div>
 
-          {/* Sync */}
-          <div style={{background:'#1a1410',borderRadius:12,padding:16}}>
-            <div style={{fontFamily:'Playfair Display,serif',fontSize:15,color:'#e8c97a',marginBottom:8}}>📲 Sync Your Calendar</div>
-            <div style={{fontSize:12,color:'#a89a8a',marginBottom:12,lineHeight:1.6}}>Download as .ics to import into Google Calendar, Apple Calendar, or Outlook.</div>
-            <button onClick={downloadICal} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:8}}>
-              ⬇ Download .ics File
-            </button>
-            <button onClick={()=>setShowIcalInfo(s=>!s)} style={{width:'100%',background:'#2d2118',color:'#c8a84b',border:'1px solid #3d3020',borderRadius:8,padding:'8px 0',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-              {showIcalInfo?'Hide':'How to import ▼'}
-            </button>
-            {showIcalInfo && (
-              <div style={{marginTop:10,fontSize:11,color:'#a89a8a',lineHeight:1.8}}>
-                <div style={{fontWeight:700,color:'#c8a84b',marginBottom:4}}>Google Calendar:</div>
-                <div>Settings → Import &amp; Export → Import → select .ics file</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Apple Calendar:</div>
-                <div>File → Import → select .ics file</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>Outlook:</div>
-                <div>File → Open &amp; Export → Import/Export → Import iCalendar</div>
-                <div style={{fontWeight:700,color:'#c8a84b',margin:'8px 0 4px'}}>iPhone / Android:</div>
-                <div>Email yourself the .ics file and tap it to add to your phone calendar</div>
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
@@ -4336,6 +4315,16 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
 // ─── Host Calendar Page ────────────────────────────────────────────────────────
 function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, clearHostConfirm }) {
+  if (!hostEvent) {
+    return (
+      <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
+        <div style={{ fontFamily:'Playfair Display,serif', fontSize:28, marginBottom:12, color:'#1a1410' }}>Your Event Calendar</div>
+        <p style={{ fontSize:16, maxWidth:440, margin:'0 auto', marginBottom:24 }}>Post an event to see your calendar with booking requests and vendor lineup.</p>
+        <button onClick={()=>setTab('host')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 28px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Post Your Event</button>
+      </div>
+    );
+  }
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
