@@ -642,7 +642,7 @@ const DEFAULT_VENDOR_FORM = {
   yearsActive:'', password:''
 };
 
-function VendorForm({ onSubmit, setTab, authUser }) {
+function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -660,7 +660,7 @@ function VendorForm({ onSubmit, setTab, authUser }) {
       return saved ? { ...DEFAULT_VENDOR_FORM, ...JSON.parse(saved) } : DEFAULT_VENDOR_FORM;
     } catch { return DEFAULT_VENDOR_FORM; }
   });
-  useEffect(() => { localStorage.setItem(VENDOR_DRAFT_KEY, JSON.stringify(form)); }, [form]);
+  useEffect(() => { const { password: _pw, ...draft } = form; localStorage.setItem(VENDOR_DRAFT_KEY, JSON.stringify(draft)); }, [form]);
   useEffect(() => { localStorage.setItem(VENDOR_DRAFT_SUBS_KEY, JSON.stringify(otherSubcategories)); }, [otherSubcategories]);
   const clearDraft = () => {
     localStorage.removeItem(VENDOR_DRAFT_KEY);
@@ -677,6 +677,29 @@ function VendorForm({ onSubmit, setTab, authUser }) {
           <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
         </div>
       )}
+      {!authUser && (
+        <>
+          <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
+          <div style={{background:'#1a1410',borderRadius:12,padding:'20px 24px',marginBottom:24}}>
+            <div style={{fontSize:14,color:'#e8c97a',fontWeight:700,marginBottom:4}}>Your vendor account lets you:</div>
+            <div style={{fontSize:13,color:'#c8b898',lineHeight:1.6}}>Log in to manage your profile, view and respond to booking requests, and apply to events with one click.</div>
+          </div>
+          <div className="form-grid" style={{marginBottom:24}}>
+            <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
+            <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
+          </div>
+          <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
+            Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(typeof setShowAuthModal==='function')setShowAuthModal(true);}}>Log in</button> and your profile will be linked.
+          </div>
+          <hr className="form-divider" />
+        </>
+      )}
+      {authUser && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:20}}>✓</span>
+          <div><div style={{fontWeight:700,fontSize:14,color:'#1a6b3a'}}>Logged in as {authUser.email}</div><div style={{fontSize:12,color:'#2d7a50'}}>Your vendor profile will be linked to this account.</div></div>
+        </div>
+      )}
       <h2 className="form-section-title"><span className="dot" />Vendor Profile</h2>
       <p style={{ color:'#7a6a5a', marginBottom:32, fontSize:15 }}>
         Join South Jersey's premier vendor network. Get matched with events and hosts looking for exactly what you offer.
@@ -684,8 +707,7 @@ function VendorForm({ onSubmit, setTab, authUser }) {
       <div className="form-grid">
         <div className="form-group"><label>Business Name *</label><input placeholder="e.g. Subtle Boujee" value={form.businessName} onChange={e=>set('businessName',e.target.value)} /></div>
         <div className="form-group"><label>Owner Name *</label><input placeholder="Your full name" value={form.ownerName} onChange={e=>set('ownerName',e.target.value)} /></div>
-        <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
-        {!authUser && <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters — for your vendor account" value={form.password} onChange={e=>set('password',e.target.value)} /></div>}
+        {authUser && <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>}
         <div className="form-group"><label>Phone Number</label><input placeholder="(609) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <ZipInput label="Home Base Zip Code *" value={form.homeZip} onChange={v=>set('homeZip',v)} hint="Your primary location — used to calculate travel distance to events" />
         <div className="form-group"><label>Years in Business</label>
@@ -890,7 +912,7 @@ const DEFAULT_HOST_FORM = {
   vendorDiscovery:'both', password:''
 };
 
-function HostForm({ onSubmit, setTab, authUser }) {
+function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [hasDraft] = useState(() => !!localStorage.getItem(HOST_DRAFT_KEY));
@@ -904,7 +926,7 @@ function HostForm({ onSubmit, setTab, authUser }) {
       return saved ? { ...DEFAULT_HOST_FORM, ...JSON.parse(saved) } : DEFAULT_HOST_FORM;
     } catch { return DEFAULT_HOST_FORM; }
   });
-  useEffect(() => { localStorage.setItem(HOST_DRAFT_KEY, JSON.stringify(form)); }, [form]);
+  useEffect(() => { const { password: _pw, ...draft } = form; localStorage.setItem(HOST_DRAFT_KEY, JSON.stringify(draft)); }, [form]);
   useEffect(() => { localStorage.setItem(HOST_DRAFT_SUBS_KEY, JSON.stringify(otherSubcategories)); }, [otherSubcategories]);
   const clearDraft = () => {
     localStorage.removeItem(HOST_DRAFT_KEY);
@@ -921,6 +943,29 @@ function HostForm({ onSubmit, setTab, authUser }) {
           <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
         </div>
       )}
+      {!authUser && (
+        <>
+          <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
+          <div style={{background:'#1a1410',borderRadius:12,padding:'20px 24px',marginBottom:24}}>
+            <div style={{fontSize:14,color:'#e8c97a',fontWeight:700,marginBottom:4}}>Your host account lets you:</div>
+            <div style={{fontSize:13,color:'#c8b898',lineHeight:1.6}}>Log in to manage your events, review vendor applications, and track booking requests from your dashboard.</div>
+          </div>
+          <div className="form-grid" style={{marginBottom:24}}>
+            <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
+            <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
+          </div>
+          <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
+            Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}}>Log in</button> and your event will be linked.
+          </div>
+          <hr className="form-divider" />
+        </>
+      )}
+      {authUser && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:20}}>✓</span>
+          <div><div style={{fontWeight:700,fontSize:14,color:'#1a6b3a'}}>Logged in as {authUser.email}</div><div style={{fontSize:12,color:'#2d7a50'}}>Your event will be linked to this account.</div></div>
+        </div>
+      )}
       <h2 className="form-section-title"><span className="dot" />Host an Event</h2>
       <p style={{ color:'#7a6a5a', marginBottom:32, fontSize:15 }}>
         Tell us about your event and we'll match you with the perfect South Jersey vendors — based on your event zip code and the categories you need.
@@ -928,8 +973,7 @@ function HostForm({ onSubmit, setTab, authUser }) {
       <div className="form-grid">
         <div className="form-group"><label>Organization / Business Name</label><input placeholder="Your org or event name" value={form.orgName} onChange={e=>set('orgName',e.target.value)} /></div>
         <div className="form-group"><label>Contact Name *</label><input placeholder="Your full name" value={form.contactName} onChange={e=>set('contactName',e.target.value)} /></div>
-        <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
-        {!authUser && <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters — for your host account" value={form.password} onChange={e=>set('password',e.target.value)} /></div>}
+        {authUser && <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>}
         <div className="form-group"><label>Phone</label><input placeholder="(856) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <div className="form-group"><label>Event Name *</label><input placeholder="e.g. Haddonfield Holiday Market" value={form.eventName} onChange={e=>set('eventName',e.target.value)} /></div>
         <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set('eventType',e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
@@ -3331,7 +3375,7 @@ function AppInner() {
               <>
                 <div className="section-title">Vendor Registration</div>
                 <p className="section-sub">Join South Jersey's growing vendor community and get matched with events near you.</p>
-                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} />
+                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
               </>
             )}
           </div>
@@ -3356,7 +3400,7 @@ function AppInner() {
               <>
                 <div className="section-title">Host an Event</div>
                 <p className="section-sub">Tell us about your event and we'll find the perfect vendors for you.</p>
-                <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} />
+                <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
               </>
             )}
           </div>
