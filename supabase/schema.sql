@@ -111,6 +111,12 @@ alter table events add column if not exists allow_duplicate_categories boolean n
 -- 'browse' = host browses only, 'apply' = vendors can apply, 'both' = both
 alter table events add column if not exists vendor_discovery text not null default 'both';
 
+-- ─── Auth: link vendors and events to Supabase Auth users ────────────────────
+alter table vendors add column if not exists user_id uuid;
+alter table events  add column if not exists user_id uuid;
+create index if not exists vendors_user_id_idx on vendors (user_id);
+create index if not exists events_user_id_idx  on events  (user_id);
+
 -- ─── Booking Requests ─────────────────────────────────────────────────────────
 create table if not exists booking_requests (
   id                   bigint       primary key,

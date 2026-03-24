@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+const ADMIN_EMAILS = ['millowholdings@gmail.com', 'tiffany@subtleboujee.com'];
+
 // ─── Data ────────────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
@@ -636,10 +639,10 @@ const DEFAULT_VENDOR_FORM = {
   otherCategory:'', otherEventType:'',
   responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
   setupTime:30, tableSize:'6ft', needsElectric:false,
-  yearsActive:''
+  yearsActive:'', password:''
 };
 
-function VendorForm({ onSubmit, setTab }) {
+function VendorForm({ onSubmit, setTab, authUser }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -682,6 +685,7 @@ function VendorForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Business Name *</label><input placeholder="e.g. Subtle Boujee" value={form.businessName} onChange={e=>set('businessName',e.target.value)} /></div>
         <div className="form-group"><label>Owner Name *</label><input placeholder="Your full name" value={form.ownerName} onChange={e=>set('ownerName',e.target.value)} /></div>
         <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
+        {!authUser && <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters — for your vendor account" value={form.password} onChange={e=>set('password',e.target.value)} /></div>}
         <div className="form-group"><label>Phone Number</label><input placeholder="(609) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <ZipInput label="Home Base Zip Code *" value={form.homeZip} onChange={v=>set('homeZip',v)} hint="Your primary location — used to calculate travel distance to events" />
         <div className="form-group"><label>Years in Business</label>
@@ -883,10 +887,10 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
   budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
-  vendorDiscovery:'both'
+  vendorDiscovery:'both', password:''
 };
 
-function HostForm({ onSubmit, setTab }) {
+function HostForm({ onSubmit, setTab, authUser }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [hasDraft] = useState(() => !!localStorage.getItem(HOST_DRAFT_KEY));
@@ -925,6 +929,7 @@ function HostForm({ onSubmit, setTab }) {
         <div className="form-group"><label>Organization / Business Name</label><input placeholder="Your org or event name" value={form.orgName} onChange={e=>set('orgName',e.target.value)} /></div>
         <div className="form-group"><label>Contact Name *</label><input placeholder="Your full name" value={form.contactName} onChange={e=>set('contactName',e.target.value)} /></div>
         <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
+        {!authUser && <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters — for your host account" value={form.password} onChange={e=>set('password',e.target.value)} /></div>}
         <div className="form-group"><label>Phone</label><input placeholder="(856) 555-0000" value={form.phone} onChange={e=>set('phone',e.target.value)} /></div>
         <div className="form-group"><label>Event Name *</label><input placeholder="e.g. Haddonfield Holiday Market" value={form.eventName} onChange={e=>set('eventName',e.target.value)} /></div>
         <div className="form-group"><label>Event Type *</label><select value={form.eventType} onChange={e=>set('eventType',e.target.value)}><option value="">Select type...</option>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
@@ -1162,6 +1167,238 @@ function HostForm({ onSubmit, setTab }) {
         {showTos && <TosModal onClose={()=>setShowTos(false)} />}
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
+    </div>
+  );
+}
+
+// ─── Auth Modal ───────────────────────────────────────────────────────────────
+function AuthModal({ onClose, onAuth, defaultEmail }) {
+  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [email, setEmail] = useState(defaultEmail || '');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email || !password) { setError('Please enter email and password.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    setLoading(true); setError('');
+    if (mode === 'signup') {
+      const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+      if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
+    } else {
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInErr) { setError(signInErr.message); setLoading(false); return; }
+    }
+    setLoading(false);
+    if (onAuth) onAuth();
+    onClose();
+  };
+
+  const handleReset = async () => {
+    if (!email) { setError('Enter your email first.'); return; }
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email);
+    if (resetErr) { setError(resetErr.message); return; }
+    setResetSent(true);
+  };
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:420,width:'100%',overflow:'hidden'}}>
+        <div style={{background:'#1a1410',padding:'24px 28px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>
+            {mode==='login' ? 'Welcome Back' : 'Create Account'}
+          </div>
+          <div style={{fontSize:13,color:'#a89a8a',marginTop:4}}>South Jersey Vendor Market</div>
+        </div>
+        <div style={{padding:'24px 28px'}}>
+          {resetSent ? (
+            <div style={{textAlign:'center',padding:'16px 0'}}>
+              <div style={{fontSize:28,marginBottom:8}}>📧</div>
+              <div style={{fontSize:15,fontWeight:600,color:'#1a6b3a',marginBottom:8}}>Check your email</div>
+              <div style={{fontSize:13,color:'#7a6a5a'}}>We sent a password reset link to {email}</div>
+              <button onClick={onClose} style={{marginTop:16,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
+          ) : (
+            <>
+              <div className="form-group" style={{marginBottom:12}}>
+                <label>Email</label>
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
+                  onKeyDown={e=>{if(e.key==='Enter')handleSubmit();}} />
+              </div>
+              <div className="form-group" style={{marginBottom:16}}>
+                <label>Password</label>
+                <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
+                  placeholder={mode==='signup'?'Create a password (min 6 chars)':'Your password'}
+                  onKeyDown={e=>{if(e.key==='Enter')handleSubmit();}} />
+              </div>
+              {error && <div style={{color:'#c0392b',fontSize:13,marginBottom:12,background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px'}}>{error}</div>}
+              <button onClick={handleSubmit} disabled={loading}
+                style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',marginBottom:12,opacity:loading?0.5:1}}>
+                {loading ? 'Please wait...' : mode==='login' ? 'Log In' : 'Sign Up'}
+              </button>
+              <div style={{textAlign:'center',fontSize:13,color:'#7a6a5a'}}>
+                {mode==='login' ? (
+                  <>
+                    <button onClick={handleReset} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:13,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}}>Forgot password?</button>
+                    <span style={{margin:'0 8px'}}>·</span>
+                    <button onClick={()=>{setMode('signup');setError('');}} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:13,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}}>Create account</button>
+                  </>
+                ) : (
+                  <>Already have an account? <button onClick={()=>{setMode('login');setError('');}} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:13,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}}>Log in</button></>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Vendor Dashboard ─────────────────────────────────────────────────────────
+function VendorDashboard({ user, vendorProfile, bookingRequests, setTab }) {
+  const [requests, setRequests] = useState([]);
+  const [loadingReqs, setLoadingReqs] = useState(true);
+
+  useEffect(() => {
+    if (!vendorProfile?.id) { setLoadingReqs(false); return; }
+    supabase.from('booking_requests').select('*')
+      .eq('vendor_id', vendorProfile.id).order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRequests(data); setLoadingReqs(false); });
+  }, [vendorProfile?.id]);
+
+  const respond = async (reqId, status) => {
+    const { error } = await supabase.from('booking_requests')
+      .update({ status, responded_at: new Date().toISOString() }).eq('id', reqId);
+    if (error) { alert('Failed to update. Try again.'); return; }
+    setRequests(r => r.map(x => x.id === reqId ? { ...x, status } : x));
+  };
+
+  return (
+    <div className="section" style={{maxWidth:900}}>
+      <div className="section-title">My Vendor Dashboard</div>
+      <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
+
+      <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
+        <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Profile</h3>
+        <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px'}}>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Business:</span> {vendorProfile?.name}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Contact:</span> {vendorProfile?.contact_name}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {vendorProfile?.contact_email}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Phone:</span> {vendorProfile?.contact_phone || '—'}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Zip:</span> {vendorProfile?.home_zip}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Radius:</span> {vendorProfile?.radius}mi</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.category}</div>
+          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
+        </div>
+      </div>
+
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Booking Requests</h3>
+      {loadingReqs ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
+      : requests.length === 0 ? (
+        <div className="empty-state"><div className="big">📭</div><p>No booking requests yet. Browse <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('opportunities')}>Opportunities</button> and apply to events!</p></div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {requests.map(r => (
+            <div key={r.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{r.event_name || r.event_type}</div>
+                  <div style={{fontSize:13,color:'#7a6a5a'}}>{r.host_name} · {fmtDate(r.event_date)} · Zip {r.event_zip}</div>
+                  {r.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:4,fontStyle:'italic'}}>"{r.notes}"</div>}
+                </div>
+                <div>
+                  {r.status === 'pending' ? (
+                    <div style={{display:'flex',gap:6}}>
+                      <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                      <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                    </div>
+                  ) : (
+                    <span style={{background:r.status==='accepted'?'#d4f4e0':'#fdecea',color:r.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{r.status}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Host Dashboard ───────────────────────────────────────────────────────────
+function HostDashboard({ user, userEvents, setTab }) {
+  const [applications, setApplications] = useState([]);
+  const [loadingApps, setLoadingApps] = useState(true);
+
+  useEffect(() => {
+    if (!userEvents || userEvents.length === 0) { setLoadingApps(false); return; }
+    const eventNames = userEvents.map(e => e.event_name);
+    supabase.from('booking_requests').select('*')
+      .in('event_name', eventNames).order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setApplications(data); setLoadingApps(false); });
+  }, [userEvents]);
+
+  const respond = async (reqId, status) => {
+    const { error } = await supabase.from('booking_requests')
+      .update({ status, responded_at: new Date().toISOString() }).eq('id', reqId);
+    if (error) { alert('Failed to update. Try again.'); return; }
+    setApplications(a => a.map(x => x.id === reqId ? { ...x, status } : x));
+  };
+
+  return (
+    <div className="section" style={{maxWidth:900}}>
+      <div className="section-title">My Host Dashboard</div>
+      <p className="section-sub">Welcome back, {user.email}</p>
+
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Events</h3>
+      {userEvents.length === 0 ? (
+        <div className="empty-state"><div className="big">📅</div><p>No events posted yet. <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('host')}>Post your first event</button></p></div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:32}}>
+          {userEvents.map(e => (
+            <div key={e.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+              <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{e.event_name}</div>
+              <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
+              <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Vendor Applications & Responses</h3>
+      {loadingApps ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
+      : applications.length === 0 ? (
+        <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p></div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {applications.map(a => (
+            <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
+                  <div style={{fontSize:13,color:'#7a6a5a'}}>For: {a.event_name} · {fmtDate(a.event_date)}</div>
+                  <div style={{fontSize:12,color:'#a89a8a'}}>{a.vendor_category}{a.host_email ? ` · ${a.host_email}` : ''}</div>
+                  {a.notes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4,fontStyle:'italic'}}>"{a.notes}"</div>}
+                </div>
+                <div>
+                  {(a.status === 'pending' || a.status === 'reviewing') ? (
+                    <div style={{display:'flex',gap:6}}>
+                      <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                      <button onClick={()=>respond(a.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                      {a.status === 'pending' && <button onClick={()=>respond(a.id,'reviewing')} style={{background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Review</button>}
+                    </div>
+                  ) : (
+                    <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1762,8 +1999,8 @@ function PendingVendorCard({ v, onApprove, onReject }) {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
-function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{} }) {
-  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('sjvm_admin') === '1');
+function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false }) {
+  const [unlocked, setUnlocked] = useState(() => isAdmin || sessionStorage.getItem('sjvm_admin') === '1');
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
 
@@ -1908,24 +2145,43 @@ function VendorApplyModal({ opp, onClose }) {
   const [autoFilled, setAutoFilled] = useState(false);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
-  // Auto-fill from vendor profile if they've registered on this device
+  // Auto-fill from vendor profile (auth user or localStorage fallback)
   useEffect(() => {
-    const vid = localStorage.getItem('sjvm_calendar_vendor_id');
-    if (!vid) return;
-    supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category').eq('id', vid).single()
-      .then(({ data }) => {
-        if (data) {
-          setForm(f => ({
-            ...f,
-            vendorName: f.vendorName || data.name || '',
-            contactName: f.contactName || data.contact_name || '',
-            email: f.email || data.contact_email || '',
-            phone: f.phone || data.contact_phone || '',
-            category: f.category || data.category || '',
-          }));
-          setAutoFilled(true);
+    const fillFrom = (data) => {
+      if (!data) return;
+      setForm(f => ({
+        ...f,
+        vendorName: f.vendorName || data.name || '',
+        contactName: f.contactName || data.contact_name || '',
+        email: f.email || data.contact_email || '',
+        phone: f.phone || data.contact_phone || '',
+        category: f.category || data.category || '',
+      }));
+      setAutoFilled(true);
+    };
+    // Try auth user first
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+          .eq('user_id', session.user.id).limit(1).single()
+          .then(({ data }) => {
+            if (data) fillFrom(data);
+            else {
+              // Fallback to email match
+              supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+                .eq('contact_email', session.user.email).limit(1).single()
+                .then(({ data: d2 }) => fillFrom(d2));
+            }
+          });
+      } else {
+        // Fallback to localStorage vendor ID
+        const vid = localStorage.getItem('sjvm_calendar_vendor_id');
+        if (vid) {
+          supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+            .eq('id', vid).single().then(({ data }) => fillFrom(data));
         }
-      });
+      }
+    });
   }, []);
 
   const handleSubmit = async () => {
@@ -2410,6 +2666,66 @@ function VendorResponsePage({ token }) {
 // ─── Root App ─────────────────────────────────────────────────────────────────
 function AppInner() {
   const [tab, setTab] = useState("home");
+  const [authUser, setAuthUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authEmail, setAuthEmail] = useState('');
+  const [vendorProfile, setVendorProfile] = useState(null); // raw DB row for logged-in vendor
+  const [userEvents, setUserEvents] = useState([]); // raw DB rows for logged-in host
+  const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email?.toLowerCase());
+
+  // Listen for auth state changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setAuthUser(session?.user || null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user || null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load vendor profile and host events for logged-in user
+  useEffect(() => {
+    if (!authUser) { setVendorProfile(null); setUserEvents([]); return; }
+    // Find vendor linked to this user
+    supabase.from('vendors').select('*').eq('user_id', authUser.id).limit(1).single()
+      .then(({ data }) => { if (data) setVendorProfile(data); });
+    // Also check by email if not linked yet
+    supabase.from('vendors').select('*').eq('contact_email', authUser.email).limit(1).single()
+      .then(({ data }) => {
+        if (data && !data.user_id) {
+          // Link existing vendor to this auth user
+          supabase.from('vendors').update({ user_id: authUser.id }).eq('id', data.id).then(() => {});
+          setVendorProfile(data);
+        } else if (data) {
+          setVendorProfile(p => p || data);
+        }
+      });
+    // Find events linked to this user
+    supabase.from('events').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
+      .then(({ data }) => { if (data) setUserEvents(data); });
+    // Also link by email
+    supabase.from('events').select('*').eq('contact_email', authUser.email).order('date', { ascending: false })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          const unlinked = data.filter(e => !e.user_id);
+          if (unlinked.length > 0) {
+            Promise.all(unlinked.map(e => supabase.from('events').update({ user_id: authUser.id }).eq('id', e.id)));
+          }
+          setUserEvents(prev => {
+            const ids = new Set(prev.map(e => e.id));
+            return [...prev, ...data.filter(e => !ids.has(e.id))];
+          });
+        }
+      });
+  }, [authUser]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setAuthUser(null); setVendorProfile(null); setUserEvents([]);
+    setTab('home');
+  };
+
   const [vendorSuccess, setVendorSuccess] = useState(false);
   const [vendorConfirm, setVendorConfirm] = useState(null); // { ref, email, name }
   const [hostSuccess,   setHostSuccess]   = useState(false);
@@ -2656,6 +2972,25 @@ function AppInner() {
       alert("Please enter a valid 5-digit home zip code.");
       return;
     }
+    // Create auth account if not already logged in
+    let userId = authUser?.id || null;
+    if (!authUser) {
+      if (!form.password || form.password.length < 6) {
+        alert("Please create a password (minimum 6 characters) for your vendor account.");
+        return;
+      }
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email: form.email, password: form.password });
+      if (signUpErr) {
+        if (signUpErr.message?.includes('already registered')) {
+          alert("An account with this email already exists. Please log in first, then submit your vendor profile.");
+          setShowAuthModal(true); setAuthEmail(form.email);
+          return;
+        }
+        alert(`Account creation failed: ${signUpErr.message}`);
+        return;
+      }
+      userId = signUpData.user?.id || null;
+    }
     // Check for duplicate vendor email
     const { data: existing } = await supabase.from('vendors').select('id').eq('contact_email', form.email).limit(1);
     if (existing && existing.length > 0) {
@@ -2694,6 +3029,7 @@ function AppInner() {
       instagram:           form.instagram   || null,
       metadata:            metadataPayload,
       status:              'pending',
+      ...(userId ? { user_id: userId } : {}),
     };
     let { data: newVendor, error } = await supabase.from('vendors').insert(vendorPayload).select('id').single();
     // Retry without status if the column doesn't exist yet
@@ -2791,6 +3127,25 @@ function AppInner() {
         return;
       }
     }
+    // Create auth account if not already logged in
+    let hostUserId = authUser?.id || null;
+    if (!authUser) {
+      if (!form.password || form.password.length < 6) {
+        alert("Please create a password (minimum 6 characters) for your host account.");
+        return;
+      }
+      const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({ email: form.email, password: form.password });
+      if (signUpErr) {
+        if (signUpErr.message?.includes('already registered')) {
+          alert("An account with this email already exists. Please log in first, then post your event.");
+          setShowAuthModal(true); setAuthEmail(form.email);
+          return;
+        }
+        alert(`Account creation failed: ${signUpErr.message}`);
+        return;
+      }
+      hostUserId = signUpData.user?.id || null;
+    }
     const eventPayload = {
       event_name: form.eventName || form.eventType,
       event_type: form.eventType,
@@ -2808,6 +3163,7 @@ function AppInner() {
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
       vendor_discovery: form.vendorDiscovery || 'both',
+      ...(hostUserId ? { user_id: hostUserId } : {}),
     };
     let { data: newEvent, error: eventErr } = await supabase.from('events').insert(eventPayload).select().single();
     // Retry without vendor_discovery if column doesn't exist yet
@@ -2863,7 +3219,19 @@ function AppInner() {
             </div>
             <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
             <button className={`nav-tab${tab==="tos"?" active":""}`} onClick={()=>{setTab("tos");window.scrollTo({top:0});}}>Terms</button>
-            <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>
+            {isAdmin && <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>}
+            {authUser ? (
+              <div className="nav-group">
+                <div className="nav-group-label">&#128100; Account</div>
+                <div className="nav-group-items">
+                  {vendorProfile && <button className={`nav-tab${tab==="vendor-dashboard"?" active":""}`} onClick={()=>{setTab("vendor-dashboard");window.scrollTo({top:0});}}>Vendor Dashboard</button>}
+                  {userEvents.length > 0 && <button className={`nav-tab${tab==="host-dashboard"?" active":""}`} onClick={()=>{setTab("host-dashboard");window.scrollTo({top:0});}}>Host Dashboard</button>}
+                  <button className="nav-tab" onClick={handleLogout} style={{color:'#c8a84b'}}>Log Out</button>
+                </div>
+              </div>
+            ) : (
+              <button className="nav-tab" onClick={()=>setShowAuthModal(true)} style={{color:'#e8c97a',fontWeight:700}}>Log In</button>
+            )}
           </div>
         </nav>
 
@@ -2963,7 +3331,7 @@ function AppInner() {
               <>
                 <div className="section-title">Vendor Registration</div>
                 <p className="section-sub">Join South Jersey's growing vendor community and get matched with events near you.</p>
-                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} />
+                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} />
               </>
             )}
           </div>
@@ -2988,7 +3356,7 @@ function AppInner() {
               <>
                 <div className="section-title">Host an Event</div>
                 <p className="section-sub">Tell us about your event and we'll find the perfect vendors for you.</p>
-                <HostForm onSubmit={handleHostSubmit} setTab={setTab} />
+                <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} />
               </>
             )}
           </div>
@@ -3001,12 +3369,15 @@ function AppInner() {
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} />}
       </div>
+      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} />}
     </>
   );
 }
