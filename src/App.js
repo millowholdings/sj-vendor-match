@@ -349,9 +349,16 @@ const styles = `
     .success-banner { padding: 28px 20px; }
     .success-banner h2 { font-size: 22px; }
     .success-icon { font-size: 36px; }
-  }
     .ometa-grid { grid-template-columns: 1fr; }
     .service-grid { grid-template-columns: 1fr; }
+    .modal-2col { grid-template-columns: 1fr !important; }
+    .modal-3col { grid-template-columns: 1fr !important; }
+    .msg-layout { flex-direction: column !important; }
+    .msg-sidebar { width: 100% !important; min-width: unset !important; max-height: 200px; border-right: none !important; border-bottom: 1px solid #2d2118; }
+    .msg-sidebar-list { display: flex; overflow-x: auto; flex-direction: row !important; }
+    .msg-sidebar-list > div { min-width: 200px; flex-shrink: 0; }
+    .msg-chat { min-height: 300px; }
+  }
       @media (max-width: 480px) {
     .nav-logo { font-size: 16px; }
     .hero h1 { font-size: 26px; }
@@ -1218,7 +1225,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
           </div>
         )}
 
-        <div style={{padding:'24px 32px 32px'}}>
+        <div style={{padding:'20px clamp(16px, 4vw, 32px) 28px'}}>
           {/* Name + category header */}
           <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:16,flexWrap:'wrap',marginBottom:20}}>
             <div>
@@ -1251,7 +1258,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
           )}
 
           {/* Two-column details */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 32px',marginBottom:24}}>
+          <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 32px',marginBottom:24}}>
             <div>
               <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>About</div>
               <Field label="Location" val={`📍 ${v.homeZip} · travels ${v.radius}mi`} />
@@ -1303,7 +1310,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
             <div style={{fontSize:13,fontWeight:700,color:accepted?'#1a6b3a':'#1a1410',marginBottom:12}}>
               {accepted ? '✅ Contact Info (Booking Accepted)' : '🔒 Contact Info — Available After Booking Accepted'}
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 24px'}}>
+            <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'0 24px'}}>
               <BlurredField label="Email" val={v.contactEmail} />
               <BlurredField label="Phone" val={v.contactPhone} />
             </div>
@@ -1665,7 +1672,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
       {/* Expanded details */}
       {expanded && (
         <div style={{borderTop:'1px solid #e8ddd0',padding:'20px 24px',background:'#faf8f5'}}>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 32px'}}>
+          <div className="modal-3col" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 32px'}}>
             <div>
               <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Contact & Business</div>
               <Field label="Business Name" val={v.name} />
@@ -1993,11 +2000,11 @@ function VendorApplyModal({ opp, onClose }) {
                   ✓ Pre-filled from your vendor profile
                 </div>
               )}
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+              <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
                 <div className="form-group"><label>Business Name *</label><input value={form.vendorName} onChange={e=>set('vendorName',e.target.value)} placeholder="Your business name" /></div>
                 <div className="form-group"><label>Contact Name *</label><input value={form.contactName} onChange={e=>set('contactName',e.target.value)} placeholder="Your name" /></div>
               </div>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+              <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
                 <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" /></div>
                 <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="(555) 555-5555" /></div>
               </div>
@@ -3185,15 +3192,15 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
         </div>
       )}
 
-      <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
+      <div className="msg-layout" style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
       {/* Sidebar */}
-      <div style={{ width:280, minWidth:220, background:'#1a1410', display:'flex', flexDirection:'column', borderRight:'1px solid #2d2118', flexShrink:0 }}>
+      <div className="msg-sidebar" style={{ width:280, minWidth:220, background:'#1a1410', display:'flex', flexDirection:'column', borderRight:'1px solid #2d2118', flexShrink:0 }}>
         <div style={{ padding:'20px 16px 12px', borderBottom:'1px solid #2d2118' }}>
           <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#e8c97a', marginBottom:4 }}>Messages</div>
           <div style={{ fontSize:12, color:'#7a6a5a' }}>{conversations.length} conversation{conversations.length!==1?'s':''}</div>
         </div>
-        <div style={{ flex:1, overflowY:'auto' }}>
+        <div className="msg-sidebar-list" style={{ flex:1, overflowY:'auto' }}>
           {conversations.length === 0 && (
             <div style={{ padding:24, color:'#7a6a5a', fontSize:13, textAlign:'center', lineHeight:1.6 }}>
               No conversations yet.<br/>Browse vendors and click<br/>"Message Vendor" to start.
