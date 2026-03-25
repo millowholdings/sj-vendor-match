@@ -567,10 +567,10 @@ const TOS_SECTIONS = [
   { title: "1. Acceptance of Terms", body: "By creating a vendor or host profile on South Jersey Vendor Market, you agree to be bound by these Terms of Service. If you do not agree, do not use the platform. These terms constitute a legally binding agreement between you and South Jersey Vendor Market." },
   { title: "2. Non-Circumvention Agreement", body: "This is the most important section of our Terms. When a vendor and host are connected through South Jersey Vendor Market — whether through Browse Vendors, the Opportunities Board, in-app messaging, or any other platform feature — both parties agree NOT to conduct direct transactions outside the platform for a period of 12 months from the date of first contact.\n\nAny direct booking, hiring, payment, or business arrangement between a host and vendor who first connected through South Jersey Vendor Market, made outside of the platform, constitutes a circumvention violation. Violating parties will be subject to a finder's fee equal to 15% of the total transaction value, with a minimum fee of $150. South Jersey Vendor Market reserves the right to remove violating users from the platform permanently." },
   { title: "3. Vendor Responsibilities", body: "Vendors agree to: (a) provide accurate information about their business, products, pricing, insurance status, and availability; (b) honor commitments made through in-app messaging and booking; (c) maintain current and valid certificates of insurance where applicable; (d) conduct all platform communications through the in-app messaging system; (e) pay the applicable monthly subscription fee to maintain an active listing." },
-  { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) pay the applicable event posting or subscription fee; (e) not share vendor contact information obtained through the platform with third parties." },
+  { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) not share vendor contact information obtained through the platform with third parties." },
   { title: "5. In-App Messaging & Communication", body: "South Jersey Vendor Market provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. South Jersey Vendor Market does not read private messages but may access them if a dispute is filed." },
   { title: "6. Privacy & Data Protection", body: "South Jersey Vendor Market collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
-  { title: "7. Fees & Subscriptions", body: "Vendor listings are free until your first booking. After your first booking, a subscription fee of $15/month (Basic) applies. Host event postings start at $25 per event or $49/month for unlimited access. Managed booking services are priced separately. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
+  { title: "7. Fees & Subscriptions", body: "Vendor listings are free during the beta period. After beta, a subscription fee of $15/month (Basic) applies to maintain an active vendor listing. Host access to all self-service features — including browsing vendors, posting events, and sending booking requests — is completely free. The optional Full Service Concierge offering is priced separately starting at $150 per event. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
   { title: "8. Limitation of Liability", body: "South Jersey Vendor Market is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to South Jersey Vendor Market in the 3 months preceding any claim." },
   { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@sjvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
   { title: "10. Modifications & Termination", body: "South Jersey Vendor Market reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
@@ -1627,7 +1627,9 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
       <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>{label}</div>
       {accepted && val
         ? <div style={{fontSize:14,color:'#1a1410'}}>{val}</div>
-        : <div style={{fontSize:14,color:'#c8c0b4',filter:'blur(5px)',userSelect:'none',pointerEvents:'none'}}>{'vendor@email.com'}</div>
+        : <div style={{fontSize:13,color:'#a89a8a',display:'flex',alignItems:'center',gap:6}}>
+            <span style={{fontSize:14}}>🔒</span> Available after booking accepted
+          </div>
       }
     </div>
   );
@@ -2041,14 +2043,10 @@ function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthM
       <h3 style={{ fontSize:13, marginBottom:20, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR HOSTS & EVENT ORGANIZERS</h3>
       <div className="pricing-grid">
         <div className="pricing-card">
-          <div className="pricing-type">Host</div><div className="pricing-name">Single Event</div>
-          <div className="pricing-price">$25</div><div className="pricing-period">one-time fee</div>
-          <ul className="pricing-features"><li>Zip-radius matched vendor list</li><li>Up to 20 vendor results</li><li>Filter by category & distance</li><li>Direct vendor contact info</li><li>You manage booking yourself</li></ul>
-        </div>
-        <div className="pricing-card">
-          <div className="pricing-type">Host</div><div className="pricing-name">Monthly Access</div>
-          <div className="pricing-price">$49</div><div className="pricing-period">per month</div>
-          <ul className="pricing-features"><li>Unlimited event submissions</li><li>Unlimited vendor matching</li><li>Early access to new vendors</li><li>Event calendar listing</li><li>Priority support</li></ul>
+          <div className="pricing-badge" style={{ background:'#d4f4e0', color:'#1a6b3a' }}>ALWAYS FREE</div>
+          <div className="pricing-type" style={{ marginTop:8 }}>Host</div><div className="pricing-name">Self-Service</div>
+          <div className="pricing-price">$0</div><div className="pricing-period">forever free</div>
+          <ul className="pricing-features"><li>Unlimited event postings</li><li>Full vendor directory access</li><li>Vendor names, photos & profiles</li><li>Send unlimited booking requests</li><li>Contact info revealed on acceptance</li><li>In-app messaging</li></ul>
         </div>
         <div className="pricing-card featured">
           <div className="pricing-badge">FULL SERVICE</div>
