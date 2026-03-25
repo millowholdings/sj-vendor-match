@@ -4171,7 +4171,7 @@ function AppInner() {
             </div>
 
             {/* Three cards — fill remaining space */}
-            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'8px clamp(12px,2vw,32px) 0',flex:1,alignContent:'center'}}>
+            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'0 clamp(12px,2vw,32px)',flex:1,alignContent:'start'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
