@@ -4104,39 +4104,39 @@ function AppInner() {
 
         {tab==='home' && (
           <>
-            <div style={{background:'linear-gradient(160deg, #1a1410 0%, #2a1e16 40%, #1a1410 100%)',display:'flex',flexDirection:'column',minHeight:'100vh',justifyContent:'center'}}>
-              {/* Logo + tagline */}
-              <div style={{textAlign:'center',padding:'clamp(20px,3.5vh,40px) 24px clamp(8px,1.5vh,16px)'}}>
+            <div style={{background:'linear-gradient(160deg, #1a1410 0%, #231b14 40%, #1a1410 100%)',display:'flex',flexDirection:'column',minHeight:'100vh'}}>
+              {/* Logo + tagline — compact, close to nav */}
+              <div style={{textAlign:'center',padding:'clamp(10px,1.5vh,20px) 24px clamp(6px,1vh,12px)'}}>
                 <h1 style={{margin:0,lineHeight:1}}>
-                  <span style={{fontFamily:"'Corinthia', cursive",fontSize:'clamp(44px,6vw,68px)',color:'#e8c97a',display:'block',lineHeight:1,fontWeight:700}}>South Jersey</span>
-                  <span style={{fontFamily:"'Playfair Display', serif",fontSize:'clamp(16px,2.4vw,28px)',color:'#fff',letterSpacing:3,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:2}}>Vendor Market</span>
+                  <span style={{fontFamily:"'Corinthia', cursive",fontSize:'clamp(40px,5.5vw,64px)',color:'#e8c97a',display:'block',lineHeight:1,fontWeight:700}}>South Jersey</span>
+                  <span style={{fontFamily:"'Playfair Display', serif",fontSize:'clamp(14px,2.2vw,26px)',color:'#fff',letterSpacing:3,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:2}}>Vendor Market</span>
                 </h1>
-                <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(11px,1.2vw,14px)',color:'#a89a8a',margin:'6px auto 0',whiteSpace:'nowrap',lineHeight:1.5}}>Connecting vendors, events, and communities across South Jersey</p>
+                <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(11px,1.1vw,13px)',color:'#a89a8a',margin:'4px auto 0',whiteSpace:'nowrap',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
               </div>
 
-              {/* Three cards */}
-              <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(12px,1.4vw,20px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'clamp(8px,1.5vh,16px) clamp(12px,2vw,32px) clamp(12px,2vh,20px)'}}>
+              {/* Three cards — mixed backgrounds */}
+              <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(12px,1.4vw,20px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'clamp(6px,1vh,12px) clamp(12px,2vw,32px)',flex:1,alignItems:'center'}}>
 
-                {/* Event Goers */}
-                <div className="home-col" style={{background:'#c8a850',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 8px 32px rgba(0,0,0,0.35)'}}>
-                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(24px,2.4vw,32px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
+                {/* Left: Event Goers — cream/white */}
+                <div className="home-col" style={{background:'#faf6f0',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 6px 24px rgba(0,0,0,0.25)',border:'1px solid rgba(200,168,80,0.3)'}}>
+                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(22px,2.2vw,30px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
                     Event Goers
                   </h2>
-                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#3a3020',lineHeight:1.55,margin:'0 0 16px'}}>
+                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#5a4a3a',lineHeight:1.55,margin:'0 0 16px'}}>
                     Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.
                   </p>
                   <button onClick={()=>{setTab('upcoming-markets');window.scrollTo({top:0});}}
-                    style={{width:'100%',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
+                    style={{width:'100%',background:'#1a1410',color:'#fff',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
                     Browse Upcoming Markets
                   </button>
                 </div>
 
-                {/* Vendors */}
-                <div className="home-col" style={{background:'#c8a850',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 8px 32px rgba(0,0,0,0.35)'}}>
-                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(24px,2.4vw,32px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
+                {/* Middle: Vendors — gold */}
+                <div className="home-col" style={{background:'#c8a850',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 6px 24px rgba(0,0,0,0.25)'}}>
+                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(22px,2.2vw,30px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
                     Vendors
                   </h2>
-                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#3a3020',lineHeight:1.55,margin:'0 0 16px'}}>
+                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#3a2e1a',lineHeight:1.55,margin:'0 0 16px'}}>
                     Create your profile, set your travel radius, and get matched with events looking for what you offer.
                   </p>
                   <div style={{display:'flex',flexDirection:'column',gap:8}}>
@@ -4145,43 +4145,43 @@ function AppInner() {
                       Join as a Vendor
                     </button>
                     <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}}
-                      style={{width:'100%',background:'rgba(26,20,16,0.15)',color:'#1a1410',border:'1px solid rgba(26,20,16,0.3)',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
+                      style={{width:'100%',background:'#1a1410',color:'#fff',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
                       Browse Opportunities
                     </button>
                   </div>
                 </div>
 
-                {/* Hosts */}
-                <div className="home-col" style={{background:'#c8a850',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 8px 32px rgba(0,0,0,0.35)'}}>
-                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(24px,2.4vw,32px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
+                {/* Right: Hosts — dark */}
+                <div className="home-col" style={{background:'#1e1712',borderRadius:12,padding:'clamp(18px,2vw,26px)',display:'flex',flexDirection:'column',textAlign:'center',boxShadow:'0 6px 24px rgba(0,0,0,0.25)',border:'1px solid rgba(200,168,80,0.25)'}}>
+                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(22px,2.2vw,30px)',color:'#e8c97a',margin:'0 0 8px',lineHeight:1.15,fontWeight:700}}>
                     Event Hosts
                   </h2>
-                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#3a3020',lineHeight:1.55,margin:'0 0 16px'}}>
+                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(12px,0.95vw,14px)',color:'#b8a888',lineHeight:1.55,margin:'0 0 16px'}}>
                     Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.
                   </p>
                   <div style={{display:'flex',flexDirection:'column',gap:8}}>
                     <button onClick={()=>{setTab('host');window.scrollTo({top:0});}}
-                      style={{width:'100%',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
+                      style={{width:'100%',background:'#1a1410',color:'#e8c97a',border:'1px solid rgba(200,168,80,0.3)',borderRadius:8,padding:'11px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
                       Post Your Event
                     </button>
                     <button onClick={()=>{setTab('matches');window.scrollTo({top:0});}}
-                      style={{width:'100%',background:'rgba(26,20,16,0.15)',color:'#1a1410',border:'1px solid rgba(26,20,16,0.3)',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
+                      style={{width:'100%',background:'#1a1410',color:'#fff',border:'1px solid rgba(200,168,80,0.3)',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>
                       Browse Vendors
                     </button>
                   </div>
                 </div>
               </div>
 
-              {/* Stats bar */}
-              <div style={{background:'#c8a850',margin:'clamp(8px,1.5vh,16px) clamp(12px,2vw,32px) 0',borderRadius:10,maxWidth:1200,width:'calc(100% - clamp(24px,4vw,64px))',marginLeft:'auto',marginRight:'auto',padding:'clamp(14px,2vh,22px) 24px',display:'flex',justifyContent:'center',gap:'clamp(32px,6vw,80px)',flexWrap:'wrap'}}>
+              {/* Stats bar — dark with white numbers */}
+              <div style={{background:'#151210',padding:'clamp(16px,2.5vh,28px) 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.12)'}}>
                 {[
                   {num: vendors.length || '—', label:'Active Vendors'},
                   {num: CATEGORIES.length - 1, label:'Categories'},
                   {num: opps.length || '—', label:'Live Events'},
                 ].map(s=>(
                   <div key={s.label} style={{textAlign:'center'}}>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(28px,3vw,40px)',fontWeight:700,color:'#1a1410',lineHeight:1}}>{s.num}</div>
-                    <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:'#3a3020',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:2}}>{s.label}</div>
+                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(32px,3.5vw,48px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
+                    <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:11,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:700,marginTop:4}}>{s.label}</div>
                   </div>
                 ))}
               </div>
