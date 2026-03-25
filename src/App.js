@@ -4161,7 +4161,7 @@ function AppInner() {
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'auto',margin:0,padding:0}}>
             {/* Text logo */}
-            <div style={{textAlign:'center',padding:'24px 24px 16px',margin:0,flexShrink:0}}>
+            <div style={{textAlign:'center',padding:'12px 24px 8px',margin:0,flexShrink:0}}>
               <h1 style={{margin:0,lineHeight:1}}>
                 <span style={{fontFamily:"'Ibarra Real Nova',serif",fontSize:'clamp(56px,8vw,96px)',color:'#c8a850',display:'block',lineHeight:1.1,fontWeight:700,fontStyle:'italic'}}>South Jersey</span>
                 <span style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(20px,3.2vw,38px)',color:'#fff',letterSpacing:6,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:8}}>Vendor Market</span>
@@ -4171,7 +4171,7 @@ function AppInner() {
             </div>
 
             {/* Three cards */}
-            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'0 clamp(12px,2vw,32px)'}}>
+            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'8px clamp(12px,2vw,32px) 0'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
@@ -4200,7 +4200,7 @@ function AppInner() {
             </div>
 
             {/* Stats bar — pushed to bottom */}
-            <div style={{background:'#0e0c0a',padding:'10px 24px 12px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',flexShrink:0,marginTop:20}}>
+            <div style={{background:'#0e0c0a',padding:'10px 24px 12px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',flexShrink:0,marginTop:16}}>
               {[
                 {num: vendors.length || '—', label:'Active Vendors'},
                 {num: CATEGORIES.length - 1, label:'Categories'},
@@ -4211,6 +4211,17 @@ function AppInner() {
                   <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:9,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:1}}>{s.label}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Homepage footer */}
+            <div style={{background:'#0e0c0a',padding:24,textAlign:'center',flexShrink:0}}>
+              <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:12}}>
+                <button onClick={()=>setShowContactModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Contact Us</button>
+                <button onClick={()=>setShowFeedbackModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Give Feedback</button>
+                <button onClick={()=>{setTab('tos');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Terms of Service</button>
+                <button onClick={()=>{setTab('pricing');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Pricing</button>
+              </div>
+              <div style={{fontSize:11,color:'#5a4a3a'}}>support@southjerseyvendormarket.com</div>
             </div>
           </div>
         )}
