@@ -908,6 +908,7 @@ const DEFAULT_HOST_FORM = {
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
+  applyByDate:'',
   budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
   vendorDiscovery:'both', password:''
 };
@@ -988,6 +989,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
+        <div className="form-group"><label>Apply By Date</label><input type="date" value={form.applyByDate} max={form.date || undefined} onChange={e=>set('applyByDate',e.target.value)} /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Deadline for vendors to apply</div></div>
         <div className="form-group full">
           <label>Recurring Event?</label>
           <select value={form.isRecurring?'yes':'no'} onChange={e=>set('isRecurring',e.target.value==='yes')}>
@@ -3224,6 +3226,7 @@ function AppInner() {
       contact_email: form.email,
       contact_phone: form.phone || null,
       notes: form.notes || null,
+      deadline: form.applyByDate || null,
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       allow_duplicate_categories: form.allowDuplicateCategories,
       vendor_discovery: form.vendorDiscovery || 'both',
