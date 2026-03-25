@@ -169,7 +169,7 @@ function isUrgent(d){ if(!d) return false; return (new Date(d+"T12:00:00")-new D
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = `
-  @import url('https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Ibarra+Real+Nova:ital,wght@0,400;0,700;1,400;1,700&family=Lexend+Deca:wght@400;600;700&family=Public+Sans:wght@300;400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: #f5f0ea; color: #1a1410; min-height: 100vh; }
   .app { min-height: 100vh; }
@@ -4159,19 +4159,19 @@ function AppInner() {
         </nav>
 
         {tab==='home' && (
-          <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)',overflow:'hidden'}}>
+          <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)',overflow:'hidden',margin:0,padding:0}}>
             {/* Text logo */}
-            <div style={{textAlign:'center',padding:'6px 24px 2px',flexShrink:0}}>
+            <div style={{textAlign:'center',padding:'8px 24px 0',flexShrink:0,margin:0}}>
               <h1 style={{margin:0,lineHeight:1}}>
-                <span style={{fontFamily:"'Corinthia',cursive",fontSize:'clamp(48px,6.5vw,76px)',color:'#c8a850',display:'block',lineHeight:0.95,fontWeight:700}}>South Jersey</span>
-                <span style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(18px,2.8vw,34px)',color:'#fff',letterSpacing:4,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:0}}>Vendor Market</span>
+                <span style={{fontFamily:"'Ibarra Real Nova',serif",fontSize:'clamp(44px,6vw,72px)',color:'#c8a850',display:'block',lineHeight:0.95,fontWeight:700,fontStyle:'italic'}}>South Jersey</span>
+                <span style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,2.6vw,30px)',color:'#fff',letterSpacing:5,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:2}}>Vendor Market</span>
               </h1>
-              <div style={{width:60,height:2,background:'#c8a850',margin:'4px auto',borderRadius:1}} />
-              <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(11px,1.1vw,14px)',color:'#c8a850',margin:'2px auto 0',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
+              <div style={{width:50,height:2,background:'#c8a850',margin:'4px auto 2px',borderRadius:1}} />
+              <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(10px,1vw,13px)',color:'#c8a850',margin:'0 auto',lineHeight:1.3}}>Connecting vendors, events, and communities across South Jersey</p>
             </div>
 
-            {/* Three cards */}
-            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'0 clamp(12px,2vw,32px)',flex:1,alignContent:'center'}}>
+            {/* Three cards — fill remaining space */}
+            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'8px clamp(12px,2vw,32px) 0',flex:1,alignContent:'center'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
@@ -4180,17 +4180,17 @@ function AppInner() {
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
                   buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'}] },
               ].map(card=>(
-                <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:'clamp(12px,1.4vw,20px)',display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
-                  <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(18px,1.8vw,26px)',color:'#fff',margin:'0 0 6px',lineHeight:1.2,fontWeight:700}}>
+                <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:'clamp(10px,1.2vw,18px)',display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
+                  <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 4px',lineHeight:1.2,fontWeight:700}}>
                     {card.title}
                   </h2>
-                  <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(11px,0.85vw,13px)',color:'#c8a850',lineHeight:1.45,margin:'0 0 10px'}}>
+                  <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(11px,0.8vw,13px)',color:'#c8a850',lineHeight:1.4,margin:'0 0 8px'}}>
                     {card.desc}
                   </p>
-                  <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:'auto'}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
                       <button key={b.label} onClick={()=>{setTab(b.tab);window.scrollTo({top:0});}}
-                        style={{width:'100%',background:'#0e0c0a',color:'#fff',border:'2px solid #c8a850',borderRadius:8,padding:'8px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",letterSpacing:0.3}}>
+                        style={{width:'100%',background:'#0e0c0a',color:'#fff',border:'2px solid #c8a850',borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
                     ))}
@@ -4199,16 +4199,16 @@ function AppInner() {
               ))}
             </div>
 
-            {/* Stats bar — flush */}
-            <div style={{background:'#0e0c0a',padding:'8px 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.15)',flexShrink:0}}>
+            {/* Stats bar — flush under cards */}
+            <div style={{background:'#0e0c0a',padding:'6px 24px 8px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.15)',flexShrink:0,margin:0}}>
               {[
                 {num: vendors.length || '—', label:'Active Vendors'},
                 {num: CATEGORIES.length - 1, label:'Categories'},
                 {num: opps.length || '—', label:'Live Events'},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:'center'}}>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(24px,2.5vw,36px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
-                  <div style={{fontFamily:"'DM Sans',sans-serif",fontSize:10,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:700,marginTop:1}}>{s.label}</div>
+                  <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(22px,2.4vw,34px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
+                  <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:9,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:1}}>{s.label}</div>
                 </div>
               ))}
             </div>
