@@ -1307,6 +1307,25 @@ function AuthModal({ onClose, onAuth, defaultEmail }) {
 function VendorDashboard({ user, vendorProfile, bookingRequests, setTab }) {
   const [requests, setRequests] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
+  const [subscribing, setSubscribing] = useState(false);
+  const [subMessage, setSubMessage] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const subStatus = params.get('subscription');
+    if (subStatus === 'success') return { type: 'success', text: 'Subscription activated! Thank you for subscribing.' };
+    if (subStatus === 'canceled') return { type: 'info', text: 'Subscription checkout was canceled. You can subscribe anytime.' };
+    return null;
+  });
+
+  // Clean up URL params after reading them
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription')) {
+      params.delete('subscription');
+      params.delete('tab');
+      const newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
 
   useEffect(() => {
     if (!vendorProfile?.id) { setLoadingReqs(false); return; }
@@ -1322,10 +1341,52 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab }) {
     setRequests(r => r.map(x => x.id === reqId ? { ...x, status } : x));
   };
 
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    try {
+      const resp = await fetch('/api/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId: vendorProfile.id,
+          vendorEmail: vendorProfile.contact_email || user.email,
+          vendorName: vendorProfile.name,
+        }),
+      });
+      const data = await resp.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert('Failed to start checkout. Please try again.');
+        setSubscribing(false);
+      }
+    } catch (err) {
+      alert('Failed to connect to payment service. Please try again.');
+      setSubscribing(false);
+    }
+  };
+
+  const subStatus = vendorProfile?.subscription_status || 'none';
+  const isApproved = vendorProfile?.status === 'approved';
+
   return (
     <div className="section" style={{maxWidth:900}}>
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
+
+      {subMessage && (
+        <div style={{
+          background: subMessage.type === 'success' ? '#d4f4e0' : '#e8f4fd',
+          border: `1px solid ${subMessage.type === 'success' ? '#b8e8c8' : '#b8d8f0'}`,
+          borderRadius: 10, padding: '14px 20px', marginBottom: 24,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12
+        }}>
+          <div style={{ fontSize: 14, color: subMessage.type === 'success' ? '#1a6b3a' : '#1a4a6b', fontWeight: 600 }}>
+            {subMessage.type === 'success' ? '✓ ' : ''}{subMessage.text}
+          </div>
+          <button onClick={() => setSubMessage(null)} style={{ background: 'none', border: 'none', fontSize: 16, cursor: 'pointer', color: '#a89a8a', padding: 0 }}>×</button>
+        </div>
+      )}
 
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Profile</h3>
@@ -1339,6 +1400,55 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab }) {
           <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.category}</div>
           <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
         </div>
+      </div>
+
+      {/* Subscription Card */}
+      <div style={{background:'#fff',border: subStatus === 'active' ? '2px solid #b8e8c8' : '2px solid #e8c97a',borderRadius:12,padding:24,marginBottom:24}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+          <div>
+            <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:'0 0 4px'}}>Subscription</h3>
+            {subStatus === 'active' && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'3px 10px',borderRadius:10,fontSize:11,fontWeight:700}}>Active</span>
+                <span style={{fontSize:13,color:'#7a6a5a'}}>Basic Listing — $15/month</span>
+              </div>
+            )}
+            {subStatus === 'past_due' && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:'#fdecea',color:'#8b1a1a',padding:'3px 10px',borderRadius:10,fontSize:11,fontWeight:700}}>Past Due</span>
+                <span style={{fontSize:13,color:'#7a6a5a'}}>Please update your payment method.</span>
+              </div>
+            )}
+            {subStatus === 'canceled' && (
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{background:'#f0e8dc',color:'#7a5a10',padding:'3px 10px',borderRadius:10,fontSize:11,fontWeight:700}}>Canceled</span>
+                <span style={{fontSize:13,color:'#7a6a5a'}}>Re-subscribe to maintain your listing.</span>
+              </div>
+            )}
+            {subStatus === 'none' && isApproved && (
+              <div>
+                <div style={{fontSize:13,color:'#7a6a5a',marginBottom:4}}>Your profile is approved and visible during beta — no charge yet!</div>
+                <div style={{fontSize:12,color:'#a89a8a'}}>Subscribe now to lock in $15/month and be ready when billing activates.</div>
+              </div>
+            )}
+            {subStatus === 'none' && !isApproved && (
+              <div style={{fontSize:13,color:'#7a6a5a'}}>Subscription will be available once your profile is approved.</div>
+            )}
+          </div>
+          <div>
+            {isApproved && subStatus !== 'active' && (
+              <button onClick={handleSubscribe} disabled={subscribing}
+                style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'11px 28px',fontSize:14,fontWeight:700,cursor:subscribing?'wait':'pointer',fontFamily:'DM Sans,sans-serif',opacity:subscribing?0.7:1,whiteSpace:'nowrap'}}>
+                {subscribing ? 'Redirecting...' : subStatus === 'canceled' ? 'Re-subscribe — $15/mo' : 'Subscribe — $15/mo'}
+              </button>
+            )}
+          </div>
+        </div>
+        {subStatus === 'none' && isApproved && (
+          <div style={{background:'#fdf9f5',border:'1px solid #f0e8dc',borderRadius:8,padding:'12px 16px',marginTop:16,fontSize:13,color:'#7a5a10'}}>
+            <strong>Beta note:</strong> Your listing is currently free and visible to all hosts. Once billing goes live, an active subscription will be required to stay in the directory. Subscribe now in test mode — your card will not be charged.
+          </div>
+        )}
       </div>
 
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Booking Requests</h3>
@@ -2764,7 +2874,10 @@ function VendorResponsePage({ token }) {
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 function AppInner() {
-  const [tab, setTab] = useState("home");
+  const [tab, setTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('tab') || "home";
+  });
   const [authUser, setAuthUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');

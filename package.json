@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
+    "@stripe/stripe-js": "^8.11.0",
     "@supabase/supabase-js": "^2.99.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "resend": "^6.9.4"
+    "resend": "^6.9.4",
+    "stripe": "^20.4.1"
   },
   "scripts": {
     "start": "react-scripts start",

@@ -117,6 +117,13 @@ alter table events  add column if not exists user_id uuid;
 create index if not exists vendors_user_id_idx on vendors (user_id);
 create index if not exists events_user_id_idx  on events  (user_id);
 
+-- ─── Stripe: vendor subscription fields ─────────────────────────────────────
+alter table vendors add column if not exists stripe_customer_id     text;
+alter table vendors add column if not exists stripe_subscription_id text;
+alter table vendors add column if not exists subscription_status    text not null default 'none';
+-- subscription_status values: 'none', 'active', 'past_due', 'canceled', 'trialing'
+create index if not exists vendors_stripe_customer_idx on vendors (stripe_customer_id);
+
 -- ─── Booking Requests ─────────────────────────────────────────────────────────
 create table if not exists booking_requests (
   id                   bigint       primary key,
