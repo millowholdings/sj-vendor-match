@@ -4160,13 +4160,13 @@ function AppInner() {
 
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)'}}>
-            {/* Logo image — includes tagline */}
-            <div style={{textAlign:'center',padding:'clamp(8px,2vh,20px) 24px 4px'}}>
-              <img src="/Logo.png" alt="South Jersey Vendor Market — Connecting vendors, events, and communities across South Jersey" style={{maxWidth:'clamp(320px,45vw,540px)',width:'100%',height:'auto',display:'inline-block',background:'none',border:'none'}} />
+            {/* Logo */}
+            <div style={{textAlign:'center',padding:'4px 24px 0',lineHeight:0}}>
+              <img src="/Logo.png" alt="South Jersey Vendor Market" style={{width:'clamp(380px,40vw,520px)',height:'auto',display:'inline-block',background:'transparent',border:'none',outline:'none'}} />
             </div>
 
-            {/* Three cards — uniform black with gold border */}
-            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(10px,1.2vw,16px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'8px clamp(12px,2vw,32px) 0',flex:1,alignContent:'center'}}>
+            {/* Three cards */}
+            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(10px,1.2vw,16px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'4px clamp(12px,2vw,32px) 0',flex:1,alignContent:'center'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
