@@ -4064,6 +4064,9 @@ function AppInner() {
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
+                <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
+                  Messages{(()=>{const p=bookingRequests.filter(r=>r.status==='pending').length;return p>0?` (${p} pending)`:conversations.length>0?` (${conversations.length})`:"";})()}
+                </button>
                 <button className={`nav-tab${tab==="calendar"?" active":""}`} onClick={()=>{setTab("calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
             </div>
