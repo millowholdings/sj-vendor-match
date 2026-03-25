@@ -1218,17 +1218,21 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 }
 
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
-function AuthModal({ onClose, onAuth, defaultEmail }) {
+function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState(defaultEmail || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [roles, setRoles] = useState({ vendor: false, host: false });
+
+  const toggleRole = (role) => setRoles(r => ({ ...r, [role]: !r[role] }));
 
   const handleSubmit = async () => {
     if (!email || !password) { setError('Please enter email and password.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
+    if (mode === 'signup' && !roles.vendor && !roles.host) { setError('Please select at least one role.'); return; }
     setLoading(true); setError('');
     if (mode === 'signup') {
       const { error: signUpErr } = await supabase.auth.signUp({ email, password });
@@ -1240,6 +1244,16 @@ function AuthModal({ onClose, onAuth, defaultEmail }) {
     setLoading(false);
     if (onAuth) onAuth();
     onClose();
+    // After signup, navigate to the appropriate form
+    if (mode === 'signup' && setTab) {
+      if (roles.vendor && roles.host) {
+        setTab('vendor'); // Start with vendor form, they can do host form after
+      } else if (roles.vendor) {
+        setTab('vendor');
+      } else if (roles.host) {
+        setTab('host');
+      }
+    }
   };
 
   const handleReset = async () => {
@@ -1249,9 +1263,23 @@ function AuthModal({ onClose, onAuth, defaultEmail }) {
     setResetSent(true);
   };
 
+  const roleBtn = (role, label, emoji, desc) => (
+    <button onClick={()=>toggleRole(role)} style={{
+      flex:1, minWidth:140, padding:'14px 12px', borderRadius:10, cursor:'pointer',
+      border: roles[role] ? '2px solid #c8a84b' : '2px solid #e8ddd0',
+      background: roles[role] ? '#fdf9f0' : '#fff',
+      fontFamily:'DM Sans,sans-serif', textAlign:'center', transition:'all 0.15s',
+    }}>
+      <div style={{fontSize:22,marginBottom:4}}>{emoji}</div>
+      <div style={{fontSize:14,fontWeight:700,color:'#1a1410'}}>{label}</div>
+      <div style={{fontSize:11,color:'#7a6a5a',marginTop:2}}>{desc}</div>
+      {roles[role] && <div style={{color:'#c8a84b',fontSize:16,marginTop:4}}>&#10003;</div>}
+    </button>
+  );
+
   return (
     <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:420,width:'100%',overflow:'hidden'}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:440,width:'100%',overflow:'hidden'}}>
         <div style={{background:'#1a1410',padding:'24px 28px',textAlign:'center'}}>
           <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>
             {mode==='login' ? 'Welcome Back' : 'Create Account'}
@@ -1268,6 +1296,20 @@ function AuthModal({ onClose, onAuth, defaultEmail }) {
             </div>
           ) : (
             <>
+              {mode === 'signup' && (
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:8,display:'block'}}>I am a... <span style={{fontWeight:400,color:'#a89a8a'}}>(select all that apply)</span></label>
+                  <div style={{display:'flex',gap:10}}>
+                    {roleBtn('vendor', 'Vendor', '🛍️', 'Sell at events')}
+                    {roleBtn('host', 'Host', '🎪', 'Organize events')}
+                  </div>
+                  {roles.vendor && roles.host && (
+                    <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'8px 12px',marginTop:10,fontSize:12,color:'#1a4a6b'}}>
+                      You'll have access to both vendor and host features under one account.
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="form-group" style={{marginBottom:12}}>
                 <label>Email</label>
                 <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@email.com"
@@ -3423,7 +3465,7 @@ function AppInner() {
               <div className="nav-group-label">&#127918; Hosts</div>
               <div className="nav-group-items">
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
-                {!(vendorProfile && !(userEvents.length > 0)) && <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>}
+                {(!vendorProfile || userEvents.length > 0) && <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>}
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
                   Messages{(()=>{const p=bookingRequests.filter(r=>r.status==='pending').length;return p>0?` (${p} pending)`:conversations.length>0?` (${conversations.length})`:"";})()}
                 </button>
@@ -3435,10 +3477,12 @@ function AppInner() {
             {isAdmin && <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>}
             {authUser ? (
               <div className="nav-group">
-                <div className="nav-group-label">&#128100; Account</div>
+                <div className="nav-group-label">&#128100; Account{vendorProfile && userEvents.length > 0 ? ' (Vendor + Host)' : vendorProfile ? ' (Vendor)' : userEvents.length > 0 ? ' (Host)' : ''}</div>
                 <div className="nav-group-items">
                   {vendorProfile && <button className={`nav-tab${tab==="vendor-dashboard"?" active":""}`} onClick={()=>{setTab("vendor-dashboard");window.scrollTo({top:0});}}>Vendor Dashboard</button>}
                   {userEvents.length > 0 && <button className={`nav-tab${tab==="host-dashboard"?" active":""}`} onClick={()=>{setTab("host-dashboard");window.scrollTo({top:0});}}>Host Dashboard</button>}
+                  {vendorProfile && userEvents.length === 0 && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>+ Add Host Role</button>}
+                  {!vendorProfile && userEvents.length > 0 && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>+ Add Vendor Role</button>}
                   <button className="nav-tab" onClick={handleLogout} style={{color:'#c8a84b'}}>Log Out</button>
                 </div>
               </div>
@@ -3575,7 +3619,7 @@ function AppInner() {
           </div>
         )}
 
-        {tab==="matches"      && (vendorProfile && !(userEvents.length > 0)
+        {tab==="matches"      && (vendorProfile && userEvents.length === 0
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>post an event</a> first.</p></div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
@@ -3592,7 +3636,7 @@ function AppInner() {
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} />}
       </div>
-      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} />}
+      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} />}
     </>
   );
 }
