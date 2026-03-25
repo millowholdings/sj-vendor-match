@@ -4663,14 +4663,14 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 function TosPage({ setTab }) {
   return (
     <div className="section" style={{ maxWidth:860 }}>
-      <div className="section-title">Terms of Service</div>
-      <p className="section-sub">South Jersey Vendor Market Platform Agreement — effective upon registration</p>
+      <div className="section-title" style={{color:'#e8c97a'}}>Terms of Service</div>
+      <p className="section-sub" style={{color:'#b8a888'}}>South Jersey Vendor Market Platform Agreement — effective upon registration</p>
 
       {TOS_SECTIONS.map(({ title, body }) => (
         <div key={title} style={{ marginBottom:28 }}>
-          <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410', marginBottom:8 }}>{title}</div>
+          <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#e8c97a', marginBottom:8 }}>{title}</div>
           {body.split('\n\n').map((para, i) => (
-            <p key={i} style={{ fontSize:14, color:'#5a4a3a', lineHeight:1.8, marginBottom:8 }}>{para}</p>
+            <p key={i} style={{ fontSize:14, color:'#d4c8a8', lineHeight:1.8, marginBottom:8 }}>{para}</p>
           ))}
         </div>
       ))}
