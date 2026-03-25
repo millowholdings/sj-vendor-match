@@ -3079,10 +3079,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
                       {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
                     </div>
                     {opp.notes && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 10px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.notes}</p>}
-                    <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
-                      {opp.categoriesNeeded.map(c=><span key={c} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',padding:'3px 10px',borderRadius:20,fontSize:11,color:'#5a4a3a'}}>{c}</span>)}
-                      {opp.eventLink && <a href={opp.eventLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a>}
-                    </div>
+                    {opp.eventLink && <div><a href={opp.eventLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a></div>}
                     {!isOpen && <div style={{fontSize:12,color:'#c8a84b',marginTop:8,fontWeight:600}}>Click to see vendors attending →</div>}
                   </div>
                 </div>
