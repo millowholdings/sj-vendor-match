@@ -4213,16 +4213,6 @@ function AppInner() {
               ))}
             </div>
 
-            {/* Homepage footer */}
-            <div style={{padding:32,textAlign:'center'}}>
-              <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:16}}>
-                <button onClick={()=>setShowContactModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Contact Us</button>
-                <button onClick={()=>setShowFeedbackModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Give Feedback</button>
-                <button onClick={()=>{setTab('tos');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Terms of Service</button>
-                <button onClick={()=>{setTab('pricing');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Pricing</button>
-              </div>
-              <div style={{fontSize:11,color:'#5a4a3a'}}>support@southjerseyvendormarket.com</div>
-            </div>
           </div>
         )}
 
