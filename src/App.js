@@ -2585,6 +2585,92 @@ function VendorApplyModal({ opp, onClose }) {
   );
 }
 
+// ─── Upcoming Markets (public calendar) ──────────────────────────────────────
+function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
+  const [filterType, setFilterType] = useState("");
+  const [filterCat, setFilterCat] = useState("");
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcoming = opps
+    .filter(o => o.date >= todayStr)
+    .filter(o => !filterType || o.eventType===filterType)
+    .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
+    .sort((a,b) => a.date.localeCompare(b.date));
+
+  return (
+    <>
+      <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"48px 40px", textAlign:"center", position:"relative", overflow:"hidden" }}>
+        <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 60% 80% at 50% 50%,rgba(232,201,122,.08),transparent)" }} />
+        <h2 style={{ fontFamily:"Playfair Display,serif", fontSize:36, color:"#fff", marginBottom:8, position:"relative" }}>
+          Upcoming <em style={{ color:"#e8c97a", fontStyle:"italic" }}>Markets & Events</em>
+        </h2>
+        <p style={{ color:"#a89a8a", fontSize:16, maxWidth:520, margin:"0 auto", position:"relative" }}>
+          Browse upcoming vendor markets, pop-ups, and events across South Jersey.
+        </p>
+      </div>
+      <div className="section" style={{ maxWidth:1100, paddingTop:40 }}>
+        <div className="match-filters">
+          <div className="match-filter-group">
+            <label>Event Type</label>
+            <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
+              <option value="">All Types</option>
+              {EVENT_TYPES.map(t=><option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="match-filter-group">
+            <label>Category</label>
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
+              <option value="">All Categories</option>
+              {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="results-header">
+          <div className="results-count"><strong>{upcoming.length}</strong> upcoming events</div>
+        </div>
+        {upcoming.length===0
+          ? <div className="empty-state"><div className="big">📭</div><p>No upcoming events match your filters.</p></div>
+          : (
+          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
+            {upcoming.map(opp => (
+              <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden" }}>
+                <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"20px 24px" }}>
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{opp.eventName}</div>
+                  <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
+                </div>
+                <div style={{ padding:"20px 24px" }}>
+                  <div className="ometa-grid">
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)} – {fmtTime(opp.endTime)}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}</div></div>
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                    {opp.categoriesNeeded.map(c=><span key={c} style={{ background:"#f5f0ea", border:"1px solid #e8ddd0", padding:"3px 10px", borderRadius:20, fontSize:11, color:"#5a4a3a" }}>{c}</span>)}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* CTAs */}
+        <div style={{ marginTop:48, display:'flex', gap:20, justifyContent:'center', flexWrap:'wrap' }}>
+          <div style={{ background:'#fff', border:'1px solid #e8ddd0', borderRadius:12, padding:'28px 32px', textAlign:'center', flex:'1 1 280px', maxWidth:380 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>🛍️</div>
+            <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, fontWeight:700, marginBottom:6 }}>Are you a vendor?</div>
+            <p style={{ fontSize:13, color:'#7a6a5a', marginBottom:14 }}>Find events near you and grow your business.</p>
+            <button onClick={()=>{setShowAuthModal ? setShowAuthModal(true) : setTab('vendor');}} className="btn-submit" style={{ fontSize:14, padding:'10px 28px' }}>Apply to Vend</button>
+          </div>
+          <div style={{ background:'#fff', border:'1px solid #e8ddd0', borderRadius:12, padding:'28px 32px', textAlign:'center', flex:'1 1 280px', maxWidth:380 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>🎪</div>
+            <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, fontWeight:700, marginBottom:6 }}>Are you an event organizer?</div>
+            <p style={{ fontSize:13, color:'#7a6a5a', marginBottom:14 }}>List your event for free and find quality vendors.</p>
+            <button onClick={()=>{setShowAuthModal ? setShowAuthModal(true) : setTab('host');}} className="btn-submit" style={{ fontSize:14, padding:'10px 28px', background:'#e8c97a', color:'#1a1410' }}>List Your Event</button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
   const isGuest = !authUser;
   const [filterType, setFilterType] = useState("");
@@ -2592,10 +2678,11 @@ function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
   const [myZip, setMyZip] = useState("");
   const [saved, setSaved] = useState([]);
   const [applyOpp, setApplyOpp] = useState(null);
+  const [showSection, setShowSection] = useState('open');
   const zipOk = myZip.length===5 && isKnownZip(myZip);
 
   const todayStr = new Date().toISOString().split('T')[0];
-  const list = opps
+  const future = opps
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
@@ -2607,6 +2694,9 @@ function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
       if (a.dist!==null && b.dist!==null) return a.dist - b.dist;
       return 0;
     });
+  const openOpps = future.filter(o => !o.deadline || o.deadline >= todayStr);
+  const closedOpps = future.filter(o => o.deadline && o.deadline < todayStr);
+  const list = showSection === 'open' ? openOpps : closedOpps;
 
   return (
     <>
@@ -2646,8 +2736,22 @@ function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
             </select>
           </div>
         </div>
+        <div style={{ display:'flex', gap:0, marginBottom:20, borderRadius:8, overflow:'hidden', border:'1px solid #e8ddd0' }}>
+          <button onClick={()=>setShowSection('open')} style={{
+            flex:1, padding:'10px 16px', fontSize:13, fontWeight:700, cursor:'pointer', border:'none',
+            fontFamily:'DM Sans,sans-serif',
+            background: showSection==='open' ? '#1a1410' : '#fff',
+            color: showSection==='open' ? '#e8c97a' : '#7a6a5a',
+          }}>Open ({openOpps.length})</button>
+          <button onClick={()=>setShowSection('closed')} style={{
+            flex:1, padding:'10px 16px', fontSize:13, fontWeight:700, cursor:'pointer', border:'none',
+            fontFamily:'DM Sans,sans-serif', borderLeft:'1px solid #e8ddd0',
+            background: showSection==='closed' ? '#1a1410' : '#fff',
+            color: showSection==='closed' ? '#e8c97a' : '#7a6a5a',
+          }}>Coming Soon ({closedOpps.length})</button>
+        </div>
         <div className="results-header">
-          <div className="results-count"><strong>{list.length}</strong> upcoming opportunities</div>
+          <div className="results-count"><strong>{list.length}</strong> {showSection==='open' ? 'open opportunities' : 'coming soon — applications closed'}</div>
           <div style={{ fontSize:13, color:"#a89a8a" }}>Past events hidden</div>
         </div>
         {list.length===0
@@ -2702,10 +2806,15 @@ function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
                         </div>
                       )}
                       <div style={{ display:"flex", gap:10 }}>
-                        {(opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
+                        {showSection==='open' && (opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
                           <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                             Apply to Vend
                           </button>
+                        )}
+                        {showSection==='closed' && (
+                          <div style={{ flex:2, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>
+                            Applications Closed
+                          </div>
                         )}
                         {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
                         <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
@@ -3506,6 +3615,7 @@ function AppInner() {
           <div className="nav-logo"><span className="nav-logo-cursive">South Jersey</span><span className="nav-logo-serif">Vendor Market</span></div>
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
+            <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Markets</button>
             <div className="nav-group">
               <div className="nav-group-label">&#128717; Vendors</div>
               <div className="nav-group-items">
@@ -3677,6 +3787,9 @@ function AppInner() {
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
             : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
+        {tab==="upcoming-markets" && (loading
+          ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
+          : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
