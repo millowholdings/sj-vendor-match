@@ -153,6 +153,11 @@ function dbEventToApp(e) {
     source:           e.source            || "Host Submitted",
     photoUrl:         e.photo_url         || "",
     vendorDiscovery:  e.vendor_discovery  || "both",
+    status:           e.status            || "approved",
+    eventLink:        e.event_link        || "",
+    userId:           e.user_id           || "",
+    adminNotes:       e.admin_notes       || "",
+    rejectionReason:  e.rejection_reason  || "",
   };
 }
 
@@ -908,7 +913,7 @@ const DEFAULT_HOST_FORM = {
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
-  applyByDate:'',
+  applyByDate:'', eventLink:'',
   budget:'', isTicketedEvent:false, otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
   vendorDiscovery:'both', password:''
 };
@@ -990,6 +995,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
         <div className="form-group"><label>Apply By Date</label><input type="date" value={form.applyByDate} max={form.date || undefined} onChange={e=>set('applyByDate',e.target.value)} /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Deadline for vendors to apply</div></div>
+        <div className="form-group full"><label>Event Website or Facebook Page <span style={{color:'#c0392b'}}>*</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Official event page — used to verify your event</div></div>
         <div className="form-group full">
           <label>Recurring Event?</label>
           <select value={form.isRecurring?'yes':'no'} onChange={e=>set('isRecurring',e.target.value==='yes')}>
@@ -1558,9 +1564,25 @@ function HostDashboard({ user, userEvents, setTab }) {
         <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:32}}>
           {userEvents.map(e => (
             <div key={e.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
-              <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{e.event_name}</div>
-              <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
-              <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{e.event_name}</div>
+                  <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
+                  <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
+                </div>
+                <span style={{
+                  padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',
+                  background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
+                  color: e.status==='approved' ? '#1a6b3a' : e.status==='rejected' ? '#8b1a1a' : e.status==='concierge_active' ? '#1a6b3a' : '#7a5a10',
+                }}>
+                  {e.status==='approved' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='concierge_pending' ? 'Awaiting Payment' : e.status==='concierge_active' ? 'Concierge Active' : e.status==='pending_review' ? 'Pending Review' : 'Live'}
+                </span>
+              </div>
+              {e.status==='rejected' && e.rejection_reason && (
+                <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:6,padding:'8px 12px',marginTop:8,fontSize:12,color:'#8b1a1a'}}>
+                  <strong>Reason:</strong> {e.rejection_reason}
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -1950,9 +1972,12 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
           <strong>{hostConfirm?.eventName}</strong> has been received. Ref: <strong>{hostConfirm?.ref}</strong>
         </p>
         <p style={{fontSize:13,color:'#2d7a50',marginBottom:16}}>A confirmation was sent to {hostConfirm?.email}</p>
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
+          <strong>⏳ Pending Review:</strong> Your event will be reviewed by our team before it goes live. You'll be notified once it's approved.
+        </div>
         {hostEvent?.fullServiceBooking && (
           <div style={{background:'#1a1410',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#e8c97a',lineHeight:1.5}}>
-            <strong>Concierge Request received!</strong> Our team will review your event and reach out within 24 hours to discuss vendor selection and coordination.
+            <strong>Concierge Request received!</strong> Check your email for a payment link ($200 concierge fee). Once payment is confirmed, our team will begin coordinating vendors for your event.
           </div>
         )}
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
@@ -2290,7 +2315,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
-function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false }) {
+function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false }) {
   const [unlocked, setUnlocked] = useState(() => isAdmin || sessionStorage.getItem('sjvm_admin') === '1');
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
@@ -2323,16 +2348,163 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
     );
   }
 
+  const pendingEvents = allEvents.filter(e => e.status === 'pending_review');
+  const conciergeEvents = allEvents.filter(e => e.status === 'concierge_pending' || e.status === 'concierge_active');
+  const [eventNotes, setEventNotes] = useState({});
+  const [rejectReasons, setRejectReasons] = useState({});
+  const [expandedEvent, setExpandedEvent] = useState(null);
+
+  const approveEvent = async (evt) => {
+    const notes = eventNotes[evt.id] || '';
+    const updatePayload = { status: 'approved' };
+    if (notes) updatePayload.admin_notes = notes;
+    const { error } = await supabase.from('events').update(updatePayload).eq('id', evt.id);
+    if (error) { alert('Failed to approve event: ' + error.message); return; }
+    const updated = { ...evt, status: 'approved', adminNotes: notes };
+    setAllEvents(prev => prev.map(e => e.id === evt.id ? updated : e));
+    setOpps(prev => [updated, ...prev]);
+  };
+
+  const rejectEvent = async (evt) => {
+    const reason = rejectReasons[evt.id] || '';
+    if (!reason) { alert('Please provide a rejection reason.'); return; }
+    const { error } = await supabase.from('events').update({ status: 'rejected', rejection_reason: reason, admin_notes: eventNotes[evt.id] || null }).eq('id', evt.id);
+    if (error) { alert('Failed to reject event: ' + error.message); return; }
+    setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: 'rejected', rejectionReason: reason } : e));
+    // Send rejection notification email
+    try {
+      await fetch('/api/send-event-rejection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostEmail: evt.contactEmail, hostName: evt.contactName, eventName: evt.eventName, reason }),
+      });
+    } catch (e) { console.error('Rejection email failed:', e); }
+  };
+
+  const markConciergeActive = async (evt) => {
+    const { error } = await supabase.from('events').update({ status: 'concierge_active' }).eq('id', evt.id);
+    if (error) { alert('Failed to update: ' + error.message); return; }
+    setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: 'concierge_active' } : e));
+    setOpps(prev => [{ ...evt, status: 'concierge_active' }, ...prev]);
+  };
+
+  const eventStatusPill = (status) => {
+    const styles = {
+      pending_review:    { bg:'#fdf4dc', color:'#7a5a10', label:'Pending Review' },
+      approved:          { bg:'#d4f4e0', color:'#1a6b3a', label:'Live' },
+      rejected:          { bg:'#fdecea', color:'#8b1a1a', label:'Rejected' },
+      concierge_pending: { bg:'#fdf4dc', color:'#7a5a10', label:'Concierge — Awaiting Payment' },
+      concierge_active:  { bg:'#d4f4e0', color:'#1a6b3a', label:'Concierge Active' },
+    };
+    const s = styles[status] || styles.approved;
+    return <span style={{background:s.bg,color:s.color,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{s.label}</span>;
+  };
+
   return (
-    <div className="section" style={{ maxWidth:1000 }}>
+    <div className="section" style={{ maxWidth:1100 }}>
       <div className="section-title">Admin Dashboard</div>
       <p className="section-sub">Manage vendors, hosts, and bookings across South Jersey.</p>
       <div className="admin-grid">
-        <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Opportunities</div></div>
-        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{opps.filter(o=>o.source==='Concierge Request').length}</div><div className="admin-stat-label">Concierge Requests</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Pending Review</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Events</div></div>
+        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{pendingEvents.length}</div><div className="admin-stat-label">Events Pending Review</div></div>
+        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{conciergeEvents.length}</div><div className="admin-stat-label">Concierge</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
       </div>
+
+      {/* ── Pending Event Review ─────────────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🔍 Events Pending Review ({pendingEvents.length})</h3>
+      {pendingEvents.length===0
+        ? <div className="empty-state"><div className="big">✅</div><p>No events awaiting review.</p></div>
+        : <div style={{display:'flex',flexDirection:'column',gap:16}}>
+          {pendingEvents.map(evt=>(
+            <div key={evt.id} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:12,overflow:'hidden'}}>
+              <div style={{background:'#fdf9f0',padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,cursor:'pointer'}} onClick={()=>setExpandedEvent(expandedEvent===evt.id?null:evt.id)}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:16,color:'#1a1410'}}>{evt.eventName}</div>
+                  <div style={{fontSize:13,color:'#7a6a5a'}}>{evt.eventType} · {fmtDate(evt.date)} · Zip {evt.zip}</div>
+                  <div style={{fontSize:12,color:'#a89a8a',marginTop:2}}>Host: {evt.contactName} ({evt.contactEmail})</div>
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  {eventStatusPill(evt.status)}
+                  <span style={{fontSize:18,color:'#a89a8a'}}>{expandedEvent===evt.id ? '▲' : '▼'}</span>
+                </div>
+              </div>
+              {expandedEvent===evt.id && (
+                <div style={{padding:'20px',borderTop:'1px solid #f0e8dc'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px',marginBottom:16}}>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Time:</span> {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Booth Fee:</span> {evt.boothFee || '—'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Spots:</span> {evt.spots}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Deadline:</span> {evt.deadline ? fmtDate(evt.deadline) : '—'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Phone:</span> {evt.contactPhone || '—'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Source:</span> {evt.source}</div>
+                    <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Categories:</span> {(evt.categoriesNeeded||[]).join(', ') || '—'}</div>
+                    {evt.notes && <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Host Notes:</span> {evt.notes}</div>}
+                  </div>
+                  {/* Event Link — prominent for verification */}
+                  {evt.eventLink && (
+                    <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'10px 14px',marginBottom:16}}>
+                      <div style={{fontSize:11,color:'#1a4a6b',fontWeight:700,marginBottom:4}}>🔗 EVENT LINK (verify host)</div>
+                      <a href={evt.eventLink} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:14,wordBreak:'break-all'}}>{evt.eventLink}</a>
+                    </div>
+                  )}
+                  {!evt.eventLink && (
+                    <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'10px 14px',marginBottom:16}}>
+                      <div style={{fontSize:12,color:'#8b1a1a',fontWeight:600}}>⚠️ No event link provided — verify host through other means</div>
+                    </div>
+                  )}
+                  {/* Admin notes */}
+                  <div style={{marginBottom:12}}>
+                    <label style={{fontSize:12,fontWeight:600,color:'#1a1410',display:'block',marginBottom:4}}>Admin Notes (internal — flag suspicious hosts)</label>
+                    <textarea value={eventNotes[evt.id]||''} onChange={e=>setEventNotes(n=>({...n,[evt.id]:e.target.value}))}
+                      placeholder="Flag anything suspicious, verification notes, etc."
+                      style={{width:'100%',minHeight:60,border:'1px solid #e0d5c5',borderRadius:6,padding:'8px 10px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',resize:'vertical'}} />
+                  </div>
+                  {/* Reject reason */}
+                  <div style={{marginBottom:16}}>
+                    <label style={{fontSize:12,fontWeight:600,color:'#8b1a1a',display:'block',marginBottom:4}}>Rejection Reason (sent to host if rejected)</label>
+                    <input value={rejectReasons[evt.id]||''} onChange={e=>setRejectReasons(r=>({...r,[evt.id]:e.target.value}))}
+                      placeholder="Reason for rejection (required to reject)"
+                      style={{width:'100%',border:'1px solid #e0d5c5',borderRadius:6,padding:'8px 10px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box'}} />
+                  </div>
+                  <div style={{display:'flex',gap:10}}>
+                    <button onClick={()=>approveEvent(evt)} style={{flex:1,background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'10px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>✓ Approve Event</button>
+                    <button onClick={()=>rejectEvent(evt)} style={{flex:1,background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'10px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>✗ Reject Event</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      }
+
+      {/* ── Concierge Requests ───────────────────────────────── */}
+      {conciergeEvents.length > 0 && (
+        <>
+          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🤝 Concierge Requests ({conciergeEvents.length})</h3>
+          <div style={{display:'flex',flexDirection:'column',gap:12}}>
+            {conciergeEvents.map(evt=>(
+              <div key={evt.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:15}}>{evt.eventName}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(evt.date)} · {evt.contactName} · {evt.contactEmail}</div>
+                  {evt.eventLink && <a href={evt.eventLink} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>🔗 Event Link</a>}
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  {eventStatusPill(evt.status)}
+                  {evt.status === 'concierge_pending' && (
+                    <button onClick={()=>markConciergeActive(evt)} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                      Mark Payment Confirmed
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       <AdminPostForm onPost={async opp => {
         const { data, error } = await supabase.from('events').insert({
           event_name:        opp.eventName,
@@ -2352,52 +2524,35 @@ function AdminPage({ opps=[], setOpps=()=>{}, vendorSubs=[], vendors=[], setVend
           notes:             opp.notes,
           source:            opp.source     || "Admin",
           photo_url:         opp.photoUrl   || null,
+          status:            'approved',
         }).select().single();
         if (error) { console.error('Error posting event:', error); return false; }
-        setOpps(prev => [dbEventToApp(data), ...prev]);
+        const mapped = dbEventToApp(data);
+        setOpps(prev => [mapped, ...prev]);
+        setAllEvents(prev => [mapped, ...prev]);
         return true;
       }} />
-      {opps.filter(o=>o.source==='Concierge Request').length > 0 && (
-        <>
-          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Concierge Requests</h3>
-          <p style={{fontSize:13,color:'#7a5a10',marginBottom:12}}>These hosts requested full-service vendor coordination. Reach out within 24 hours.</p>
-          <table className="admin-table" style={{border:'2px solid #e8c97a'}}>
-            <thead><tr style={{background:'#1a1410'}}><th style={{color:'#e8c97a'}}>Event</th><th style={{color:'#e8c97a'}}>Type</th><th style={{color:'#e8c97a'}}>Contact</th><th style={{color:'#e8c97a'}}>Zip</th><th style={{color:'#e8c97a'}}>Date</th><th style={{color:'#e8c97a'}}>Categories</th><th style={{color:'#e8c97a'}}>Status</th></tr></thead>
-            <tbody>
-              {opps.filter(o=>o.source==='Concierge Request').map(o=>(
-                <tr key={o.id} style={{background:'#fdf9f0'}}>
-                  <td><strong>{o.eventName}</strong></td>
-                  <td>{o.eventType}</td>
-                  <td>{o.contactName}<br/><span style={{fontSize:11,color:'#7a6a5a'}}>{o.contactEmail}</span></td>
-                  <td>{o.zip}</td>
-                  <td>{fmtDate(o.date)}</td>
-                  <td style={{fontSize:12}}>{(o.categoriesNeeded||[]).join(', ')||'—'}</td>
-                  <td><span style={{background:'#1a1410',color:'#e8c97a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>Concierge</span></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </>
-      )}
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Opportunities</h3>
+
+      {/* ── Live Events ──────────────────────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Events ({opps.length})</h3>
       {opps.length===0
-        ? <div className="empty-state"><div className="big">&#128221;</div><p>No opportunities posted yet.</p></div>
+        ? <div className="empty-state"><div className="big">&#128221;</div><p>No live events yet.</p></div>
         : <table className="admin-table">
             <thead><tr><th>Event</th><th>Type</th><th>Zip</th><th>Date</th><th>Source</th><th>Status</th></tr></thead>
             <tbody>
               {opps.map(o=>(
                 <tr key={o.id} style={o.source==='Concierge Request'?{background:'#fdf9f0'}:{}}>
-                  <td><strong>{o.eventName}</strong></td><td>{o.eventType}</td><td>{o.zip}</td>
+                  <td><strong>{o.eventName}</strong>{o.eventLink && <a href={o.eventLink} target="_blank" rel="noopener noreferrer" style={{marginLeft:6,fontSize:11,color:'#1a4a6b'}}>🔗</a>}</td><td>{o.eventType}</td><td>{o.zip}</td>
                   <td>{fmtDate(o.date)}</td><td>{o.source}</td>
-                  <td>{o.source==='Concierge Request'
-                    ? <span style={{background:'#1a1410',color:'#e8c97a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700}}>Concierge</span>
-                    : <span className="status-pill status-active">Live</span>}</td>
+                  <td>{eventStatusPill(o.status)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
       }
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Pending Vendor Applications</h3>
+
+      {/* ── Pending Vendor Applications ──────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Pending Vendor Applications ({pendingVendors.length})</h3>
       {pendingVendors.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -3149,6 +3304,7 @@ function AppInner() {
   const [hostEvent,     setHostEvent]     = useState(null);
   const [vendors, setVendors] = useState([]);
   const [opps, setOpps] = useState([]);
+  const [allEvents, setAllEvents] = useState([]);
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
 
@@ -3184,7 +3340,12 @@ function AppInner() {
       if (pErr && pErr.code !== '42703') console.error('Failed to load pending vendors:', pErr);
       else if (pendingRows) setPendingVendors(pendingRows);
       if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
-      else if (eventRows) setOpps(eventRows.map(dbEventToApp));
+      else if (eventRows) {
+        // Public feed only shows approved events (or events without status column for backwards compat)
+        setOpps(eventRows.map(dbEventToApp).filter(e => !e.status || e.status === 'approved'));
+        // Store all events including pending for admin
+        setAllEvents(eventRows.map(dbEventToApp));
+      }
 
       // Load booking requests for this browser session from Supabase
       const sid = getSessionId();
@@ -3513,6 +3674,10 @@ function AppInner() {
       alert('Please enter a valid 10-digit phone number, or leave it blank.');
       return;
     }
+    if (!form.eventLink || !/^https?:\/\/.+/.test(form.eventLink)) {
+      alert('Please provide a valid event website or Facebook page URL.');
+      return;
+    }
     if (!form.date) {
       alert('Please select an event date.');
       return;
@@ -3578,25 +3743,46 @@ function AppInner() {
       notes: form.notes || null,
       deadline: form.applyByDate || null,
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
+      status: form.fullServiceBooking ? 'concierge_pending' : 'pending_review',
+      event_link: form.eventLink || null,
       allow_duplicate_categories: form.allowDuplicateCategories,
       vendor_discovery: form.vendorDiscovery || 'both',
       ...(hostUserId ? { user_id: hostUserId } : {}),
     };
     let { data: newEvent, error: eventErr } = await supabase.from('events').insert(eventPayload).select().single();
-    // Retry without vendor_discovery if column doesn't exist yet
+    // Retry without newer columns if they don't exist yet
     if (eventErr && (eventErr.code === '42703' || eventErr.code === 'PGRST204')) {
-      const { vendor_discovery: _vd, ...withoutVd } = eventPayload;
-      ({ data: newEvent, error: eventErr } = await supabase.from('events').insert(withoutVd).select().single());
+      const { vendor_discovery: _vd, status: _st, event_link: _el, ...fallback } = eventPayload;
+      ({ data: newEvent, error: eventErr } = await supabase.from('events').insert(fallback).select().single());
     }
     if (eventErr) {
       console.error('Event submit error:', eventErr);
       alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@sjvendormarket.com`);
       return;
     }
-    // Add the new event to opportunities so it appears immediately
-    if (newEvent) setOpps(prev => [dbEventToApp(newEvent), ...prev]);
+    // Send concierge email with payment link
+    if (form.fullServiceBooking && newEvent) {
+      try {
+        await fetch('/api/send-concierge-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hostEmail: form.email,
+            hostName: form.contactName,
+            eventName: form.eventName || form.eventType,
+            eventDate: form.date,
+            eventId: newEvent.id,
+          }),
+        });
+      } catch (e) { console.error('Concierge email failed:', e); }
+    }
+    // Pending events don't appear in public feed — they go through admin approval
+    // Only add to user's own events list for their dashboard
+    if (newEvent) {
+      setUserEvents(prev => [dbEventToApp(newEvent), ...prev]);
+    }
     setHostEvent(form);
-    setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType });
+    setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType, isPending: true, isConcierge: form.fullServiceBooking });
     setHostSuccess(true);
     window.scrollTo({top:0, behavior:'smooth'});
   };
@@ -3794,7 +3980,7 @@ function AppInner() {
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}

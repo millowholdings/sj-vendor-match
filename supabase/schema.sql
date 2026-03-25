@@ -117,6 +117,14 @@ alter table events  add column if not exists user_id uuid;
 create index if not exists vendors_user_id_idx on vendors (user_id);
 create index if not exists events_user_id_idx  on events  (user_id);
 
+-- ─── Events: approval status + event link + admin notes ─────────────────────
+-- status values: 'pending_review', 'approved', 'rejected', 'concierge_pending', 'concierge_active'
+alter table events add column if not exists status           text not null default 'approved';
+alter table events add column if not exists event_link       text;
+alter table events add column if not exists admin_notes      text;
+alter table events add column if not exists rejection_reason text;
+create index if not exists events_status_idx on events (status);
+
 -- ─── Stripe: vendor subscription fields ─────────────────────────────────────
 alter table vendors add column if not exists stripe_customer_id     text;
 alter table vendors add column if not exists stripe_subscription_id text;
