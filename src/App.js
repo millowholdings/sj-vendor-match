@@ -171,8 +171,8 @@ function isUrgent(d){ if(!d) return false; return (new Date(d+"T12:00:00")-new D
 const styles = `
   @import url('https://fonts.googleapis.com/css2?family=Corinthia:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Ibarra+Real+Nova:ital,wght@0,400;0,700;1,400;1,700&family=Lexend+Deca:wght@400;600;700&family=Public+Sans:wght@300;400;500;600&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: #f5f0ea; color: #1a1410; min-height: 100vh; }
-  .app { min-height: 100vh; }
+  body { font-family: 'DM Sans', sans-serif; background: #1a1208; color: #1a1410; min-height: 100vh; }
+  .app { min-height: 100vh; background: #1a1208; }
   .nav { background: #1a1410; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
   .nav-logo { display:flex; align-items:baseline; gap:6px; }
   .nav-logo-cursive { font-family: 'Corinthia', cursive; font-size: 32px; color: #e8c97a; line-height:1; letter-spacing: 0px; }
@@ -4306,7 +4306,7 @@ function AppInner() {
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
-      <footer style={{background:'#1a1410',padding:'32px 24px',marginTop:0,textAlign:'center'}}>
+      <footer style={{background:'#1a1208',padding:'32px 24px',marginTop:0,textAlign:'center',borderTop:'1px solid rgba(200,168,80,0.15)'}}>
         <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a',marginBottom:8}}>South Jersey Vendor Market</div>
         <p style={{fontSize:13,color:'#a89a8a',marginBottom:16}}>Connecting vendors and events across South Jersey</p>
         <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:16}}>
