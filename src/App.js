@@ -2995,12 +2995,30 @@ function VendorApplyModal({ opp, onClose }) {
 function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+  const [vendorsByEvent, setVendorsByEvent] = useState({});
+  const [loadingVendors, setLoadingVendors] = useState({});
   const todayStr = new Date().toISOString().split('T')[0];
   const upcoming = opps
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
     .sort((a,b) => a.date.localeCompare(b.date));
+
+  const loadVendors = async (opp) => {
+    if (vendorsByEvent[opp.id]) return;
+    setLoadingVendors(l => ({...l, [opp.id]: true}));
+    const { data } = await supabase.from('booking_requests').select('vendor_name,vendor_category,vendor_emoji,status')
+      .eq('event_name', opp.eventName).eq('status', 'accepted');
+    setVendorsByEvent(v => ({...v, [opp.id]: data || []}));
+    setLoadingVendors(l => ({...l, [opp.id]: false}));
+  };
+
+  const handleExpand = (opp) => {
+    const next = expandedId === opp.id ? null : opp.id;
+    setExpandedId(next);
+    if (next) loadVendors(opp);
+  };
 
   return (
     <>
@@ -3036,26 +3054,65 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
         {upcoming.length===0
           ? <div className="empty-state"><div className="big">📭</div><p>No upcoming events match your filters.</p></div>
           : (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
-            {upcoming.map(opp => (
+          <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+            {upcoming.map(opp => {
+              const isOpen = expandedId === opp.id;
+              const vendors = vendorsByEvent[opp.id] || [];
+              const loading = loadingVendors[opp.id];
+              return (
               <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden" }}>
-                <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"20px 24px" }}>
-                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{opp.eventName}</div>
-                  <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
-                </div>
-                <div style={{ padding:"20px 24px" }}>
-                  <div className="ometa-grid">
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)} – {fmtTime(opp.endTime)}</div></div>
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}</div></div>
-                    {opp.isTicketed && opp.ticketPrice && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Admission</div><div style={{ fontSize:14, fontWeight:500 }}>🎟️ {opp.ticketPrice}</div></div>}
+                {/* Card header — always visible */}
+                <div style={{ cursor:'pointer' }} onClick={()=>handleExpand(opp)}>
+                  <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"18px 24px", display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div>
+                      <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, color:"#fff", marginBottom:2, lineHeight:1.3 }}>{opp.eventName}</div>
+                      <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
+                    </div>
+                    <div style={{color:'#a89a8a',fontSize:18,flexShrink:0,marginLeft:12}}>{isOpen ? '▲' : '▼'}</div>
                   </div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-                    {opp.categoriesNeeded.map(c=><span key={c} style={{ background:"#f5f0ea", border:"1px solid #e8ddd0", padding:"3px 10px", borderRadius:20, fontSize:11, color:"#5a4a3a" }}>{c}</span>)}
+                  <div style={{ padding:"16px 24px" }}>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:'12px 24px',marginBottom:opp.notes||opp.isTicketed||opp.eventLink?12:0}}>
+                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Date </span><span style={{fontSize:14,fontWeight:500}}>{fmtDate(opp.date)}</span></div>
+                      {(opp.startTime || opp.endTime) && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Time </span><span style={{fontSize:14,fontWeight:500}}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</span></div>}
+                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}</span></div>
+                      {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
+                      {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
+                    </div>
+                    {opp.notes && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 10px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.notes}</p>}
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6,alignItems:'center'}}>
+                      {opp.categoriesNeeded.map(c=><span key={c} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',padding:'3px 10px',borderRadius:20,fontSize:11,color:'#5a4a3a'}}>{c}</span>)}
+                      {opp.eventLink && <a href={opp.eventLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a>}
+                    </div>
+                    {!isOpen && <div style={{fontSize:12,color:'#c8a84b',marginTop:8,fontWeight:600}}>Click to see vendors attending →</div>}
                   </div>
                 </div>
+
+                {/* Expanded: vendors attending */}
+                {isOpen && (
+                  <div style={{borderTop:'1px solid #e8ddd0',padding:'20px 24px',background:'#fdf9f5'}}>
+                    <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:12}}>Vendors Attending</div>
+                    {loading ? (
+                      <div style={{color:'#a89a8a',fontSize:13,padding:'8px 0'}}>Loading vendors...</div>
+                    ) : vendors.length === 0 ? (
+                      <div style={{color:'#7a6a5a',fontSize:13,padding:'8px 0'}}>No confirmed vendors yet. Check back closer to the event date!</div>
+                    ) : (
+                      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
+                        {vendors.map((v,i) => (
+                          <div key={i} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px',display:'flex',alignItems:'center',gap:10}}>
+                            {v.vendor_emoji && <span style={{fontSize:20}}>{v.vendor_emoji}</span>}
+                            <div>
+                              <div style={{fontWeight:700,fontSize:13,color:'#1a1410'}}>{v.vendor_name}</div>
+                              {v.vendor_category && <div style={{fontSize:11,color:'#7a6a5a'}}>{v.vendor_category}</div>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {/* CTAs */}
