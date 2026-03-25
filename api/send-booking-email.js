@@ -96,7 +96,7 @@ module.exports = async function handler(req, res) {
 </html>`;
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@sjvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
 
   try {
     const { data, error } = await resend.emails.send({

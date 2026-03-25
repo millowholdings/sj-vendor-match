@@ -16,7 +16,7 @@ module.exports = async function handler(req, res) {
   }
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@sjvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
   const supportAddr = 'support@southjerseyvendormarket.com';
 
   try {

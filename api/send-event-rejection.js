@@ -57,14 +57,14 @@ module.exports = async function handler(req, res) {
     </div>
     <div style="text-align:center;margin-top:20px;font-size:11px;color:#a89a8a;line-height:1.6">
       South Jersey Vendor Market · Connecting local vendors with event hosts<br>
-      Questions? Reply to this email or contact support@sjvendormarket.com
+      Questions? Reply to this email or contact support@southjerseyvendormarket.com
     </div>
   </div>
 </body>
 </html>`;
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@sjvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
 
   try {
     const { data, error } = await resend.emails.send({

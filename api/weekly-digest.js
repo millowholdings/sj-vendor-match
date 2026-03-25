@@ -69,7 +69,7 @@ module.exports = async function handler(req, res) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@sjvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
   // Get events created in the last 7 days that are still in the future

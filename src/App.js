@@ -579,9 +579,9 @@ const TOS_SECTIONS = [
   { title: "4. Host Responsibilities", body: "Hosts agree to: (a) provide accurate event information including zip code, date, time, and vendor requirements; (b) honor commitments to vendors made through the platform; (c) conduct all vendor communications through the in-app messaging system; (d) not share vendor contact information obtained through the platform with third parties." },
   { title: "5. In-App Messaging & Communication", body: "South Jersey Vendor Market provides in-app messaging to protect both vendors and hosts. All initial contact and booking negotiations must take place through the platform's messaging system. This protects vendors from having their contact information shared without consent, and protects hosts by maintaining a record of all agreements. South Jersey Vendor Market does not read private messages but may access them if a dispute is filed." },
   { title: "6. Privacy & Data Protection", body: "South Jersey Vendor Market collects only the information necessary to operate the platform. Vendor contact details (email, phone) are never shared with hosts until a booking is confirmed. Host contact details are shared with vendors only as needed to fulfill event bookings. We do not sell your personal information to third parties. By using the platform, you consent to our use of your data to operate and improve our services." },
-  { title: "7. Fees & Subscriptions", body: "Vendor listings are free during the beta period. After beta, a subscription fee of $15/month (Basic) applies to maintain an active vendor listing. Host access to all self-service features — including browsing vendors, posting events, and sending booking requests — is completely free. The optional Full Service Concierge offering is priced separately starting at $150 per event. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
+  { title: "7. Fees & Subscriptions", body: "Vendor listings are free during the beta period. After beta, a subscription fee of $15/month (Basic) applies to maintain an active vendor listing. Host access to all self-service features — including browsing vendors, posting events, and sending booking requests — is completely free. The optional Full Service Concierge offering is priced on a per-event basis through a free consultation. All fees are non-refundable except where required by law. South Jersey Vendor Market reserves the right to modify pricing with 30 days notice." },
   { title: "8. Limitation of Liability", body: "South Jersey Vendor Market is a marketplace platform that connects vendors and hosts. We are not responsible for the quality of vendor products or services, the outcome of events, disputes between vendors and hosts, or any damages arising from transactions conducted through the platform. Our total liability to any user shall not exceed the amount paid to South Jersey Vendor Market in the 3 months preceding any claim." },
-  { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@sjvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
+  { title: "9. Dispute Resolution", body: "Any disputes between vendors and hosts arising from platform connections should first be reported to South Jersey Vendor Market at support@southjerseyvendormarket.com. We will make reasonable efforts to mediate. Disputes not resolved through mediation shall be governed by the laws of the State of New Jersey. You agree to binding arbitration for any claims against South Jersey Vendor Market itself." },
   { title: "10. Modifications & Termination", body: "South Jersey Vendor Market reserves the right to modify these terms at any time with 14 days notice. Continued use of the platform after modifications constitutes acceptance. We reserve the right to suspend or terminate accounts that violate these terms, engage in fraudulent activity, or circumvent the platform. The Non-Circumvention clause (Section 2) survives account termination." },
 ];
 
@@ -608,7 +608,7 @@ function TosModal({ onClose }) {
             </div>
           ))}
           <div style={{ fontSize:13, color:'#a89a8a', borderTop:'1px solid #e8ddd0', paddingTop:16, marginTop:8 }}>
-            Questions? Contact us at <strong>support@sjvendormarket.com</strong>
+            Questions? Contact us at <strong>support@southjerseyvendormarket.com</strong>
           </div>
         </div>
         {/* Footer */}
@@ -2156,7 +2156,7 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
         </div>
         {hostEvent?.fullServiceBooking && (
           <div style={{background:'#1a1410',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#e8c97a',lineHeight:1.5}}>
-            <strong>Concierge Request received!</strong> Check your email for a payment link ($200 concierge fee). Once payment is confirmed, our team will begin coordinating vendors for your event.
+            <strong>Concierge Request received!</strong> Our team will review your event and reach out within 24 hours to schedule a free consultation and discuss pricing for your event.
           </div>
         )}
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
@@ -2835,9 +2835,6 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
 
 // ─── Opportunities Page ───────────────────────────────────────────────────────
 // ─── Vendor Application Modal ─────────────────────────────────────────────────
-// TODO: When Supabase Auth is added, logged-in vendors should see a one-click
-// "Apply to Vend" button (no form) — auto-attach their profile ID and info.
-// Host receives accept/deny/pending review options with vendor's full profile.
 function VendorApplyModal({ opp, onClose }) {
   const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'' });
   const [submitting, setSubmitting] = useState(false);
@@ -3600,7 +3597,7 @@ function AppInner() {
       if (eErr) { console.error('Failed to load events:', eErr); setLoadError('Could not load event data. Please refresh.'); }
       else if (eventRows) {
         // Public feed only shows approved events (or events without status column for backwards compat)
-        setOpps(eventRows.map(dbEventToApp).filter(e => !e.status || e.status === 'approved'));
+        setOpps(eventRows.map(dbEventToApp).filter(e => !e.status || e.status === 'approved' || e.status === 'concierge_active'));
         // Store all events including pending for admin
         setAllEvents(eventRows.map(dbEventToApp));
       }
@@ -3874,7 +3871,7 @@ function AppInner() {
     }
     if (error) {
       console.error('Vendor submit error:', error);
-      alert(`Submission failed: ${error.message}\n\nIf this keeps happening, please contact support@sjvendormarket.com`);
+      alert(`Submission failed: ${error.message}\n\nIf this keeps happening, please contact support@southjerseyvendormarket.com`);
       return;
     }
 
@@ -4017,7 +4014,7 @@ function AppInner() {
     }
     if (eventErr) {
       console.error('Event submit error:', eventErr);
-      alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@sjvendormarket.com`);
+      alert(`Failed to submit event: ${eventErr.message}\n\nPlease try again or contact support@southjerseyvendormarket.com`);
       return;
     }
     // Send concierge email with payment link
@@ -4171,7 +4168,7 @@ function AppInner() {
                       <div style={{ fontSize:12, color:'#a89a8a', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Confirmation Number</div>
                       <div style={{ fontSize:22, fontWeight:700, color:'#e8c97a', letterSpacing:3, marginBottom:12 }}>{vendorConfirm.ref}</div>
                       <div style={{ fontSize:13, color:'#a89a8a', marginBottom:12 }}>Save this for your records.</div>
-                      <a href={`mailto:${vendorConfirm.email}?subject=Your SJVM Vendor Registration — ${vendorConfirm.ref}&body=Hi ${vendorConfirm.name},%0A%0AThank you for registering with South Jersey Vendor Market!%0A%0AYour confirmation number is: ${vendorConfirm.ref}%0A%0AWhat happens next:%0A• Your listing will be reviewed within 24 hours%0A• You'll be matched with nearby events automatically%0A• Check Messages for booking requests from hosts%0A%0A— South Jersey Vendor Market%0Asupport@sjvendormarket.com`}
+                      <a href={`mailto:${vendorConfirm.email}?subject=Your SJVM Vendor Registration — ${vendorConfirm.ref}&body=Hi ${vendorConfirm.name},%0A%0AThank you for registering with South Jersey Vendor Market!%0A%0AYour confirmation number is: ${vendorConfirm.ref}%0A%0AWhat happens next:%0A• Your listing will be reviewed within 24 hours%0A• You'll be matched with nearby events automatically%0A• Check Messages for booking requests from hosts%0A%0A— South Jersey Vendor Market%0Asupport@southjerseyvendormarket.com`}
                         style={{ display:'inline-block', background:'#e8c97a', color:'#1a1410', padding:'9px 20px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', fontFamily:'DM Sans,sans-serif' }}>
                         📧 Email yourself a copy
                       </a>
@@ -4619,7 +4616,7 @@ function TosPage({ setTab }) {
 
       <div style={{ background:'#1a1410', borderRadius:10, padding:'28px 32px', marginTop:32, textAlign:'center' }}>
         <div style={{ fontFamily:'Playfair Display,serif', fontSize:20, color:'#e8c97a', marginBottom:8 }}>Questions about our Terms?</div>
-        <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@sjvendormarket.com</p>
+        <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@southjerseyvendormarket.com</p>
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
           <button className="btn-primary" onClick={()=>setTab('vendor')}>Join as a Vendor</button>
           <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
@@ -5438,7 +5435,7 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
           <div>
             <div style={{fontWeight:700,color:'#1a6b3a',fontSize:15,marginBottom:4}}>✅ Event submitted — you're all set!</div>
             <div style={{fontSize:13,color:'#2d7a50'}}>
-              Confirmation <strong>{hostConfirm.ref}</strong> sent to {hostConfirm.email} · <a href={`mailto:${hostConfirm.email}?subject=Your SJVM Event Submission — ${hostConfirm.ref}&body=Hi,%0A%0AYour event has been submitted to South Jersey Vendor Market.%0A%0AConfirmation: ${hostConfirm.ref}%0AEvent: ${hostConfirm.eventName}%0A%0ANext steps:%0A• Browse vendors using the Browse Vendors tab%0A• Send booking requests to vendors you want%0A• Check this calendar for responses%0A%0A— South Jersey Vendor Market%0Asupport@sjvendormarket.com`} style={{color:'#1a6b3a',fontWeight:700}}>Email copy →</a>
+              Confirmation <strong>{hostConfirm.ref}</strong> sent to {hostConfirm.email} · <a href={`mailto:${hostConfirm.email}?subject=Your SJVM Event Submission — ${hostConfirm.ref}&body=Hi,%0A%0AYour event has been submitted to South Jersey Vendor Market.%0A%0AConfirmation: ${hostConfirm.ref}%0AEvent: ${hostConfirm.eventName}%0A%0ANext steps:%0A• Browse vendors using the Browse Vendors tab%0A• Send booking requests to vendors you want%0A• Check this calendar for responses%0A%0A— South Jersey Vendor Market%0Asupport@southjerseyvendormarket.com`} style={{color:'#1a6b3a',fontWeight:700}}>Email copy →</a>
             </div>
           </div>
           <button onClick={clearHostConfirm} style={{background:'none',border:'none',color:'#1a6b3a',fontSize:18,cursor:'pointer',padding:4}}>✕</button>

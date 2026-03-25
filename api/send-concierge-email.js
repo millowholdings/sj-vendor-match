@@ -16,9 +16,6 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing hostEmail' });
   }
 
-  const paymentLink = process.env.STRIPE_CONCIERGE_PAYMENT_LINK || 'https://buy.stripe.com/test_placeholder';
-  const conciergeFee = process.env.CONCIERGE_FEE || '$200';
-
   const fmtDate = (d) => {
     if (!d) return '';
     const [y, m, day] = d.split('-');
@@ -38,7 +35,7 @@ module.exports = async function handler(req, res) {
     </div>
     <div style="background:#fff;border-radius:12px;border:1px solid #e8ddd0;overflow:hidden">
       <div style="background:#1a1410;padding:24px 28px;text-align:center">
-        <div style="font-size:16px;color:#e8c97a;font-weight:700;margin-bottom:4px">Concierge Service Requested</div>
+        <div style="font-size:16px;color:#e8c97a;font-weight:700;margin-bottom:4px">Concierge Request Received</div>
         <div style="font-size:13px;color:#a89a8a">Thank you for choosing our full-service option!</div>
       </div>
       <div style="padding:24px 28px">
@@ -50,39 +47,32 @@ module.exports = async function handler(req, res) {
           Our team will find and book vendors, handle confirmations and follow-ups, and provide a day-of coordination checklist.
         </p>
         <div style="background:#fdf9f5;border:1px solid #e8ddd0;border-radius:8px;padding:16px;margin:20px 0;text-align:center">
-          <div style="font-size:13px;color:#7a6a5a;margin-bottom:4px">Concierge Fee</div>
-          <div style="font-size:28px;font-weight:700;color:#1a1410">${conciergeFee}</div>
-          <div style="font-size:12px;color:#a89a8a;margin-top:4px">one-time per event</div>
+          <div style="font-size:14px;color:#1a1410;font-weight:600">What happens next?</div>
+          <div style="font-size:13px;color:#7a6a5a;margin-top:6px;line-height:1.5">
+            A member of our team will reach out within 24 hours to schedule a free consultation. We'll discuss your event details, vendor needs, and customize a concierge plan with pricing tailored to your event.
+          </div>
         </div>
         <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:20px">
-          To activate your concierge service, please complete payment using the link below. Once payment is confirmed, our team will begin coordinating vendors for your event.
+          In the meantime, your event has been submitted for review and you can track its status from your Host Dashboard.
         </p>
-        <div style="text-align:center;margin:28px 0 8px">
-          <a href="${paymentLink}" style="display:inline-block;background:#c8a84b;color:#1a1410;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px;letter-spacing:0.3px">
-            Pay ${conciergeFee} — Activate Concierge
-          </a>
-        </div>
-        <div style="text-align:center;font-size:12px;color:#a89a8a;margin-top:12px">
-          This is a test payment — your card will not be charged.
-        </div>
       </div>
     </div>
     <div style="text-align:center;margin-top:20px;font-size:11px;color:#a89a8a;line-height:1.6">
-      South Jersey Vendor Market · Connecting local vendors with event hosts<br>
-      Questions? Reply to this email or contact support@sjvendormarket.com
+      South Jersey Vendor Market &middot; Connecting local vendors with event hosts<br>
+      Questions? Reply to this email or contact support@southjerseyvendormarket.com
     </div>
   </div>
 </body>
 </html>`;
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@sjvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
 
   try {
     const { data, error } = await resend.emails.send({
       from: `South Jersey Vendor Market <${fromAddr}>`,
       to: [hostEmail],
-      subject: `Concierge Service: ${eventName || 'Your Event'} — Complete Payment to Activate`,
+      subject: `Concierge Request: ${eventName || 'Your Event'} — We'll Be in Touch Within 24 Hours`,
       html,
     });
     if (error) {
