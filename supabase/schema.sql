@@ -123,7 +123,20 @@ alter table events add column if not exists status           text not null defau
 alter table events add column if not exists event_link       text;
 alter table events add column if not exists admin_notes      text;
 alter table events add column if not exists rejection_reason text;
+alter table events add column if not exists is_ticketed      boolean not null default false;
+alter table events add column if not exists ticket_price     text;
 create index if not exists events_status_idx on events (status);
+
+-- ─── Admin removal log ──────────────────────────────────────────────────────
+create table if not exists admin_removal_log (
+  id          serial primary key,
+  entity_type text not null,  -- 'vendor', 'event', 'host'
+  entity_id   integer not null,
+  entity_name text,
+  reason      text not null,
+  removed_at  timestamptz default now(),
+  removed_by  text default 'admin'
+);
 
 -- ─── Stripe: vendor subscription fields ─────────────────────────────────────
 alter table vendors add column if not exists stripe_customer_id     text;
