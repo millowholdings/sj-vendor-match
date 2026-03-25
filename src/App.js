@@ -1868,60 +1868,93 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthModal }) {
   const isVendor = !!vendorProfile;
   const isHost = userEvents && userEvents.length > 0;
+  const [activeTab, setActiveTab] = useState('vendor');
 
-  if (!authUser) {
+  const vendorPricing = (
+    <>
+      <h3 style={{ fontSize:13, marginBottom:8, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR VENDORS</h3>
+      <div className="info-box" style={{ marginBottom:20 }}>🎉 <strong>Pay nothing until your first booking!</strong> After that, just $15/month — cancel anytime.</div>
+      <div className="pricing-grid">
+        <div className="pricing-card">
+          <div className="pricing-type">Vendor</div><div className="pricing-name">Basic Listing</div>
+          <div className="pricing-price">$15</div><div className="pricing-period">per month</div>
+          <ul className="pricing-features"><li>Profile in vendor directory</li><li>Photo gallery (up to 6)</li><li>Insurance & doc uploads</li><li>Matched to events in your radius</li><li>Lead notifications by email</li></ul>
+        </div>
+      </div>
+    </>
+  );
+
+  const hostPricing = (
+    <>
+      <h3 style={{ fontSize:13, marginBottom:20, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR HOSTS & EVENT ORGANIZERS</h3>
+      <div className="pricing-grid">
+        <div className="pricing-card">
+          <div className="pricing-type">Host</div><div className="pricing-name">Single Event</div>
+          <div className="pricing-price">$25</div><div className="pricing-period">one-time fee</div>
+          <ul className="pricing-features"><li>Zip-radius matched vendor list</li><li>Up to 20 vendor results</li><li>Filter by category & distance</li><li>Direct vendor contact info</li><li>You manage booking yourself</li></ul>
+        </div>
+        <div className="pricing-card">
+          <div className="pricing-type">Host</div><div className="pricing-name">Monthly Access</div>
+          <div className="pricing-price">$49</div><div className="pricing-period">per month</div>
+          <ul className="pricing-features"><li>Unlimited event submissions</li><li>Unlimited vendor matching</li><li>Early access to new vendors</li><li>Event calendar listing</li><li>Priority support</li></ul>
+        </div>
+        <div className="pricing-card featured">
+          <div className="pricing-badge">FULL SERVICE</div>
+          <div className="pricing-type">Host</div><div className="pricing-name">Concierge</div>
+          <div className="pricing-price">$150+</div><div className="pricing-period">per event</div>
+          <ul className="pricing-features"><li>We find & book vendors for you</li><li>Curated vendor recommendations</li><li>Confirmations & follow-ups handled</li><li>Day-of coordination checklist</li><li>Dedicated event coordinator</li></ul>
+        </div>
+      </div>
+    </>
+  );
+
+  // Logged-in vendor only — show vendor pricing
+  if (authUser && isVendor && !isHost) {
     return (
-      <div className="section" style={{ maxWidth:600, textAlign:'center' }}>
-        <div className="section-title">Pricing</div>
-        <p className="section-sub">Log in to view pricing for your account type.</p>
-        <button className="btn-submit" style={{ marginTop:24 }} onClick={()=>setShowAuthModal(true)}>Log In to View Pricing</button>
+      <div className="section" style={{ maxWidth:1000 }}>
+        <div className="section-title">Your Vendor Pricing</div>
+        <p className="section-sub">Your pricing plan as a registered vendor.</p>
+        {vendorPricing}
       </div>
     );
   }
 
+  // Logged-in host only — show host pricing
+  if (authUser && isHost && !isVendor) {
+    return (
+      <div className="section" style={{ maxWidth:1000 }}>
+        <div className="section-title">Your Host Pricing</div>
+        <p className="section-sub">Pricing plans for event hosts and organizers.</p>
+        {hostPricing}
+      </div>
+    );
+  }
+
+  // Not logged in, or logged in but no role yet — show tabs
+  const tabStyle = (t) => ({
+    flex:1, padding:'12px 0', fontSize:14, fontWeight:700, cursor:'pointer', border:'none',
+    fontFamily:'DM Sans,sans-serif', letterSpacing:0.5, transition:'all 0.2s',
+    background: activeTab===t ? '#1a1410' : '#fff',
+    color: activeTab===t ? '#e8c97a' : '#7a6a5a',
+    borderBottom: activeTab===t ? '3px solid #e8c97a' : '3px solid transparent',
+  });
+
   return (
     <div className="section" style={{ maxWidth:1000 }}>
       <div className="section-title">Simple, Transparent Pricing</div>
-      {isVendor && (
-        <>
-          <p className="section-sub">Your vendor pricing plan.</p>
-          <h3 style={{ fontSize:13, marginBottom:8, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR VENDORS</h3>
-          <div className="info-box" style={{ marginBottom:20 }}>🎉 <strong>Pay nothing until your first booking!</strong> After that, just $15/month — cancel anytime.</div>
-          <div className="pricing-grid" style={{ marginBottom:48 }}>
-            <div className="pricing-card">
-              <div className="pricing-type">Vendor</div><div className="pricing-name">Basic Listing</div>
-              <div className="pricing-price">$15</div><div className="pricing-period">per month</div>
-              <ul className="pricing-features"><li>Profile in vendor directory</li><li>Photo gallery (up to 6)</li><li>Insurance & doc uploads</li><li>Matched to events in your radius</li><li>Lead notifications by email</li></ul>
-            </div>
-          </div>
-        </>
-      )}
-      {isHost && (
-        <>
-          <p className="section-sub">{isVendor ? '' : 'Your host pricing plans.'}</p>
-          <h3 style={{ fontSize:13, marginBottom:20, color:'#7a6a5a', letterSpacing:1, textTransform:'uppercase' }}>FOR HOSTS & EVENT ORGANIZERS</h3>
-          <div className="pricing-grid">
-            <div className="pricing-card">
-              <div className="pricing-type">Host</div><div className="pricing-name">Single Event</div>
-              <div className="pricing-price">$25</div><div className="pricing-period">one-time fee</div>
-              <ul className="pricing-features"><li>Zip-radius matched vendor list</li><li>Up to 20 vendor results</li><li>Filter by category & distance</li><li>Direct vendor contact info</li><li>You manage booking yourself</li></ul>
-            </div>
-            <div className="pricing-card">
-              <div className="pricing-type">Host</div><div className="pricing-name">Monthly Access</div>
-              <div className="pricing-price">$49</div><div className="pricing-period">per month</div>
-              <ul className="pricing-features"><li>Unlimited event submissions</li><li>Unlimited vendor matching</li><li>Early access to new vendors</li><li>Event calendar listing</li><li>Priority support</li></ul>
-            </div>
-            <div className="pricing-card featured">
-              <div className="pricing-badge">FULL SERVICE</div>
-              <div className="pricing-type">Host</div><div className="pricing-name">Concierge</div>
-              <div className="pricing-price">$150+</div><div className="pricing-period">per event</div>
-              <ul className="pricing-features"><li>We find & book vendors for you</li><li>Curated vendor recommendations</li><li>Confirmations & follow-ups handled</li><li>Day-of coordination checklist</li><li>Dedicated event coordinator</li></ul>
-            </div>
-          </div>
-        </>
-      )}
-      {!isVendor && !isHost && (
-        <p className="section-sub">You don't have a vendor profile or host events yet. <a href="#" onClick={(e)=>{e.preventDefault();setTab('vendor')}} style={{color:'#e8c97a'}}>Join as a vendor</a> or <a href="#" onClick={(e)=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>post an event</a> to see your pricing.</p>
+      <p className="section-sub">Select your role to see the pricing that applies to you.</p>
+      <div style={{ display:'flex', borderRadius:'10px 10px 0 0', overflow:'hidden', border:'1px solid #e8ddd0', borderBottom:'none', marginBottom:0 }}>
+        <button style={tabStyle('vendor')} onClick={()=>setActiveTab('vendor')}>I'm a Vendor</button>
+        <button style={tabStyle('host')} onClick={()=>setActiveTab('host')}>I'm a Host</button>
+      </div>
+      <div style={{ border:'1px solid #e8ddd0', borderTop:'none', borderRadius:'0 0 10px 10px', padding:'32px 24px', background:'#fff', marginBottom:32 }}>
+        {activeTab==='vendor' ? vendorPricing : hostPricing}
+      </div>
+      {!authUser && (
+        <div style={{ textAlign:'center', marginTop:8 }}>
+          <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>Log in or create an account to get started.</p>
+          <button className="btn-submit" onClick={()=>setShowAuthModal(true)}>Log In / Sign Up</button>
+        </div>
       )}
     </div>
   );
@@ -3284,7 +3317,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="host-calendar"?" active":""}`} onClick={()=>{setTab("host-calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
             </div>
-            {authUser && <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>}
+            <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
             <button className={`nav-tab${tab==="tos"?" active":""}`} onClick={()=>{setTab("tos");window.scrollTo({top:0});}}>Terms</button>
             {isAdmin && <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>}
             {authUser ? (
