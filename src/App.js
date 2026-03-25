@@ -1655,7 +1655,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         </div>
         {subStatus === 'none' && isApproved && (
           <div style={{background:'#fdf9f5',border:'1px solid #f0e8dc',borderRadius:8,padding:'12px 16px',marginTop:16,fontSize:13,color:'#7a5a10'}}>
-            <strong>Beta note:</strong> Your listing is currently free and visible to all hosts. Once billing goes live, an active subscription will be required to stay in the directory. Subscribe now in test mode — your card will not be charged.
+            <strong>Beta note:</strong> Your listing is currently free and visible to all hosts. Once billing goes live, an active subscription will be required to stay in the directory. Subscribe now in test mode — your card will not be charged. All prices subject to applicable sales tax.
           </div>
         )}
       </div>
@@ -2279,6 +2279,7 @@ function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthM
           <div className="pricing-type">Vendor</div><div className="pricing-name">Basic Listing</div>
           <div className="pricing-price">$15</div><div className="pricing-period">per month</div>
           <ul className="pricing-features"><li>Profile in vendor directory</li><li>Photo gallery (up to 6)</li><li>Insurance & doc uploads</li><li>Matched to events in your radius</li><li>Lead notifications by email</li></ul>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:12,textAlign:'center'}}>All prices subject to applicable sales tax.</div>
         </div>
       </div>
     </>
@@ -2305,6 +2306,7 @@ function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthM
           <button onClick={()=>setShowContactModal(true)} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
             Request a Consultation
           </button>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:8,textAlign:'center'}}>All service fees subject to applicable sales tax.</div>
         </div>
       </div>
     </>

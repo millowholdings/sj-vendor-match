@@ -53,18 +53,22 @@ module.exports = async function handler(req, res) {
       customer: customerId,
       mode: 'subscription',
       payment_method_types: ['card'],
+      automatic_tax: { enabled: true },
       line_items: [{
         price_data: {
           currency: 'usd',
           product_data: {
             name: 'Vendor Basic Listing',
-            description: 'Monthly vendor listing on South Jersey Vendor Market',
+            description: 'Monthly vendor listing on South Jersey Vendor Market. Applicable sales tax will be added.',
           },
           unit_amount: 1500, // $15.00
           recurring: { interval: 'month' },
         },
         quantity: 1,
       }],
+      custom_text: {
+        submit: { message: 'All prices subject to applicable sales tax.' },
+      },
       success_url: `${baseUrl}?tab=vendor-dashboard&subscription=success`,
       cancel_url: `${baseUrl}?tab=vendor-dashboard&subscription=canceled`,
       metadata: { vendor_id: vendorId },
