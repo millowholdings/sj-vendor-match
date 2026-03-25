@@ -4159,19 +4159,19 @@ function AppInner() {
         </nav>
 
         {tab==='home' && (
-          <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'auto',margin:0,padding:0}}>
+          <div style={{background:'#0e0c0a'}}>
             {/* Text logo */}
-            <div style={{textAlign:'center',padding:'12px 24px 8px',margin:0,flexShrink:0}}>
+            <div style={{textAlign:'center',paddingTop:32,paddingBottom:0}}>
               <h1 style={{margin:0,lineHeight:1}}>
                 <span style={{fontFamily:"'Ibarra Real Nova',serif",fontSize:'clamp(56px,8vw,96px)',color:'#c8a850',display:'block',lineHeight:1.1,fontWeight:700,fontStyle:'italic'}}>South Jersey</span>
                 <span style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(20px,3.2vw,38px)',color:'#fff',letterSpacing:6,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:8}}>Vendor Market</span>
               </h1>
-              <div style={{width:60,height:2,background:'#c8a850',margin:'10px auto 6px',borderRadius:1}} />
+              <div style={{width:60,height:2,background:'#c8a850',margin:'10px auto 8px',borderRadius:1}} />
               <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(12px,1.2vw,15px)',color:'#c8a850',margin:'0 auto',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
             </div>
 
             {/* Three cards */}
-            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'clamp(8px,1vw,14px)',maxWidth:1200,width:'100%',margin:'0 auto',padding:'8px clamp(12px,2vw,32px) 0'}}>
+            <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:1200,width:'100%',margin:'0 auto',padding:'32px 32px 0'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
@@ -4180,17 +4180,17 @@ function AppInner() {
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
                   buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'}] },
               ].map(card=>(
-                <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:16,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
-                  <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 4px',lineHeight:1.2,fontWeight:700}}>
+                <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
+                  <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 8px',lineHeight:1.2,fontWeight:700}}>
                     {card.title}
                   </h2>
-                  <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(11px,0.8vw,13px)',color:'#c8a850',lineHeight:1.4,margin:'0 0 8px'}}>
+                  <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(11px,0.85vw,14px)',color:'#c8a850',lineHeight:1.5,margin:'0 0 16px'}}>
                     {card.desc}
                   </p>
-                  <div style={{display:'flex',flexDirection:'column',gap:5,marginTop:'auto'}}>
+                  <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
                       <button key={b.label} onClick={()=>{setTab(b.tab);window.scrollTo({top:0});}}
-                        style={{width:'100%',background:'#0e0c0a',color:'#fff',border:'2px solid #c8a850',borderRadius:8,padding:'7px 0',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
+                        style={{width:'100%',background:'#0e0c0a',color:'#fff',border:'2px solid #c8a850',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
                     ))}
@@ -4199,8 +4199,8 @@ function AppInner() {
               ))}
             </div>
 
-            {/* Stats bar — pushed to bottom */}
-            <div style={{background:'#0e0c0a',padding:'10px 24px 12px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',flexShrink:0,marginTop:16}}>
+            {/* Stats bar */}
+            <div style={{padding:'16px 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',marginTop:32}}>
               {[
                 {num: vendors.length || '—', label:'Active Vendors'},
                 {num: CATEGORIES.length - 1, label:'Categories'},
@@ -4208,14 +4208,14 @@ function AppInner() {
               ].map(s=>(
                 <div key={s.label} style={{textAlign:'center'}}>
                   <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(22px,2.4vw,34px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
-                  <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:9,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:1}}>{s.label}</div>
+                  <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:10,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:2}}>{s.label}</div>
                 </div>
               ))}
             </div>
 
             {/* Homepage footer */}
-            <div style={{background:'#0e0c0a',padding:24,textAlign:'center',flexShrink:0}}>
-              <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:12}}>
+            <div style={{padding:32,textAlign:'center'}}>
+              <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:16}}>
                 <button onClick={()=>setShowContactModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Contact Us</button>
                 <button onClick={()=>setShowFeedbackModal(true)} style={{background:'transparent',color:'#c8a850',border:'1px solid #c8a850',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Give Feedback</button>
                 <button onClick={()=>{setTab('tos');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:"'Public Sans',sans-serif"}}>Terms of Service</button>
