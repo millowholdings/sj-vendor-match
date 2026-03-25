@@ -1288,6 +1288,100 @@ function ContactModal({ onClose, defaultSubject, defaultMessage, userName, userE
   );
 }
 
+// ─── Feedback Modal ──────────────────────────────────────────────────────────
+function FeedbackModal({ onClose, userEmail }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [liked, setLiked] = useState('');
+  const [improve, setImprove] = useState('');
+  const [role, setRole] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSend = async () => {
+    if (!rating) { setError('Please select a star rating.'); return; }
+    if (!role) { setError('Please select your role.'); return; }
+    setSending(true); setError('');
+    try {
+      const resp = await fetch('/api/send-contact', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: role,
+          email: userEmail || 'anonymous@feedback.sjvm',
+          subject: `Feedback: ${rating} stars from ${role}`,
+          message: `Rating: ${rating}/5 stars\nRole: ${role}\n\nWhat they liked:\n${liked || '(not provided)'}\n\nWhat could be improved:\n${improve || '(not provided)'}`,
+        }),
+      });
+      if (resp.ok) setSent(true);
+      else setError('Failed to send. Please try again.');
+    } catch { setError('Failed to send. Please try again.'); }
+    setSending(false);
+  };
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:440,width:'100%',overflow:'hidden'}}>
+        <div style={{background:'#1a1410',padding:'20px 28px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>Share Your Feedback</div>
+          <div style={{fontSize:13,color:'#a89a8a',marginTop:4}}>Help us improve South Jersey Vendor Market</div>
+        </div>
+        <div style={{padding:'24px 28px'}}>
+          {sent ? (
+            <div style={{textAlign:'center',padding:'20px 0'}}>
+              <div style={{fontSize:32,marginBottom:8}}>&#10003;</div>
+              <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>Thanks for your feedback!</div>
+              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:20}}>We read every response and use it to make the platform better.</div>
+              <button onClick={onClose} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
+          ) : (
+            <>
+              {/* Star rating */}
+              <div style={{marginBottom:16}}>
+                <label style={{fontSize:13,fontWeight:600,color:'#1a1410',display:'block',marginBottom:6}}>Overall Rating <span style={{color:'#c0392b'}}>*</span></label>
+                <div style={{display:'flex',gap:4}}>
+                  {[1,2,3,4,5].map(n=>(
+                    <button key={n} onClick={()=>setRating(n)} onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
+                      style={{background:'none',border:'none',fontSize:32,cursor:'pointer',color:(hover||rating)>=n?'#e8c97a':'#e0d5c5',transition:'color 0.1s',padding:0,lineHeight:1}}>
+                      &#9733;
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {/* Role */}
+              <div style={{marginBottom:14}}>
+                <label style={{fontSize:13,fontWeight:600,color:'#1a1410',display:'block',marginBottom:6}}>I am a... <span style={{color:'#c0392b'}}>*</span></label>
+                <div style={{display:'flex',gap:8}}>
+                  {['Vendor','Host','Visitor'].map(r=>(
+                    <button key={r} onClick={()=>setRole(r)} style={{
+                      flex:1,padding:'8px 0',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',
+                      border:role===r?'2px solid #c8a84b':'2px solid #e8ddd0',
+                      background:role===r?'#fdf9f0':'#fff',color:'#1a1410',
+                    }}>{r}</button>
+                  ))}
+                </div>
+              </div>
+              {/* Text fields */}
+              <div className="form-group" style={{marginBottom:10}}>
+                <label>What did you like?</label>
+                <textarea value={liked} onChange={e=>setLiked(e.target.value)} placeholder="What's working well..." style={{minHeight:60,resize:'vertical'}} />
+              </div>
+              <div className="form-group" style={{marginBottom:14}}>
+                <label>What could be improved?</label>
+                <textarea value={improve} onChange={e=>setImprove(e.target.value)} placeholder="Anything we should do differently..." style={{minHeight:60,resize:'vertical'}} />
+              </div>
+              {error && <div style={{color:'#c0392b',fontSize:13,marginBottom:12,background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px'}}>{error}</div>}
+              <button onClick={handleSend} disabled={sending} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:sending?0.6:1}}>
+                {sending ? 'Sending...' : 'Submit Feedback'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
 function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
@@ -1417,7 +1511,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal }) {
+function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal }) {
   const [requests, setRequests] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
@@ -1564,10 +1658,13 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         )}
       </div>
 
-      {/* Contact Us */}
+      {/* Contact & Feedback */}
       <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
         <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your listing?</div>
-        <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
+          <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        </div>
       </div>
 
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Booking Requests</h3>
@@ -1604,7 +1701,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
 
@@ -1659,10 +1756,13 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal }) {
         </div>
       )}
 
-      {/* Contact Us */}
+      {/* Contact & Feedback */}
       <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
         <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your events?</div>
-        <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
+          <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        </div>
       </div>
 
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Vendor Applications & Responses</h3>
@@ -3460,6 +3560,7 @@ function AppInner() {
   const [opps, setOpps] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
 
@@ -4194,8 +4295,8 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} setShowContactModal={setShowContactModal} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
       <footer style={{background:'#1a1410',padding:'32px 24px',marginTop:48,textAlign:'center'}}>
@@ -4203,6 +4304,7 @@ function AppInner() {
         <p style={{fontSize:13,color:'#a89a8a',marginBottom:16}}>Connecting vendors and events across South Jersey</p>
         <div style={{display:'flex',gap:16,justifyContent:'center',flexWrap:'wrap',marginBottom:16}}>
           <button onClick={()=>setShowContactModal(true)} style={{background:'transparent',color:'#e8c97a',border:'1px solid #e8c97a',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'transparent',color:'#e8c97a',border:'1px solid #e8c97a',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
           <button onClick={()=>{setTab('tos');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Terms of Service</button>
           <button onClick={()=>{setTab('pricing');window.scrollTo({top:0});}} style={{background:'transparent',color:'#a89a8a',border:'1px solid rgba(168,154,138,0.3)',borderRadius:6,padding:'8px 20px',fontSize:13,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Pricing</button>
         </div>
@@ -4210,6 +4312,7 @@ function AppInner() {
       </footer>
       {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} />}
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
+      {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
     </>
   );
 }
