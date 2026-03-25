@@ -4160,9 +4160,14 @@ function AppInner() {
 
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)',overflow:'hidden'}}>
-            {/* Logo */}
-            <div style={{textAlign:'center',padding:'0 24px',lineHeight:0,flexShrink:0}}>
-              <img src="/Logo.png" alt="South Jersey Vendor Market" style={{width:'clamp(400px,42vw,540px)',height:'auto',display:'inline-block',background:'transparent',border:'none',outline:'none',marginTop:0}} />
+            {/* Text logo */}
+            <div style={{textAlign:'center',padding:'6px 24px 2px',flexShrink:0}}>
+              <h1 style={{margin:0,lineHeight:1}}>
+                <span style={{fontFamily:"'Corinthia',cursive",fontSize:'clamp(48px,6.5vw,76px)',color:'#c8a850',display:'block',lineHeight:0.95,fontWeight:700}}>South Jersey</span>
+                <span style={{fontFamily:"'Playfair Display',serif",fontSize:'clamp(18px,2.8vw,34px)',color:'#fff',letterSpacing:4,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:0}}>Vendor Market</span>
+              </h1>
+              <div style={{width:60,height:2,background:'#c8a850',margin:'4px auto',borderRadius:1}} />
+              <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(11px,1.1vw,14px)',color:'#c8a850',margin:'2px auto 0',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
             </div>
 
             {/* Three cards */}
