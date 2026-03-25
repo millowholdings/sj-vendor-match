@@ -4111,7 +4111,7 @@ function AppInner() {
           </div>
         )}
         <nav className="nav">
-          <div className="nav-logo"><span className="nav-logo-cursive">South Jersey</span><span className="nav-logo-serif">Vendor Market</span></div>
+          <div className="nav-logo" style={{cursor:'pointer'}} onClick={()=>{setTab('home');window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:36,display:'block'}} /></div>
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
             <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Markets</button>
@@ -4160,13 +4160,9 @@ function AppInner() {
 
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)'}}>
-            {/* Logo + tagline — tight to nav */}
+            {/* Logo image — includes tagline */}
             <div style={{textAlign:'center',padding:'8px 24px 4px'}}>
-              <h1 style={{margin:0,lineHeight:1}}>
-                <span style={{fontFamily:"'Corinthia', cursive",fontSize:'clamp(52px,7vw,84px)',color:'#e8c97a',display:'block',lineHeight:0.95,fontWeight:700}}>South Jersey</span>
-                <span style={{fontFamily:"'Playfair Display', serif",fontSize:'clamp(20px,3vw,36px)',color:'#fff',letterSpacing:4,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:0}}>Vendor Market</span>
-              </h1>
-              <p style={{fontFamily:"'DM Sans',sans-serif",fontSize:'clamp(13px,1.3vw,16px)',color:'#b8a888',margin:'4px auto 0',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
+              <img src="/Logo.png" alt="South Jersey Vendor Market — Connecting vendors, events, and communities across South Jersey" style={{maxHeight:'clamp(100px,14vh,160px)',width:'auto',display:'inline-block'}} />
             </div>
 
             {/* Three cards — uniform black with gold border */}
