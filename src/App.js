@@ -4111,7 +4111,7 @@ function AppInner() {
           </div>
         )}
         <nav className="nav">
-          <div className="nav-logo" style={{cursor:'pointer'}} onClick={()=>{setTab('home');window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:36,display:'block'}} /></div>
+          <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
             <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Markets</button>
@@ -4161,8 +4161,8 @@ function AppInner() {
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)'}}>
             {/* Logo image — includes tagline */}
-            <div style={{textAlign:'center',padding:'8px 24px 4px'}}>
-              <img src="/Logo.png" alt="South Jersey Vendor Market — Connecting vendors, events, and communities across South Jersey" style={{maxHeight:'clamp(100px,14vh,160px)',width:'auto',display:'inline-block'}} />
+            <div style={{textAlign:'center',padding:'clamp(8px,2vh,20px) 24px 4px'}}>
+              <img src="/Logo.png" alt="South Jersey Vendor Market — Connecting vendors, events, and communities across South Jersey" style={{maxWidth:'clamp(320px,45vw,540px)',width:'100%',height:'auto',display:'inline-block',background:'none',border:'none'}} />
             </div>
 
             {/* Three cards — uniform black with gold border */}
