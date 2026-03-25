@@ -4161,13 +4161,13 @@ function AppInner() {
         {tab==='home' && (
           <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)',overflow:'hidden',margin:0,padding:0}}>
             {/* Text logo */}
-            <div style={{textAlign:'center',padding:'8px 24px 0',flexShrink:0,margin:0}}>
+            <div style={{textAlign:'center',padding:'12px 24px 0',flexShrink:0,margin:0}}>
               <h1 style={{margin:0,lineHeight:1}}>
-                <span style={{fontFamily:"'Ibarra Real Nova',serif",fontSize:'clamp(44px,6vw,72px)',color:'#c8a850',display:'block',lineHeight:0.95,fontWeight:700,fontStyle:'italic'}}>South Jersey</span>
-                <span style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,2.6vw,30px)',color:'#fff',letterSpacing:5,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:2}}>Vendor Market</span>
+                <span style={{fontFamily:"'Ibarra Real Nova',serif",fontSize:'clamp(56px,8vw,96px)',color:'#c8a850',display:'block',lineHeight:1.1,fontWeight:700,fontStyle:'italic'}}>South Jersey</span>
+                <span style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(20px,3.2vw,38px)',color:'#fff',letterSpacing:6,fontWeight:700,textTransform:'uppercase',display:'block',marginTop:8}}>Vendor Market</span>
               </h1>
-              <div style={{width:50,height:2,background:'#c8a850',margin:'4px auto 2px',borderRadius:1}} />
-              <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(10px,1vw,13px)',color:'#c8a850',margin:'0 auto',lineHeight:1.3}}>Connecting vendors, events, and communities across South Jersey</p>
+              <div style={{width:60,height:2,background:'#c8a850',margin:'10px auto 6px',borderRadius:1}} />
+              <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(12px,1.2vw,15px)',color:'#c8a850',margin:'0 auto',lineHeight:1.4}}>Connecting vendors, events, and communities across South Jersey</p>
             </div>
 
             {/* Three cards — fill remaining space */}
