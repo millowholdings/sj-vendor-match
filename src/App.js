@@ -2996,7 +2996,8 @@ function VendorApplyModal({ opp, onClose }) {
 // ─── Upcoming Markets (public calendar) ──────────────────────────────────────
 function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
   const [filterType, setFilterType] = useState("");
-  const [filterCat, setFilterCat] = useState("");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterTicketed, setFilterTicketed] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [vendorsByEvent, setVendorsByEvent] = useState({});
   const [loadingVendors, setLoadingVendors] = useState({});
@@ -3004,7 +3005,8 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
   const upcoming = opps
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
-    .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
+    .filter(o => !filterDate || o.date === filterDate)
+    .filter(o => !filterTicketed || (filterTicketed==='yes' ? o.isTicketed : !o.isTicketed))
     .sort((a,b) => a.date.localeCompare(b.date));
 
   const loadVendors = async (opp) => {
@@ -3043,10 +3045,15 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
             </select>
           </div>
           <div className="match-filter-group">
-            <label>Category</label>
-            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}>
-              <option value="">All Categories</option>
-              {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            <label>Date</label>
+            <input type="date" value={filterDate} min={todayStr} onChange={e=>setFilterDate(e.target.value)} />
+          </div>
+          <div className="match-filter-group">
+            <label>Ticketed</label>
+            <select value={filterTicketed} onChange={e=>setFilterTicketed(e.target.value)}>
+              <option value="">All Events</option>
+              <option value="yes">Ticketed Only</option>
+              <option value="no">Free Only</option>
             </select>
           </div>
         </div>
