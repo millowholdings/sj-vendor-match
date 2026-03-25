@@ -4159,7 +4159,7 @@ function AppInner() {
         </nav>
 
         {tab==='home' && (
-          <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',minHeight:'calc(100vh - 52px)',margin:0,padding:0}}>
+          <div style={{background:'#0e0c0a',display:'flex',flexDirection:'column',height:'calc(100vh - 52px)',margin:0,padding:0}}>
             {/* Text logo */}
             <div style={{textAlign:'center',padding:'12px 24px 8px',margin:0,flexShrink:0}}>
               <h1 style={{margin:0,lineHeight:1}}>
@@ -4199,8 +4199,8 @@ function AppInner() {
               ))}
             </div>
 
-            {/* Stats bar — flush under cards */}
-            <div style={{background:'#0e0c0a',padding:'6px 24px 8px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.15)',flexShrink:0,margin:0}}>
+            {/* Stats bar — pushed to bottom */}
+            <div style={{background:'#0e0c0a',padding:'10px 24px 12px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',flexShrink:0,marginTop:'auto'}}>
               {[
                 {num: vendors.length || '—', label:'Active Vendors'},
                 {num: CATEGORIES.length - 1, label:'Categories'},
