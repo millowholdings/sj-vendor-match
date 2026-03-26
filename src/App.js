@@ -306,16 +306,22 @@ const styles = `
   .nav-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
     .ometa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
   .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .hamburger-btn { display: none; }
+    .mobile-menu { display: none; }
     @media (max-width: 768px) {
     .home-columns { grid-template-columns: 1fr !important; gap: 12px !important; }
     .home-col { border-right: none !important; }
     .nav { padding: 10px 16px; gap: 6px; }
     .nav-logo { font-size: 18px; }
-    .nav-tabs { gap: 2px; width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 4px; flex-wrap: nowrap; }
-    .nav-tab { padding: 6px 10px; font-size: 11px; white-space: nowrap; flex-shrink: 0; }
-    .nav-group { padding-left: 8px; margin-left: 2px; }
-    .nav-group-label { font-size: 9px; padding: 1px 4px; }
-    .nav-group-items { gap: 2px; }
+    .nav-tabs { display: none !important; }
+    .hamburger-btn { display: flex !important; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; padding: 4px; z-index: 201; }
+    .mobile-menu { display: flex !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1a1410; z-index: 200; flex-direction: column; overflow-y: auto; padding: 0; }
+    .mobile-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(200,168,80,0.2); }
+    .mobile-menu-section { padding: 8px 0; border-bottom: 1px solid rgba(200,168,80,0.1); }
+    .mobile-menu-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c8a850; padding: 8px 20px 4px; font-weight: 700; }
+    .mobile-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #fff; font-family: 'Public Sans', sans-serif; font-size: 15px; padding: 12px 20px; cursor: pointer; }
+    .mobile-menu-item:active { background: rgba(200,168,80,0.1); }
+    .mobile-menu-item.active { color: #c8a850; }
     .hero { padding: 40px 16px 32px; }
     .hero h1 { font-size: 32px; }
     .hero > p { font-size: 15px; margin-bottom: 28px; }
@@ -3629,6 +3635,8 @@ function AppInner() {
   const [allEvents, setAllEvents] = useState([]);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const navTo = (t) => { setTab(t); setMobileMenuOpen(false); window.scrollTo({top:0}); };
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
 
@@ -4124,7 +4132,58 @@ function AppInner() {
           </div>
         )}
         <nav className="nav">
-          <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
+          <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
+          {/* Hamburger button — mobile only */}
+          <button className="hamburger-btn" onClick={()=>setMobileMenuOpen(!mobileMenuOpen)} aria-label="Menu">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round">
+              {mobileMenuOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
+            </svg>
+          </button>
+          {/* Mobile menu panel */}
+          {mobileMenuOpen && (
+            <div className="mobile-menu">
+              <div className="mobile-menu-header">
+                <div style={{cursor:'pointer'}} onClick={()=>{navTo('home');}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:36,background:'none',border:'none'}} /></div>
+                <button onClick={()=>setMobileMenuOpen(false)} style={{background:'none',border:'none',cursor:'pointer',padding:4}}>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+              <div className="mobile-menu-section">
+                <button className={`mobile-menu-item${tab==='home'?' active':''}`} onClick={()=>navTo('home')}>Home</button>
+                <button className={`mobile-menu-item${tab==='upcoming-markets'?' active':''}`} onClick={()=>navTo('upcoming-markets')}>Upcoming Markets</button>
+              </div>
+              <div className="mobile-menu-section">
+                <div className="mobile-menu-label">Vendors</div>
+                <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Join as Vendor</button>
+                <button className={`mobile-menu-item${tab==='opportunities'?' active':''}`} onClick={()=>navTo('opportunities')}>Opportunities</button>
+                <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
+                <button className={`mobile-menu-item${tab==='calendar'?' active':''}`} onClick={()=>navTo('calendar')}>My Calendar</button>
+              </div>
+              <div className="mobile-menu-section">
+                <div className="mobile-menu-label">Hosts</div>
+                <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Post Event</button>
+                <button className={`mobile-menu-item${tab==='matches'?' active':''}`} onClick={()=>navTo('matches')}>Browse Vendors</button>
+                <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
+                <button className={`mobile-menu-item${tab==='host-calendar'?' active':''}`} onClick={()=>navTo('host-calendar')}>My Calendar</button>
+              </div>
+              <div className="mobile-menu-section">
+                <button className={`mobile-menu-item${tab==='pricing'?' active':''}`} onClick={()=>navTo('pricing')}>Pricing</button>
+                <button className="mobile-menu-item" onClick={()=>{setShowContactModal(true);setMobileMenuOpen(false);}}>Contact Us</button>
+                <button className={`mobile-menu-item${tab==='tos'?' active':''}`} onClick={()=>navTo('tos')}>Terms</button>
+              </div>
+              <div className="mobile-menu-section">
+                {authUser ? (
+                  <>
+                    {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
+                    {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
+                    <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
+                  </>
+                ) : (
+                  <button className="mobile-menu-item" style={{color:'#c8a850',fontWeight:700}} onClick={()=>{setShowAuthModal(true);setMobileMenuOpen(false);}}>Log In / Sign Up</button>
+                )}
+              </div>
+            </div>
+          )}
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
             <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Markets</button>
