@@ -3222,16 +3222,19 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const [filterType, setFilterType] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterTicketed, setFilterTicketed] = useState("");
+  const [myZip, setMyZip] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [vendorsByEvent, setVendorsByEvent] = useState({});
   const [loadingVendors, setLoadingVendors] = useState({});
   const todayStr = new Date().toISOString().split('T')[0];
+  const zipOk = myZip.length===5 && isKnownZip(myZip);
   const upcoming = opps
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterDate || o.date === filterDate)
     .filter(o => !filterTicketed || (filterTicketed==='yes' ? o.isTicketed : !o.isTicketed))
-    .sort((a,b) => a.date.localeCompare(b.date));
+    .map(o => ({ ...o, dist: zipOk ? distanceMiles(myZip, o.zip) : null }))
+    .sort((a,b) => { if (a.dist!==null && b.dist!==null) return a.dist - b.dist; return a.date.localeCompare(b.date); });
 
   const loadVendors = async (opp) => {
     if (vendorsByEvent[opp.id]) return;
@@ -3261,6 +3264,11 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
       </div>
       <div className="section" style={{ maxWidth:1100, paddingTop:40 }}>
         <div className="match-filters">
+          <div className="match-filter-group" style={{maxWidth:200}}>
+            <label>My Zip Code</label>
+            <input placeholder="e.g. 08033" value={myZip} maxLength={5} onChange={e=>setMyZip(e.target.value.replace(/\D/g,'').slice(0,5))} />
+            {myZip.length===5 && <div className={`zip-feedback ${zipOk?'zip-ok':'zip-warn'}`}>{zipOk ? '✓ Sorted by distance' : '⚠ Zip unverified'}</div>}
+          </div>
           <div className="match-filter-group">
             <label>Event Type</label>
             <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
@@ -3307,7 +3315,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                     <div style={{display:'flex',flexWrap:'wrap',gap:'12px 24px',marginBottom:opp.notes||opp.isTicketed||opp.eventLink?12:0}}>
                       <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Date </span><span style={{fontSize:14,fontWeight:500}}>{fmtDate(opp.date)}</span></div>
                       {(opp.startTime || opp.endTime) && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Time </span><span style={{fontSize:14,fontWeight:500}}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</span></div>}
-                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}</span></div>
+                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)} mi away` : ''}</span></div>
                       {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
                       {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
                     </div>
@@ -3376,6 +3384,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
   const canSeeFullDetails = authUser && isVendor;
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
+  const [filterDate, setFilterDate] = useState("");
   const [myZip, setMyZip] = useState("");
   const [saved, setSaved] = useState([]);
   const [applyOpp, setApplyOpp] = useState(null);
@@ -3387,6 +3396,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
+    .filter(o => !filterDate || o.date === filterDate)
     .map(o => {
       const dist = zipOk ? distanceMiles(myZip, o.zip) : null;
       return {...o, dist};
@@ -3428,6 +3438,10 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
               <option value="">All Types</option>
               {EVENT_TYPES.map(t=><option key={t}>{t}</option>)}
             </select>
+          </div>
+          <div className="match-filter-group">
+            <label>Date</label>
+            <input type="date" value={filterDate} min={todayStr} onChange={e=>setFilterDate(e.target.value)} />
           </div>
           <div className="match-filter-group">
             <label>Category Needed</label>
