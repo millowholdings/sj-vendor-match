@@ -3824,14 +3824,34 @@ function AppInner() {
     const url = newTab === 'home' ? '/' : '/' + newTab;
     window.history.pushState({ tab: newTab }, '', url);
   };
+  const modalOpenRef = React.useRef(false);
+  const anyModalOpen = showAuthModal || showContactModal || showFeedbackModal || showEventGoerSignup || mobileMenuOpen;
+
+  // Push history when a modal opens, so back button closes it
   useEffect(() => {
-    const onPop = (e) => {
-      const t = e.state?.tab || getTabFromUrl();
+    if (anyModalOpen && !modalOpenRef.current) {
+      window.history.pushState({ modal: true }, '');
+      modalOpenRef.current = true;
+    } else if (!anyModalOpen) {
+      modalOpenRef.current = false;
+    }
+  }, [anyModalOpen]);
+
+  useEffect(() => {
+    const onPop = () => {
+      // If a modal is open, close all modals
+      if (modalOpenRef.current) {
+        setShowAuthModal(false); setShowContactModal(false);
+        setShowFeedbackModal(false); setShowEventGoerSignup(false);
+        setMobileMenuOpen(false);
+        modalOpenRef.current = false;
+        return;
+      }
+      const t = getTabFromUrl();
       setTabRaw(t);
       window.scrollTo({ top: 0 });
     };
     window.addEventListener('popstate', onPop);
-    // Replace initial state so first back works correctly
     const initTab = getTabFromUrl();
     const initUrl = initTab === 'home' ? '/' : '/' + initTab;
     window.history.replaceState({ tab: initTab }, '', initUrl);
