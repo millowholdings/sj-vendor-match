@@ -316,7 +316,7 @@ const styles = `
     .mobile-menu-item.active { color: #c8a850; }
     @media (max-width: 768px) {
     .home-columns { grid-template-columns: 1fr !important; gap: 12px !important; width: auto !important; max-width: none !important; padding: 12px 16px 0 16px !important; margin: 0 !important; box-sizing: border-box !important; }
-    .home-col { border-right: none !important; }
+    .home-col { border: none !important; }
     .nav { padding: 10px 16px; gap: 6px; }
     .nav-logo { font-size: 18px; }
     .mobile-menu-header { padding: 10px 16px; }
