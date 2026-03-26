@@ -177,6 +177,7 @@ module.exports = async function handler(req, res) {
   for (const goer of (goers || [])) {
     if (!goer.email) continue;
     // Skip biweekly subscribers on odd weeks
+    if (goer.email_frequency === 'none') continue;
     if (goer.email_frequency === 'biweekly' && !isBiweeklyWeek) continue;
 
     const goerZip = goer.zip;

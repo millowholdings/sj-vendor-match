@@ -1435,12 +1435,15 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 
 // ─── Event Goer Signup Modal ─────────────────────────────────────────────────
 function EventGoerSignupModal({ onClose, onSuccess }) {
-  const [form, setForm] = useState({ name:'', email:'', zip:'', radius:20, eventTypes:[], frequency:'weekly' });
+  const [form, setForm] = useState({ name:'', email:'', zip:'', radius:20, eventTypes:[], wantsAlerts:true, frequency:'weekly' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const allTypes = EVENT_TYPES.filter(t=>t!=='Other');
+  const allSelected = allTypes.every(t=>form.eventTypes.includes(t));
   const toggleType = (t) => setForm(f=>({...f, eventTypes: f.eventTypes.includes(t) ? f.eventTypes.filter(x=>x!==t) : [...f.eventTypes, t]}));
+  const toggleAll = () => setForm(f=>({...f, eventTypes: allSelected ? [] : [...allTypes]}));
 
   const handleSave = async () => {
     if (!form.name || !form.email) { setError('Please enter your name and email.'); return; }
@@ -1450,7 +1453,7 @@ function EventGoerSignupModal({ onClose, onSuccess }) {
     setSaving(true); setError('');
     const { error: dbErr } = await supabase.from('event_goers').upsert({
       name: form.name, email: form.email, zip: form.zip, radius: form.radius,
-      event_types: form.eventTypes, email_frequency: form.frequency, active: true,
+      event_types: form.eventTypes, email_frequency: form.wantsAlerts ? form.frequency : 'none', active: true,
     }, { onConflict: 'email' });
     if (dbErr) { setError('Failed to save. Please try again.'); setSaving(false); return; }
     setSaved(true); setSaving(false);
@@ -1469,7 +1472,7 @@ function EventGoerSignupModal({ onClose, onSuccess }) {
             <div style={{textAlign:'center',padding:'20px 0'}}>
               <div style={{fontSize:32,marginBottom:8}}>&#10003;</div>
               <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>You're signed up!</div>
-              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:20}}>We'll send you a personalized list of upcoming events {form.frequency === 'weekly' ? 'every week' : 'every two weeks'}.</div>
+              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:20}}>{form.wantsAlerts ? `We'll send you a personalized list of upcoming events ${form.frequency === 'weekly' ? 'every week' : 'every two weeks'}.` : 'You can browse upcoming events anytime on our site.'}</div>
               <button onClick={onClose} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
             </div>
           ) : (
@@ -1485,9 +1488,12 @@ function EventGoerSignupModal({ onClose, onSuccess }) {
                 </div>
               </div>
               <div style={{marginBottom:14}}>
-                <label style={{fontSize:13,fontWeight:600,color:'#1a1410',display:'block',marginBottom:8}}>Event Types You're Interested In <span style={{color:'#c0392b'}}>*</span></label>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                  <label style={{fontSize:13,fontWeight:600,color:'#1a1410'}}>Event Types You're Interested In <span style={{color:'#c0392b'}}>*</span></label>
+                  <button onClick={toggleAll} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'3px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{allSelected ? '✓ All Selected' : 'Select All'}</button>
+                </div>
                 <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
-                  {EVENT_TYPES.filter(t=>t!=='Other').map(t=>(
+                  {allTypes.map(t=>(
                     <button key={t} onClick={()=>toggleType(t)} style={{
                       padding:'6px 14px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
                       fontFamily:'DM Sans,sans-serif',border:'1.5px solid',transition:'all 0.15s',
@@ -1498,19 +1504,28 @@ function EventGoerSignupModal({ onClose, onSuccess }) {
                   ))}
                 </div>
               </div>
-              <div className="form-group" style={{marginBottom:16}}>
-                <label>How Often?</label>
-                <div style={{display:'flex',gap:10}}>
-                  {[{val:'weekly',label:'Every Week'},{val:'biweekly',label:'Every 2 Weeks'}].map(o=>(
-                    <button key={o.val} onClick={()=>set('frequency',o.val)} style={{
-                      flex:1,padding:'10px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',
-                      fontFamily:'DM Sans,sans-serif',border:'2px solid',
-                      background: form.frequency===o.val ? '#fdf9f0' : '#fff',
-                      borderColor: form.frequency===o.val ? '#c8a850' : '#e8ddd0',
-                      color:'#1a1410',
-                    }}>{o.label}</button>
-                  ))}
+              <div style={{marginBottom:16}}>
+                <label style={{fontSize:13,fontWeight:600,color:'#1a1410',display:'block',marginBottom:8}}>Would you like email alerts about upcoming events?</label>
+                <div style={{display:'flex',gap:10,marginBottom:form.wantsAlerts?10:0}}>
+                  <button onClick={()=>set('wantsAlerts',true)} style={{flex:1,padding:'10px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:'2px solid',background:form.wantsAlerts?'#fdf9f0':'#fff',borderColor:form.wantsAlerts?'#c8a850':'#e8ddd0',color:'#1a1410'}}>Yes, keep me posted</button>
+                  <button onClick={()=>set('wantsAlerts',false)} style={{flex:1,padding:'10px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:'2px solid',background:!form.wantsAlerts?'#fdf9f0':'#fff',borderColor:!form.wantsAlerts?'#c8a850':'#e8ddd0',color:'#1a1410'}}>No thanks</button>
                 </div>
+                {form.wantsAlerts && (
+                  <div>
+                    <label style={{fontSize:12,color:'#7a6a5a',display:'block',marginBottom:6}}>How often?</label>
+                    <div style={{display:'flex',gap:10}}>
+                      {[{val:'weekly',label:'Every Week'},{val:'biweekly',label:'Every 2 Weeks'}].map(o=>(
+                        <button key={o.val} onClick={()=>set('frequency',o.val)} style={{
+                          flex:1,padding:'10px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',
+                          fontFamily:'DM Sans,sans-serif',border:'2px solid',
+                          background: form.frequency===o.val ? '#fdf9f0' : '#fff',
+                          borderColor: form.frequency===o.val ? '#c8a850' : '#e8ddd0',
+                          color:'#1a1410',
+                        }}>{o.label}</button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               {error && <div style={{color:'#c0392b',fontSize:13,marginBottom:12,background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px'}}>{error}</div>}
               <button onClick={handleSave} disabled={saving} style={{width:'100%',background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:saving?0.6:1}}>
@@ -1681,7 +1696,9 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [confirmSent, setConfirmSent] = useState(false);
   const [roles, setRoles] = useState({ vendor: false, host: false, eventGoer: false });
+  const [signupRoles, setSignupRoles] = useState(null);
 
   const toggleRole = (role) => setRoles(r => ({ ...r, [role]: !r[role] }));
 
@@ -1693,6 +1710,10 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
     if (mode === 'signup') {
       const { error: signUpErr } = await supabase.auth.signUp({ email, password });
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
+      setSignupRoles({...roles});
+      setConfirmSent(true);
+      setLoading(false);
+      return;
     } else {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
       if (signInErr) { setError(signInErr.message); setLoading(false); return; }
@@ -1700,16 +1721,6 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
     setLoading(false);
     if (onAuth) onAuth();
     onClose();
-    // After signup, navigate based on roles
-    if (mode === 'signup' && setTab) {
-      if (roles.vendor) {
-        setTab('vendor');
-      } else if (roles.host) {
-        setTab('host');
-      } else if (roles.eventGoer && setShowEventGoerSignup) {
-        setShowEventGoerSignup(true);
-      }
-    }
   };
 
   const handleReset = async () => {
@@ -1749,6 +1760,21 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
               <div style={{fontSize:15,fontWeight:600,color:'#1a6b3a',marginBottom:8}}>Check your email</div>
               <div style={{fontSize:13,color:'#7a6a5a'}}>We sent a password reset link to {email}</div>
               <button onClick={onClose} style={{marginTop:16,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
+          ) : confirmSent ? (
+            <div style={{textAlign:'center',padding:'16px 0'}}>
+              <div style={{fontSize:32,marginBottom:8}}>📧</div>
+              <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>Check your email to confirm</div>
+              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:8}}>We sent a confirmation link to <strong>{email}</strong></div>
+              <div style={{fontSize:13,color:'#a89a8a',marginBottom:20,lineHeight:1.5}}>Click the link in the email to activate your account, then come back and log in.</div>
+              <button onClick={()=>{
+                onClose();
+                if (setTab && signupRoles) {
+                  if (signupRoles.vendor) setTab('vendor');
+                  else if (signupRoles.host) setTab('host');
+                  else if (signupRoles.eventGoer && setShowEventGoerSignup) setShowEventGoerSignup(true);
+                }
+              }} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Got it</button>
             </div>
           ) : (
             <>
