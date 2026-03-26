@@ -3141,8 +3141,9 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
   );
 }
 
-function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
-  const isGuest = !authUser;
+function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) {
+  const isVendor = !!vendorProfile;
+  const canSeeFullDetails = authUser && isVendor;
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [myZip, setMyZip] = useState("");
@@ -3230,69 +3231,74 @@ function OpportunitiesPage({ opps, authUser, setShowAuthModal }) {
           <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:24 }}>
             {list.map(opp => (
               <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden", transition:"all 0.2s" }}>
-                {!isGuest && opp.photoUrl && (
+                {/* Photo — vendors only */}
+                {canSeeFullDetails && opp.photoUrl && (
                   <div style={{ position:'relative', height:160, overflow:'hidden' }}>
-                    <img src={opp.photoUrl} alt={opp.eventName}
-                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
+                    <img src={opp.photoUrl} alt={opp.eventName} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
                     <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, transparent 40%, rgba(26,20,16,0.7) 100%)' }} />
-                    <div style={{ position:'absolute', bottom:10, left:14,
-                      display:'inline-block', background:'#e8c97a', color:'#1a1410',
-                      fontSize:10, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase',
-                      padding:'3px 10px', borderRadius:20 }}>{opp.source}</div>
+                    <div style={{ position:'absolute', bottom:10, left:14, display:'inline-block', background:'#e8c97a', color:'#1a1410', fontSize:10, fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'3px 10px', borderRadius:20 }}>{opp.source}</div>
                   </div>
                 )}
+                {/* Header */}
                 <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"20px 24px" }}>
-                  {!isGuest && !opp.photoUrl && <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>}
-                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{isGuest ? opp.eventType : opp.eventName}</div>
+                  {canSeeFullDetails && !opp.photoUrl && <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>}
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{canSeeFullDetails ? opp.eventName : opp.eventType}</div>
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
                 </div>
                 <div style={{ padding:"20px 24px" }}>
-                  <div className="ometa-grid">
+                  {/* Preview fields — visible to everyone */}
+                  {opp.notes && <p style={{ fontSize:13, color:"#7a6a5a", lineHeight:1.6, marginBottom:14, padding:12, background:"#fdf9f5", borderRadius:6, borderLeft:"3px solid #e8c97a" }}>{opp.notes}</p>}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14}}>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
-                    {!isGuest && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)} – {fmtTime(opp.endTime)}</div></div>}
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Booth Fee</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.boothFee}</div></div>
-                    {opp.isTicketed && opp.ticketPrice && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Ticket Price</div><div style={{ fontSize:14, fontWeight:500 }}>🎟️ {opp.ticketPrice}</div></div>}
-                    {!isGuest && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots} available</div></div>}
-                    {!isGuest && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Contact</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.contactName}</div></div>}
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Booth Fee</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.boothFee || 'Not specified'}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Admission</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.isTicketed ? '🎟️ '+(opp.ticketPrice||'Ticketed') : 'Free'}</div></div>
+                    {opp.deadline && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Apply By</div><div style={{ fontSize:14, fontWeight:500, color:isUrgent(opp.deadline)?'#8b0000':'#1a1410' }}>{isUrgent(opp.deadline)?'🔥 ':''}{fmtDate(opp.deadline)}</div></div>}
                   </div>
-                  <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
-                    {opp.categoriesNeeded.map(c=><span key={c} style={{ background:"#f5f0ea", border:"1px solid #e8ddd0", padding:"3px 10px", borderRadius:20, fontSize:11, color:"#5a4a3a" }}>{c}</span>)}
-                  </div>
-                  {isGuest ? (
-                    <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'14px 16px',textAlign:'center'}}>
-                      <div style={{fontSize:12,color:'#7a5a10',marginBottom:8}}>🔒 Create a free account to see full details and apply</div>
-                      <button onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}}
-                        style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                        Sign Up Free
-                      </button>
-                    </div>
-                  ) : (
+
+                  {/* Vendor full details */}
+                  {canSeeFullDetails ? (
                     <>
-                      {opp.notes && <div style={{ fontSize:13, color:"#7a6a5a", lineHeight:1.6, marginBottom:14, padding:12, background:"#fdf9f5", borderRadius:6, borderLeft:"3px solid #e8c97a" }}>{opp.notes}</div>}
-                      <div style={{ fontSize:13, color:"#7a6a5a", marginBottom:14 }}><strong style={{ color:"#1a1410" }}>Contact:</strong> {opp.contactEmail}{opp.contactPhone ? ` · ${opp.contactPhone}` : ""}</div>
-                      {opp.deadline && (
-                        <div style={{ display:"inline-block", background:isUrgent(opp.deadline)?"#fde8e8":"#fff3cd", border:`1px solid ${isUrgent(opp.deadline)?"#f5a0a0":"#ffd966"}`, color:isUrgent(opp.deadline)?"#8b0000":"#7a5a10", fontSize:12, fontWeight:600, padding:"4px 12px", borderRadius:20, marginBottom:14 }}>
-                          {isUrgent(opp.deadline)?"🔥 Deadline soon: ":"Apply by: "}{fmtDate(opp.deadline)}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14,paddingTop:14,borderTop:'1px solid #e8ddd0'}}>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Host</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.contactName}</div></div>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots} available</div></div>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Contact</div><div style={{ fontSize:13, color:'#a89a8a' }}>🔒 Available after booking</div></div>
+                      </div>
+                      {opp.categoriesNeeded.length > 0 && (
+                        <div style={{marginBottom:14}}>
+                          <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600, marginBottom:6 }}>Categories Needed</div>
+                          <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                            {opp.categoriesNeeded.map(c=><span key={c} style={{ background:"#f5f0ea", border:"1px solid #e8ddd0", padding:"3px 10px", borderRadius:20, fontSize:11, color:"#5a4a3a" }}>{c}</span>)}
+                          </div>
                         </div>
                       )}
-                      <div style={{ display:"flex", gap:10 }}>
+                      <div style={{ display:"flex", gap:10, flexWrap:'wrap' }}>
                         {showSection==='open' && (opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
-                          <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
+                          <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, minWidth:140, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                             Apply to Vend
                           </button>
                         )}
                         {showSection==='closed' && (
-                          <div style={{ flex:2, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>
+                          <div style={{ flex:2, minWidth:140, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>
                             Applications Closed
                           </div>
                         )}
-                        {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
+                        {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:100, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
                         <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                           {saved.includes(opp.id)?"\u2713 Saved":"Save"}
                         </button>
                       </div>
                     </>
+                  ) : (
+                    /* Guest / non-vendor CTA */
+                    <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'16px 20px',textAlign:'center'}}>
+                      <div style={{fontSize:13,color:'#7a5a10',marginBottom:10,lineHeight:1.5}}>🔒 Sign up as a vendor to view full event details and apply</div>
+                      <button onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}}
+                        style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:6,padding:'10px 28px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                        Sign Up as a Vendor
+                      </button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -4303,7 +4309,7 @@ function AppInner() {
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
-          : <OpportunitiesPage opps={opps} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
+          : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
