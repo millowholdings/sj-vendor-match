@@ -1674,21 +1674,21 @@ function FeedbackModal({ onClose, userEmail }) {
 }
 
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
-function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
+function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSignup }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState(defaultEmail || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [roles, setRoles] = useState({ vendor: false, host: false });
+  const [roles, setRoles] = useState({ vendor: false, host: false, eventGoer: false });
 
   const toggleRole = (role) => setRoles(r => ({ ...r, [role]: !r[role] }));
 
   const handleSubmit = async () => {
     if (!email || !password) { setError('Please enter email and password.'); return; }
     if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
-    if (mode === 'signup' && !roles.vendor && !roles.host) { setError('Please select at least one role.'); return; }
+    if (mode === 'signup' && !roles.vendor && !roles.host && !roles.eventGoer) { setError('Please select at least one role.'); return; }
     setLoading(true); setError('');
     if (mode === 'signup') {
       const { error: signUpErr } = await supabase.auth.signUp({ email, password });
@@ -1700,14 +1700,14 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
     setLoading(false);
     if (onAuth) onAuth();
     onClose();
-    // After signup, navigate to the appropriate form
+    // After signup, navigate based on roles
     if (mode === 'signup' && setTab) {
-      if (roles.vendor && roles.host) {
-        setTab('vendor'); // Start with vendor form, they can do host form after
-      } else if (roles.vendor) {
+      if (roles.vendor) {
         setTab('vendor');
       } else if (roles.host) {
         setTab('host');
+      } else if (roles.eventGoer && setShowEventGoerSignup) {
+        setShowEventGoerSignup(true);
       }
     }
   };
@@ -1755,15 +1755,16 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab }) {
               {mode === 'signup' && (
                 <div style={{marginBottom:16}}>
                   <label style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:8,display:'block'}}>I am a... <span style={{fontWeight:400,color:'#a89a8a'}}>(select all that apply)</span></label>
-                  <div style={{display:'flex',gap:10}}>
-                    {roleBtn('vendor', 'Vendor', '🛍️', 'Sell at events')}
-                    {roleBtn('host', 'Host', '🎪', 'Organize events')}
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                    {roleBtn('vendor', 'Vendor', '🛍️', 'Sell products or services at events')}
+                    {roleBtn('host', 'Event Host', '🎪', 'Organize events and find vendors')}
+                    {roleBtn('eventGoer', 'Event Goer', '📍', 'Discover local markets near me')}
                   </div>
-                  {roles.vendor && roles.host && (
+                  {(roles.vendor && roles.host) || (roles.vendor && roles.eventGoer) || (roles.host && roles.eventGoer) ? (
                     <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'8px 12px',marginTop:10,fontSize:12,color:'#1a4a6b'}}>
-                      You'll have access to both vendor and host features under one account.
+                      You'll have access to all selected features under one account.
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
               <div className="form-group" style={{marginBottom:12}}>
@@ -2087,6 +2088,91 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Event Goer Dashboard ─────────────────────────────────────────────────────
+function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbackModal }) {
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({ name:profile.name, zip:profile.zip, radius:profile.radius, eventTypes:profile.event_types||[], frequency:profile.email_frequency });
+  const [saving, setSaving] = useState(false);
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const toggleType = (t) => setForm(f=>({...f, eventTypes: f.eventTypes.includes(t) ? f.eventTypes.filter(x=>x!==t) : [...f.eventTypes, t]}));
+
+  const handleSave = async () => {
+    setSaving(true);
+    await supabase.from('event_goers').update({ name:form.name, zip:form.zip, radius:form.radius, event_types:form.eventTypes, email_frequency:form.frequency }).eq('id', profile.id);
+    setSaving(false); setEditing(false);
+  };
+
+  // Filter events matching preferences
+  const matched = opps.filter(o => {
+    const today = new Date().toISOString().split('T')[0];
+    if (o.date < today) return false;
+    if (form.eventTypes.length > 0 && !form.eventTypes.includes(o.eventType)) return false;
+    return true;
+  }).slice(0, 10);
+
+  return (
+    <div className="section" style={{maxWidth:900}}>
+      <div className="section-title" style={{color:'#e8c97a'}}>Event Goer Dashboard</div>
+      <p className="section-sub" style={{color:'#b8a888'}}>Welcome back, {profile.name}</p>
+
+      <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Preferences</h3>
+          <button onClick={()=>setEditing(!editing)} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing ? 'Cancel' : 'Edit'}</button>
+        </div>
+        {editing ? (
+          <>
+            <div className="form-grid" style={{gap:12,marginBottom:14}}>
+              <div className="form-group"><label>Name</label><input value={form.name} onChange={e=>set('name',e.target.value)} /></div>
+              <div className="form-group"><label>Zip Code</label><input value={form.zip} onChange={e=>set('zip',e.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
+              <div className="form-group"><label>Travel Radius</label><select value={form.radius} onChange={e=>set('radius',+e.target.value)}>{[5,10,15,20,30,50].map(r=><option key={r} value={r}>{r} miles</option>)}</select></div>
+              <div className="form-group"><label>Email Frequency</label><select value={form.frequency} onChange={e=>set('frequency',e.target.value)}><option value="weekly">Weekly</option><option value="biweekly">Every 2 Weeks</option></select></div>
+            </div>
+            <div style={{marginBottom:14}}>
+              <label style={{fontSize:13,fontWeight:600,display:'block',marginBottom:6}}>Event Types</label>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {EVENT_TYPES.filter(t=>t!=='Other').map(t=>(
+                  <button key={t} onClick={()=>toggleType(t)} style={{padding:'5px 12px',borderRadius:16,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:'1.5px solid',background:form.eventTypes.includes(t)?'#c8a850':'#fff',color:form.eventTypes.includes(t)?'#1a1410':'#7a6a5a',borderColor:form.eventTypes.includes(t)?'#c8a850':'#e8ddd0'}}>{t}</button>
+                ))}
+              </div>
+            </div>
+            <button onClick={handleSave} disabled={saving} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{saving ? 'Saving...' : 'Save Preferences'}</button>
+          </>
+        ) : (
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px'}}>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Location:</span> Zip {profile.zip} ({profile.radius}mi radius)</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {profile.email_frequency === 'weekly' ? 'Weekly' : 'Biweekly'} digest</div>
+            <div style={{gridColumn:'1/-1'}}><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Event Types:</span> {(profile.event_types||[]).join(', ') || 'All types'}</div>
+          </div>
+        )}
+      </div>
+
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Upcoming Events for You</h3>
+      {matched.length === 0 ? (
+        <div className="empty-state"><div className="big">📅</div><p>No upcoming events match your preferences right now. Check back soon!</p></div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:12}}>
+          {matched.map(o=>(
+            <div key={o.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+              <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{o.eventName}</div>
+              <div style={{fontSize:13,color:'#7a6a5a'}}>{o.eventType} · {fmtDate(o.date)} · Zip {o.zip}</div>
+              {o.isTicketed && <div style={{fontSize:12,color:'#c8a850',marginTop:2}}>Tickets: {o.ticketPrice || 'Ticketed'}</div>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginTop:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+        <div style={{fontSize:13,color:'#7a6a5a'}}>Questions or feedback?</div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
+          <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -3960,7 +4046,10 @@ function AppInner() {
 
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
-    if (!authUser) { setVendorProfile(null); setUserEvents([]); return; }
+    if (!authUser) { setVendorProfile(null); setUserEvents([]); setEventGoerProfile(null); return; }
+    // Check if user is an event goer
+    supabase.from('event_goers').select('*').eq('email', authUser.email).limit(1).single()
+      .then(({ data }) => { if (data) setEventGoerProfile(data); });
     // Find vendor linked to this user
     supabase.from('vendors').select('*').eq('user_id', authUser.id).limit(1).single()
       .then(({ data }) => { if (data) setVendorProfile(data); });
@@ -4018,6 +4107,7 @@ function AppInner() {
   const [opps, setOpps] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
   const [eventGoers, setEventGoers] = useState([]);
+  const [eventGoerProfile, setEventGoerProfile] = useState(null);
   const [showEventGoerSignup, setShowEventGoerSignup] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -4588,6 +4678,7 @@ function AppInner() {
                   <>
                     {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
                     {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
+                    {eventGoerProfile && <button className={`mobile-menu-item${tab==='event-goer-dashboard'?' active':''}`} onClick={()=>navTo('event-goer-dashboard')}>Event Goer Dashboard</button>}
                     {isAdmin && <button className={`mobile-menu-item${tab==='admin'?' active':''}`} onClick={()=>navTo('admin')} style={{color:'#e8c97a'}}>Admin Panel</button>}
                     <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
                   </>
@@ -4813,6 +4904,7 @@ function AppInner() {
         {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
       <footer style={{background:'#1a1208',padding:'32px 24px',marginTop:20,textAlign:'center',borderTop:'1px solid rgba(200,168,80,0.15)'}}>
@@ -4826,7 +4918,7 @@ function AppInner() {
         </div>
         <div style={{fontSize:11,color:'#5a4a3a'}}>support@southjerseyvendormarket.com</div>
       </footer>
-      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} />}
+      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} setShowEventGoerSignup={setShowEventGoerSignup} />}
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
       {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); }} />}
