@@ -48,13 +48,30 @@ function fmtTime(t) {
   return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`;
 }
 
+function buildEventRow(ev, zip) {
+  const dist = distanceMiles(zip, ev.zip);
+  const distStr = dist !== null ? `${dist.toFixed(1)} mi away` : '';
+  const timeStr = ev.start_time ? fmtTime(ev.start_time) + (ev.end_time ? ' – ' + fmtTime(ev.end_time) : '') : '';
+  return `
+    <tr>
+      <td style="padding:14px 16px;border-bottom:1px solid #f0e8dc">
+        <div style="font-weight:700;font-size:15px;color:#1a1410;margin-bottom:3px">${ev.event_name || ev.event_type}</div>
+        <div style="font-size:13px;color:#7a6a5a;line-height:1.5">
+          ${ev.event_type ? '<span style="display:inline-block;background:#f5f0ea;border:1px solid #e8ddd0;border-radius:12px;padding:1px 8px;font-size:11px;margin-right:6px">' + ev.event_type + '</span>' : ''}
+          ${fmtDate(ev.date)}${timeStr ? ' &middot; ' + timeStr : ''}
+          ${ev.zip ? ' &middot; ' + ev.zip : ''}${distStr ? ' (' + distStr + ')' : ''}
+        </div>
+        ${ev.booth_fee ? '<div style="font-size:12px;color:#a89a8a;margin-top:2px">Booth fee: ' + ev.booth_fee + '</div>' : ''}
+        ${ev.spots ? '<div style="font-size:12px;color:#a89a8a">' + ev.spots + ' vendor spots</div>' : ''}
+      </td>
+    </tr>`;
+}
+
 module.exports = async function handler(req, res) {
-  // Accept GET (cron) or POST (manual trigger)
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Verify cron secret if configured (optional security)
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
@@ -72,14 +89,13 @@ module.exports = async function handler(req, res) {
   const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
-  // Get events created in the last 7 days that are still in the future
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const today = new Date().toISOString().split('T')[0];
+  const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
+  // Load upcoming approved events
   const { data: events, error: evErr } = await supabase
     .from('events').select('*')
-    .gte('created_at', sevenDaysAgo)
-    .gte('date', today)
+    .gte('date', today).lte('date', twoWeeksOut)
     .order('date', { ascending: true });
 
   if (evErr) {
@@ -87,58 +103,103 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: 'Failed to load events' });
   }
 
-  if (!events || events.length === 0) {
-    return res.status(200).json({ message: 'No new events this week', emailsSent: 0 });
+  // Filter to approved/concierge_active only
+  const approvedEvents = (events || []).filter(e => !e.status || e.status === 'approved' || e.status === 'concierge_active');
+
+  if (approvedEvents.length === 0) {
+    return res.status(200).json({ message: 'No upcoming events', emailsSent: 0 });
   }
 
-  // Get all approved vendors with emails
+  let emailsSent = 0;
+  const errors = [];
+
+  // ─── Send to Vendors ──────────────────────────────────────────────────────
   let vendors;
   const { data: vendorRows, error: vErr } = await supabase
     .from('vendors').select('*').eq('status', 'approved');
-
   if (vErr && vErr.code === '42703') {
-    // status column doesn't exist — load all vendors
     const fallback = await supabase.from('vendors').select('*');
     vendors = fallback.data;
   } else {
     vendors = vendorRows;
   }
 
-  if (!vendors || vendors.length === 0) {
-    return res.status(200).json({ message: 'No vendors to notify', emailsSent: 0 });
-  }
-
-  // Match events to each vendor by category + distance/radius
-  let emailsSent = 0;
-  const errors = [];
-
-  for (const vendor of vendors) {
+  for (const vendor of (vendors || [])) {
     if (!vendor.contact_email) continue;
-
     const vendorCats = vendor.metadata?.allCategories || [vendor.category];
     const vendorZip = vendor.home_zip;
     const vendorRadius = vendor.radius || 20;
 
-    const matched = events.filter(ev => {
-      // Category match: event needs at least one category the vendor offers,
-      // or event has no category filter (accepts all)
+    const matched = approvedEvents.filter(ev => {
       const evCats = ev.categories_needed || [];
       const catMatch = evCats.length === 0 || evCats.some(c => vendorCats.includes(c));
       if (!catMatch) return false;
-
-      // Distance match
       const dist = distanceMiles(vendorZip, ev.zip);
-      if (dist === null) return true; // unknown zip — include as possible match
+      if (dist === null) return true;
       return dist <= vendorRadius;
     });
 
     if (matched.length === 0) continue;
 
-    // Build email
+    const eventRows = matched.map(ev => buildEventRow(ev, vendorZip)).join('');
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f5f0ea;font-family:'Helvetica Neue',Arial,sans-serif">
+  <div style="max-width:560px;margin:0 auto;padding:32px 16px">
+    <div style="text-align:center;margin-bottom:24px"><div style="font-size:24px;font-weight:700;color:#1a1410">South Jersey Vendor Market</div><div style="font-size:13px;color:#a89a8a;margin-top:4px">Weekly Opportunity Digest</div></div>
+    <div style="background:#fff;border-radius:12px;border:1px solid #e8ddd0;overflow:hidden">
+      <div style="background:#1a1410;padding:24px 28px;text-align:center"><div style="font-size:18px;color:#e8c97a;font-weight:700">${matched.length} Event${matched.length !== 1 ? 's' : ''} Near You</div><div style="font-size:13px;color:#a89a8a;margin-top:6px">Matching ${vendorCats.join(', ')} within ${vendorRadius}mi of ${vendorZip}</div></div>
+      <table style="width:100%;border-collapse:collapse">${eventRows}</table>
+      <div style="padding:20px 28px;text-align:center;border-top:1px solid #f0e8dc"><a href="${siteUrl}/opportunities" style="display:inline-block;background:#c8a84b;color:#1a1410;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px">View All Opportunities</a></div>
+    </div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#a89a8a">South Jersey Vendor Market &middot; Weekly digest for ${vendor.name}</div>
+  </div>
+</body></html>`;
+
+    try {
+      const { error: sendErr } = await resend.emails.send({
+        from: `South Jersey Vendor Market <${fromAddr}>`,
+        to: [vendor.contact_email],
+        subject: `${matched.length} new event${matched.length !== 1 ? 's' : ''} near you — South Jersey Vendor Market`,
+        html,
+      });
+      if (sendErr) { errors.push({ type: 'vendor', name: vendor.name, error: sendErr.message }); }
+      else { emailsSent++; }
+    } catch (err) { errors.push({ type: 'vendor', name: vendor.name, error: err.message }); }
+  }
+
+  // ─── Send to Event Goers ──────────────────────────────────────────────────
+  const { data: goers } = await supabase.from('event_goers').select('*').eq('active', true);
+
+  // Determine if this is a biweekly week (even week number)
+  const weekNum = Math.floor((Date.now() - new Date('2026-01-01').getTime()) / (7*24*60*60*1000));
+  const isBiweeklyWeek = weekNum % 2 === 0;
+
+  for (const goer of (goers || [])) {
+    if (!goer.email) continue;
+    // Skip biweekly subscribers on odd weeks
+    if (goer.email_frequency === 'biweekly' && !isBiweeklyWeek) continue;
+
+    const goerZip = goer.zip;
+    const goerRadius = goer.radius || 20;
+    const goerTypes = goer.event_types || [];
+
+    const matched = approvedEvents.filter(ev => {
+      // Event type match
+      const typeMatch = goerTypes.length === 0 || goerTypes.includes(ev.event_type);
+      if (!typeMatch) return false;
+      // Distance match
+      const dist = distanceMiles(goerZip, ev.zip);
+      if (dist === null) return true;
+      return dist <= goerRadius;
+    });
+
+    if (matched.length === 0) continue;
+
     const eventRows = matched.map(ev => {
-      const dist = distanceMiles(vendorZip, ev.zip);
+      const dist = distanceMiles(goerZip, ev.zip);
       const distStr = dist !== null ? `${dist.toFixed(1)} mi away` : '';
       const timeStr = ev.start_time ? fmtTime(ev.start_time) + (ev.end_time ? ' – ' + fmtTime(ev.end_time) : '') : '';
+      const ticketStr = ev.is_ticketed ? (ev.ticket_price ? 'Tickets: ' + ev.ticket_price : 'Ticketed') : 'Free admission';
       return `
         <tr>
           <td style="padding:14px 16px;border-bottom:1px solid #f0e8dc">
@@ -148,73 +209,42 @@ module.exports = async function handler(req, res) {
               ${fmtDate(ev.date)}${timeStr ? ' &middot; ' + timeStr : ''}
               ${ev.zip ? ' &middot; ' + ev.zip : ''}${distStr ? ' (' + distStr + ')' : ''}
             </div>
-            ${ev.booth_fee ? '<div style="font-size:12px;color:#a89a8a;margin-top:2px">Booth fee: ' + ev.booth_fee + '</div>' : ''}
-            ${ev.spots ? '<div style="font-size:12px;color:#a89a8a">' + ev.spots + ' vendor spots</div>' : ''}
+            <div style="font-size:12px;color:#a89a8a;margin-top:2px">${ticketStr}</div>
           </td>
         </tr>`;
     }).join('');
 
-    const html = `
-<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f5f0ea;font-family:'Helvetica Neue',Arial,sans-serif">
   <div style="max-width:560px;margin:0 auto;padding:32px 16px">
-    <div style="text-align:center;margin-bottom:24px">
-      <div style="font-size:24px;font-weight:700;color:#1a1410;letter-spacing:-0.5px">South Jersey Vendor Market</div>
-      <div style="font-size:13px;color:#a89a8a;margin-top:4px">Weekly Opportunity Digest</div>
-    </div>
+    <div style="text-align:center;margin-bottom:24px"><div style="font-size:24px;font-weight:700;color:#1a1410">South Jersey Vendor Market</div><div style="font-size:13px;color:#a89a8a;margin-top:4px">Your Event Digest</div></div>
     <div style="background:#fff;border-radius:12px;border:1px solid #e8ddd0;overflow:hidden">
-      <div style="background:#1a1410;padding:24px 28px;text-align:center">
-        <div style="font-size:36px;margin-bottom:8px">🎪</div>
-        <div style="font-size:18px;color:#e8c97a;font-weight:700">${matched.length} New Event${matched.length !== 1 ? 's' : ''} Near You</div>
-        <div style="font-size:13px;color:#a89a8a;margin-top:6px">
-          Events matching ${vendorCats.join(', ')} within ${vendorRadius} miles of ${vendorZip}
-        </div>
-      </div>
-      <div style="padding:0">
-        <table style="width:100%;border-collapse:collapse">
-          ${eventRows}
-        </table>
-      </div>
-      <div style="padding:20px 28px;text-align:center;border-top:1px solid #f0e8dc">
-        <a href="${siteUrl}" style="display:inline-block;background:#c8a84b;color:#1a1410;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px">
-          View All Opportunities
-        </a>
-      </div>
+      <div style="background:#1a1410;padding:24px 28px;text-align:center"><div style="font-size:18px;color:#e8c97a;font-weight:700">${matched.length} Market${matched.length !== 1 ? 's' : ''} Near You!</div><div style="font-size:13px;color:#a89a8a;margin-top:6px">Within ${goerRadius} miles of ${goerZip}</div></div>
+      <table style="width:100%;border-collapse:collapse">${eventRows}</table>
+      <div style="padding:20px 28px;text-align:center;border-top:1px solid #f0e8dc"><a href="${siteUrl}/upcoming-markets" style="display:inline-block;background:#c8a84b;color:#1a1410;font-size:15px;font-weight:700;text-decoration:none;padding:14px 40px;border-radius:8px">Browse All Events</a></div>
     </div>
-    <div style="text-align:center;margin-top:20px;font-size:11px;color:#a89a8a;line-height:1.6">
-      South Jersey Vendor Market &middot; Weekly digest for ${vendor.name}<br>
-      You're receiving this because you're a registered vendor on our platform.
-    </div>
+    <div style="text-align:center;margin-top:20px;font-size:11px;color:#a89a8a">South Jersey Vendor Market &middot; ${goer.email_frequency === 'weekly' ? 'Weekly' : 'Biweekly'} digest for ${goer.name}</div>
   </div>
-</body>
-</html>`;
+</body></html>`;
 
     try {
       const { error: sendErr } = await resend.emails.send({
         from: `South Jersey Vendor Market <${fromAddr}>`,
-        to: [vendor.contact_email],
-        subject: `${matched.length} new event${matched.length !== 1 ? 's' : ''} near you this week — South Jersey Vendor Market`,
+        to: [goer.email],
+        subject: `${matched.length} market${matched.length !== 1 ? 's' : ''} near you this week!`,
         html,
       });
-      if (sendErr) {
-        console.error(`Email error for ${vendor.contact_email}:`, sendErr);
-        errors.push({ vendor: vendor.name, error: sendErr.message });
-      } else {
-        emailsSent++;
-      }
-    } catch (err) {
-      console.error(`Email exception for ${vendor.contact_email}:`, err);
-      errors.push({ vendor: vendor.name, error: err.message });
-    }
+      if (sendErr) { errors.push({ type: 'event_goer', name: goer.name, error: sendErr.message }); }
+      else { emailsSent++; }
+    } catch (err) { errors.push({ type: 'event_goer', name: goer.name, error: err.message }); }
   }
 
   return res.status(200).json({
-    message: `Weekly digest sent`,
+    message: 'Weekly digest sent',
     emailsSent,
-    totalVendors: vendors.length,
-    totalNewEvents: events.length,
+    totalVendors: (vendors || []).length,
+    totalEventGoers: (goers || []).length,
+    totalEvents: approvedEvents.length,
     errors: errors.length > 0 ? errors : undefined,
   });
 };

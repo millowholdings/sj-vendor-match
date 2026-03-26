@@ -127,6 +127,26 @@ alter table events add column if not exists is_ticketed      boolean not null de
 alter table events add column if not exists ticket_price     text;
 create index if not exists events_status_idx on events (status);
 
+-- ─── Event Goers ────────────────────────────────────────────────────────────
+create table if not exists event_goers (
+  id              serial primary key,
+  name            text not null,
+  email           text not null unique,
+  zip             text not null,
+  radius          integer not null default 20,
+  event_types     text[] default '{}',
+  email_frequency text not null default 'weekly',  -- 'weekly' or 'biweekly'
+  active          boolean not null default true,
+  created_at      timestamptz not null default now()
+);
+create index if not exists event_goers_email_idx on event_goers (email);
+create index if not exists event_goers_active_idx on event_goers (active);
+
+alter table event_goers enable row level security;
+create policy "Public read event_goers" on event_goers for select using (true);
+create policy "Anon insert event_goers" on event_goers for insert with check (true);
+create policy "Anon update event_goers" on event_goers for update using (true);
+
 -- ─── Admin removal log ──────────────────────────────────────────────────────
 create table if not exists admin_removal_log (
   id          serial primary key,

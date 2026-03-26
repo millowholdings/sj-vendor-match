@@ -1237,6 +1237,98 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   );
 }
 
+// ─── Event Goer Signup Modal ─────────────────────────────────────────────────
+function EventGoerSignupModal({ onClose, onSuccess }) {
+  const [form, setForm] = useState({ name:'', email:'', zip:'', radius:20, eventTypes:[], frequency:'weekly' });
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+  const set = (k,v) => setForm(f=>({...f,[k]:v}));
+  const toggleType = (t) => setForm(f=>({...f, eventTypes: f.eventTypes.includes(t) ? f.eventTypes.filter(x=>x!==t) : [...f.eventTypes, t]}));
+
+  const handleSave = async () => {
+    if (!form.name || !form.email) { setError('Please enter your name and email.'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) { setError('Please enter a valid email.'); return; }
+    if (!form.zip || !/^\d{5}$/.test(form.zip)) { setError('Please enter a valid 5-digit zip code.'); return; }
+    if (form.eventTypes.length === 0) { setError('Please select at least one event type.'); return; }
+    setSaving(true); setError('');
+    const { error: dbErr } = await supabase.from('event_goers').upsert({
+      name: form.name, email: form.email, zip: form.zip, radius: form.radius,
+      event_types: form.eventTypes, email_frequency: form.frequency, active: true,
+    }, { onConflict: 'email' });
+    if (dbErr) { setError('Failed to save. Please try again.'); setSaving(false); return; }
+    setSaved(true); setSaving(false);
+    if (onSuccess) onSuccess();
+  };
+
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:500,width:'100%',overflow:'hidden',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{background:'#1a1410',padding:'20px 28px',textAlign:'center'}}>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>Never Miss a Market</div>
+          <div style={{fontSize:13,color:'#a89a8a',marginTop:4}}>Get personalized event alerts delivered to your inbox</div>
+        </div>
+        <div style={{padding:'24px 28px'}}>
+          {saved ? (
+            <div style={{textAlign:'center',padding:'20px 0'}}>
+              <div style={{fontSize:32,marginBottom:8}}>&#10003;</div>
+              <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>You're signed up!</div>
+              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:20}}>We'll send you a personalized list of upcoming events {form.frequency === 'weekly' ? 'every week' : 'every two weeks'}.</div>
+              <button onClick={onClose} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
+          ) : (
+            <>
+              <div className="form-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+                <div className="form-group"><label>Name <span style={{color:'#c0392b'}}>*</span></label><input value={form.name} onChange={e=>set('name',e.target.value)} placeholder="Your name" /></div>
+                <div className="form-group"><label>Email <span style={{color:'#c0392b'}}>*</span></label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" /></div>
+                <div className="form-group"><label>Zip Code <span style={{color:'#c0392b'}}>*</span></label><input value={form.zip} onChange={e=>set('zip',e.target.value.replace(/\D/g,'').slice(0,5))} placeholder="08033" maxLength={5} /></div>
+                <div className="form-group"><label>How Far You'll Travel</label>
+                  <select value={form.radius} onChange={e=>set('radius',+e.target.value)}>
+                    {[5,10,15,20,30,50].map(r=><option key={r} value={r}>{r} miles</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{marginBottom:14}}>
+                <label style={{fontSize:13,fontWeight:600,color:'#1a1410',display:'block',marginBottom:8}}>Event Types You're Interested In <span style={{color:'#c0392b'}}>*</span></label>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  {EVENT_TYPES.filter(t=>t!=='Other').map(t=>(
+                    <button key={t} onClick={()=>toggleType(t)} style={{
+                      padding:'6px 14px',borderRadius:20,fontSize:12,fontWeight:600,cursor:'pointer',
+                      fontFamily:'DM Sans,sans-serif',border:'1.5px solid',transition:'all 0.15s',
+                      background: form.eventTypes.includes(t) ? '#c8a850' : '#fff',
+                      color: form.eventTypes.includes(t) ? '#1a1410' : '#7a6a5a',
+                      borderColor: form.eventTypes.includes(t) ? '#c8a850' : '#e8ddd0',
+                    }}>{t}</button>
+                  ))}
+                </div>
+              </div>
+              <div className="form-group" style={{marginBottom:16}}>
+                <label>How Often?</label>
+                <div style={{display:'flex',gap:10}}>
+                  {[{val:'weekly',label:'Every Week'},{val:'biweekly',label:'Every 2 Weeks'}].map(o=>(
+                    <button key={o.val} onClick={()=>set('frequency',o.val)} style={{
+                      flex:1,padding:'10px',borderRadius:8,fontSize:13,fontWeight:700,cursor:'pointer',
+                      fontFamily:'DM Sans,sans-serif',border:'2px solid',
+                      background: form.frequency===o.val ? '#fdf9f0' : '#fff',
+                      borderColor: form.frequency===o.val ? '#c8a850' : '#e8ddd0',
+                      color:'#1a1410',
+                    }}>{o.label}</button>
+                  ))}
+                </div>
+              </div>
+              {error && <div style={{color:'#c0392b',fontSize:13,marginBottom:12,background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8,padding:'8px 12px'}}>{error}</div>}
+              <button onClick={handleSave} disabled={saving} style={{width:'100%',background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:saving?0.6:1}}>
+                {saving ? 'Signing up...' : 'Get Event Alerts'}
+              </button>
+              <div style={{fontSize:11,color:'#a89a8a',textAlign:'center',marginTop:8}}>Free forever. Unsubscribe anytime.</div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Contact Modal ───────────────────────────────────────────────────────────
 function ContactModal({ onClose, defaultSubject, defaultMessage, userName, userEmail }) {
   const [form, setForm] = useState({ name: userName||'', email: userEmail||'', subject: defaultSubject||'', message: defaultMessage||'' });
@@ -2503,7 +2595,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
-function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false }) {
+function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false, eventGoers=[] }) {
   const [unlocked, setUnlocked] = useState(() => isAdmin || sessionStorage.getItem('sjvm_admin') === '1');
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
@@ -2629,6 +2721,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{conciergeEvents.length}</div><div className="admin-stat-label">Concierge</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
+        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Goers</div></div>
       </div>
 
       {/* ── Pending Event Review ─────────────────────────────── */}
@@ -2808,6 +2901,28 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td>{v.homeZip}</td>
                   <td style={{fontSize:12}}>{v.contactEmail}</td>
                   <td><button onClick={()=>setRemoveDialog({type:'vendor',id:v.id,name:v.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+      }
+
+      {/* ── Event Goers ────────────────────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Event Goers ({eventGoers.length})</h3>
+      {eventGoers.length===0
+        ? <div className="empty-state"><div className="big">📬</div><p>No event goers signed up yet.</p></div>
+        : <table className="admin-table">
+            <thead><tr><th>Name</th><th>Email</th><th>Zip</th><th>Radius</th><th>Event Types</th><th>Frequency</th><th>Signed Up</th></tr></thead>
+            <tbody>
+              {eventGoers.map(eg=>(
+                <tr key={eg.id}>
+                  <td><strong>{eg.name}</strong></td>
+                  <td style={{fontSize:12}}>{eg.email}</td>
+                  <td>{eg.zip}</td>
+                  <td>{eg.radius}mi</td>
+                  <td style={{fontSize:11}}>{(eg.event_types||[]).join(', ')||'—'}</td>
+                  <td>{eg.email_frequency}</td>
+                  <td style={{fontSize:11}}>{new Date(eg.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
             </tbody>
@@ -2995,7 +3110,7 @@ function VendorApplyModal({ opp, onClose }) {
 }
 
 // ─── Upcoming Markets (public calendar) ──────────────────────────────────────
-function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
+function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerSignup }) {
   const [filterType, setFilterType] = useState("");
   const [filterDate, setFilterDate] = useState("");
   const [filterTicketed, setFilterTicketed] = useState("");
@@ -3135,6 +3250,12 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal }) {
             <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, fontWeight:700, marginBottom:6 }}>Are you an event organizer?</div>
             <p style={{ fontSize:13, color:'#7a6a5a', marginBottom:14 }}>List your event for free and find quality vendors.</p>
             <button onClick={()=>{setShowAuthModal ? setShowAuthModal(true) : setTab('host');}} className="btn-submit" style={{ fontSize:14, padding:'10px 28px', background:'#e8c97a', color:'#1a1410' }}>List Your Event</button>
+          </div>
+          <div style={{ background:'#fff', border:'1px solid #e8ddd0', borderRadius:12, padding:'28px 32px', textAlign:'center', flex:'1 1 280px', maxWidth:380 }}>
+            <div style={{ fontSize:28, marginBottom:8 }}>📬</div>
+            <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, fontWeight:700, marginBottom:6 }}>Love local markets?</div>
+            <p style={{ fontSize:13, color:'#7a6a5a', marginBottom:14 }}>Get a personalized list of events near you — free, weekly or biweekly.</p>
+            <button onClick={()=>setShowEventGoerSignup(true)} className="btn-submit" style={{ fontSize:14, padding:'10px 28px' }}>Get Event Alerts</button>
           </div>
         </div>
       </div>
@@ -3649,6 +3770,8 @@ function AppInner() {
   const [vendors, setVendors] = useState([]);
   const [opps, setOpps] = useState([]);
   const [allEvents, setAllEvents] = useState([]);
+  const [eventGoers, setEventGoers] = useState([]);
+  const [showEventGoerSignup, setShowEventGoerSignup] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -3694,6 +3817,10 @@ function AppInner() {
         // Store all events including pending for admin
         setAllEvents(eventRows.map(dbEventToApp));
       }
+
+      // Load event goers for admin
+      supabase.from('event_goers').select('*').eq('active', true).order('created_at', { ascending: false })
+        .then(({ data }) => { if (data) setEventGoers(data); });
 
       // Load booking requests for this browser session from Supabase
       const sid = getSessionId();
@@ -4270,7 +4397,7 @@ function AppInner() {
             <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:1200,width:'100%',margin:'0 auto',padding:'32px 32px 0'}}>
               {[
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
-                  buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'}] },
+                  buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup'}] },
                 { title:'Vendors', desc:'Create your profile, set your travel radius, and get matched with events looking for what you offer.',
                   buttons:[{label:'Join as a Vendor',tab:'vendor'},{label:'Browse Opportunities',tab:'opportunities'}] },
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
@@ -4285,8 +4412,8 @@ function AppInner() {
                   </p>
                   <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
-                      <button key={b.label} onClick={()=>{setTab(b.tab);window.scrollTo({top:0});}}
-                        style={{width:'100%',background:'#0e0c0a',color:'#fff',border:'2px solid #c8a850',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
+                      <button key={b.label} onClick={()=>{ if(b.action==='eventGoerSignup') setShowEventGoerSignup(true); else {setTab(b.tab);window.scrollTo({top:0});} }}
+                        style={{width:'100%',background: b.action ? '#c8a850' : '#0e0c0a',color: b.action ? '#1a1410' : '#fff',border:'2px solid #c8a850',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
                     ))}
@@ -4389,12 +4516,12 @@ function AppInner() {
             : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
         {tab==="upcoming-markets" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
-          : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} />)}
+          : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
@@ -4417,6 +4544,7 @@ function AppInner() {
       {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} />}
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
+      {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); }} />}
     </>
   );
 }
