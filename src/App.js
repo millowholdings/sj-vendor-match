@@ -173,14 +173,15 @@ const styles = `
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: #1a1208; color: #1a1410; min-height: 100vh; }
   .app { min-height: 100vh; background: #1a1208; }
-  .nav { background: #1a1410; padding: 18px 40px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; flex-wrap: wrap; gap: 8px; }
-  .nav-logo { display:flex; align-items:baseline; gap:6px; }
+  .nav { background: #1a1410; padding: 14px 32px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; gap: 12px; border-bottom: 1px solid rgba(200,168,80,0.12); }
+  .nav-logo { display:flex; align-items:baseline; gap:6px; flex-shrink:0; }
   .nav-logo-cursive { font-family: 'Corinthia', cursive; font-size: 32px; color: #e8c97a; line-height:1; letter-spacing: 0px; }
   .nav-logo-serif { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; letter-spacing: 1px; font-weight:700; }
-  .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
-  .nav-tab { background: none; border: 1px solid transparent; color: #a89a8a; padding: 8px 18px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.2s; }
-  .nav-tab:hover { color: #e8c97a; border-color: #e8c97a30; }
-  .nav-tab.active { background: #e8c97a; color: #1a1410; border-color: #e8c97a; }
+  .nav-tabs { display: flex; gap: 2px; align-items: center; }
+  .nav-tab { background: none; border: none; color: #a89a8a; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; transition: all 0.2s; position: relative; }
+  .nav-tab:hover { color: #e8c97a; background: rgba(200,168,80,0.08); }
+  .nav-tab.active { background: rgba(200,168,80,0.15); color: #e8c97a; font-weight: 700; }
+  .nav-divider { width: 1px; height: 24px; background: rgba(200,168,80,0.25); margin: 0 6px; flex-shrink: 0; }
   .hero { background: linear-gradient(135deg, #1a1410 0%, #2d2118 50%, #1a1410 100%); padding: 90px 40px 80px; text-align: center; position: relative; overflow: hidden; }
   .hero::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 50%, #e8c97a15, transparent); }
   .hero-eyebrow { font-size: 11px; letter-spacing: 4px; text-transform: uppercase; color: #e8c97a; margin-bottom: 20px; position: relative; }
@@ -301,9 +302,9 @@ const styles = `
   .status-active { background: #d4f4e0; color: #1a6b3a; }
   .status-pending { background: #fdf4dc; color: #7a5a10; }
   .info-box { background: #fdf9f5; border: 1px solid #e8ddd0; border-left: 3px solid #e8c97a; border-radius: 6px; padding: 14px 18px; font-size: 14px; color: #7a6a5a; margin-bottom: 20px; }
-  .nav-group { display: flex; flex-direction: column; border-left: 1px solid rgba(255,255,255,.1); padding-left: 12px; margin-left: 4px; }
-  .nav-group-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #e8c97a; padding: 2px 6px; margin-bottom: 2px; font-weight: 600; }
-  .nav-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
+  .nav-group { display: flex; flex-direction: column; padding-left: 0; margin-left: 0; }
+  .nav-group-label { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: #c8a850; padding: 0 14px 2px; font-weight: 700; opacity: 0.8; pointer-events: none; }
+  .nav-group-items { display: flex; gap: 2px; }
     .ometa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
   .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .hamburger-btn { display: none; }
@@ -4132,7 +4133,7 @@ function AppInner() {
           </div>
         )}
         <nav className="nav">
-          <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
+          <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:46,width:'auto',display:'block',background:'none',border:'none'}} /></div>
           {/* Hamburger button — mobile only */}
           <button className="hamburger-btn" onClick={()=>setMobileMenuOpen(!mobileMenuOpen)} aria-label="Menu">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round">
@@ -4198,6 +4199,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="calendar"?" active":""}`} onClick={()=>{setTab("calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
             </div>
+            <div className="nav-divider" />
             <div className="nav-group">
               <div className="nav-group-label">&#127918; Hosts</div>
               <div className="nav-group-items">
@@ -4209,6 +4211,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="host-calendar"?" active":""}`} onClick={()=>{setTab("host-calendar");window.scrollTo({top:0});}}>My Calendar</button>
               </div>
             </div>
+            <div className="nav-divider" />
             <button className={`nav-tab${tab==="pricing"?" active":""}`} onClick={()=>{setTab("pricing");window.scrollTo({top:0});}}>Pricing</button>
             <button className="nav-tab" onClick={()=>setShowContactModal(true)}>Contact Us</button>
             <button className={`nav-tab${tab==="tos"?" active":""}`} onClick={()=>{setTab("tos");window.scrollTo({top:0});}}>Terms</button>
