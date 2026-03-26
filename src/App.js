@@ -37,12 +37,12 @@ const SUBCATEGORIES = {
 };
 
 const EVENT_TYPES = [
-  "Pop-Up Market", "Corporate Event", "Birthday Party", "Wedding Reception",
-  "Wedding Ceremony", "Bridal Shower", "Baby Shower", "Gender Reveal",
-  "Community Festival", "Farmers Market", "Fundraiser", "Grand Opening",
-  "Holiday Market", "Block Party", "Private Party", "Sip & Shop",
-  "Girls Night Out", "Bachelorette Party", "Anniversary Celebration", "Other"
+  "Pop-Up Market", "Vendor Market", "Craft Fair", "Food Festival",
+  "Community Festival", "Flea Market", "Farmers Market", "Art Show",
+  "Holiday Market", "Night Market", "Sip & Shop", "Fundraiser",
+  "Grand Opening", "Block Party", "Girls Night Out", "Other"
 ];
+const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration"];
 
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 
@@ -136,7 +136,7 @@ function dbEventToApp(e) {
   return {
     id:               e.id,
     eventName:        e.event_name,
-    eventType:        e.event_type,
+    eventType:        REMOVED_EVENT_TYPES.includes(e.event_type) ? 'Community Event' : e.event_type,
     zip:              e.zip,
     date:             e.date,
     startTime:        e.start_time ? e.start_time.slice(0, 5) : "",
@@ -809,12 +809,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
         </div>
         <div className="form-group">
-          <label>Private Event Fee?</label>
-          <select value={form.chargesPrivateFee?'yes':'no'} onChange={e=>set('chargesPrivateFee',e.target.value==='yes')}>
-            <option value="no">No private event fee</option>
-            <option value="yes">Yes — I charge extra for private events</option>
-          </select>
-          {form.chargesPrivateFee && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Private event fee</div><select value={form.privateEventFee} onChange={e=>set('privateEventFee',+e.target.value)}>{[50,75,100,125,150,200,250,300,400,500,750,1000].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
+          {/* Private event fee removed */}
         </div>
         <div className="form-group"><label>Setup Time Needed</label>
           <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
@@ -1915,7 +1910,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
               <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>Booth & Logistics</div>
               <Field label="Insurance" val={v.insurance ? '✓ Has Certificate of Insurance' : 'Not insured'} />
               {v.hasMinPurchase && <Field label="Minimum Purchase" val={`$${v.minPurchaseAmt}`} />}
-              {v.chargesPrivateFee && <Field label="Private Event Fee" val={`$${v.privateEventFee}`} />}
+              {/* Private event fee hidden */}
               <Field label="Setup Time" val={v.setupTime ? `${v.setupTime} min` : null} />
               <Field label="Table Size" val={v.tableSize} />
               <Field label="Needs Electric" val={v.needsElectric ? 'Yes' : null} />
@@ -2445,7 +2440,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
               <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Booth & Logistics</div>
               <Field label="Insurance" val={v.insurance ? '✓ Yes — has COI' : '✗ No'} />
               <Field label="Minimum Purchase" val={v.has_min_purchase ? `Yes — $${v.min_purchase_amt} minimum` : 'No minimum'} />
-              <Field label="Private Event Fee" val={v.charges_private_fee ? `Yes — $${v.private_event_fee}` : 'No fee'} />
+              {/* Private event fee hidden */}
               <Field label="Setup Time" val={m.setupTime ? `${m.setupTime} min` : null} />
               <Field label="Table Size" val={m.tableSize} />
               <Field label="Needs Electric" val={m.needsElectric ? 'Yes' : 'No'} />
