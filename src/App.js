@@ -3945,12 +3945,14 @@ function AppInner() {
   const [userEvents, setUserEvents] = useState([]); // raw DB rows for logged-in host
   const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email?.toLowerCase());
 
-  // Listen for auth state changes
+  // Listen for auth state changes — clear drafts when no session
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) clearAllDrafts();
       setAuthUser(session?.user || null);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) clearAllDrafts();
       setAuthUser(session?.user || null);
     });
     return () => subscription.unsubscribe();
@@ -3992,8 +3994,17 @@ function AppInner() {
       });
   }, [authUser]);
 
+  const clearAllDrafts = () => {
+    localStorage.removeItem('sjvm_vendor_draft');
+    localStorage.removeItem('sjvm_vendor_draft_subs');
+    localStorage.removeItem('sjvm_host_draft');
+    localStorage.removeItem('sjvm_host_draft_subs');
+    localStorage.removeItem('sjvm_conversations');
+    localStorage.removeItem('sjvm_vendor_calendars');
+  };
   const handleLogout = async () => {
     await supabase.auth.signOut();
+    clearAllDrafts();
     setAuthUser(null); setVendorProfile(null); setUserEvents([]);
     setTab('home');
   };
