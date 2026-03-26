@@ -3556,10 +3556,31 @@ function VendorResponsePage({ token }) {
 
 // ─── Root App ─────────────────────────────────────────────────────────────────
 function AppInner() {
-  const [tab, setTab] = useState(() => {
+  const getTabFromUrl = () => {
+    const path = window.location.pathname.replace(/^\//, '');
+    if (path && path !== '') return path;
     const params = new URLSearchParams(window.location.search);
-    return params.get('tab') || "home";
-  });
+    return params.get('tab') || 'home';
+  };
+  const [tab, setTabRaw] = useState(getTabFromUrl);
+  const setTab = (newTab) => {
+    setTabRaw(newTab);
+    const url = newTab === 'home' ? '/' : '/' + newTab;
+    window.history.pushState({ tab: newTab }, '', url);
+  };
+  useEffect(() => {
+    const onPop = (e) => {
+      const t = e.state?.tab || getTabFromUrl();
+      setTabRaw(t);
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener('popstate', onPop);
+    // Replace initial state so first back works correctly
+    const initTab = getTabFromUrl();
+    const initUrl = initTab === 'home' ? '/' : '/' + initTab;
+    window.history.replaceState({ tab: initTab }, '', initUrl);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
   const [authUser, setAuthUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authEmail, setAuthEmail] = useState('');
