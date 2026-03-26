@@ -177,7 +177,7 @@ const styles = `
   .nav-logo { display:flex; align-items:baseline; gap:6px; }
   .nav-logo-cursive { font-family: 'Corinthia', cursive; font-size: 32px; color: #e8c97a; line-height:1; letter-spacing: 0px; }
   .nav-logo-serif { font-family: 'Playfair Display', serif; font-size: 18px; color: #fff; letter-spacing: 1px; font-weight:700; }
-  .nav-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+  .nav-tabs { display: none; }
   .nav-tab { background: none; border: 1px solid transparent; color: #a89a8a; padding: 8px 18px; border-radius: 4px; cursor: pointer; font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500; transition: all 0.2s; }
   .nav-tab:hover { color: #e8c97a; border-color: #e8c97a30; }
   .nav-tab.active { background: #e8c97a; color: #1a1410; border-color: #e8c97a; }
@@ -306,22 +306,22 @@ const styles = `
   .nav-group-items { display: flex; gap: 2px; flex-wrap: wrap; }
     .ometa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
   .service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .hamburger-btn { display: none; }
-    .mobile-menu { display: none; }
+    .hamburger-btn { display: flex; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; padding: 4px; z-index: 201; }
+    .mobile-menu { display: flex; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1a1410; z-index: 200; flex-direction: column; overflow-y: auto; padding: 0; }
+    .mobile-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 32px; border-bottom: 1px solid rgba(200,168,80,0.2); }
+    .mobile-menu-section { padding: 8px 0; border-bottom: 1px solid rgba(200,168,80,0.1); }
+    .mobile-menu-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c8a850; padding: 8px 32px 4px; font-weight: 700; }
+    .mobile-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #fff; font-family: 'Public Sans', sans-serif; font-size: 15px; padding: 12px 32px; cursor: pointer; transition: background 0.15s; }
+    .mobile-menu-item:hover { background: rgba(200,168,80,0.08); }
+    .mobile-menu-item.active { color: #c8a850; }
     @media (max-width: 768px) {
-    .home-columns { grid-template-columns: 1fr !important; gap: 12px !important; }
+    .home-columns { grid-template-columns: 1fr !important; gap: 12px !important; width: 100% !important; padding-left: 16px !important; padding-right: 16px !important; margin: 0 auto !important; box-sizing: border-box !important; }
     .home-col { border-right: none !important; }
     .nav { padding: 10px 16px; gap: 6px; }
     .nav-logo { font-size: 18px; }
-    .nav-tabs { display: none !important; }
-    .hamburger-btn { display: flex !important; align-items: center; justify-content: center; background: none; border: none; cursor: pointer; padding: 4px; z-index: 201; }
-    .mobile-menu { display: flex !important; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #1a1410; z-index: 200; flex-direction: column; overflow-y: auto; padding: 0; }
-    .mobile-menu-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; border-bottom: 1px solid rgba(200,168,80,0.2); }
-    .mobile-menu-section { padding: 8px 0; border-bottom: 1px solid rgba(200,168,80,0.1); }
-    .mobile-menu-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #c8a850; padding: 8px 20px 4px; font-weight: 700; }
-    .mobile-menu-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #fff; font-family: 'Public Sans', sans-serif; font-size: 15px; padding: 12px 20px; cursor: pointer; }
-    .mobile-menu-item:active { background: rgba(200,168,80,0.1); }
-    .mobile-menu-item.active { color: #c8a850; }
+    .mobile-menu-header { padding: 10px 16px; }
+    .mobile-menu-label { padding: 8px 20px 4px; }
+    .mobile-menu-item { padding: 12px 20px; }
     .hero { padding: 40px 16px 32px; }
     .hero h1 { font-size: 32px; }
     .hero > p { font-size: 15px; margin-bottom: 28px; }
