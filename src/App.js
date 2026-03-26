@@ -4549,8 +4549,18 @@ function AppInner() {
         )}
         <nav className="nav">
           <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
-          {/* Auth + Hamburger on right */}
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
+          {/* Quick nav + Auth + Hamburger on right */}
+          <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {authUser && vendorProfile && (
+            <button onClick={()=>{setTab('calendar');window.scrollTo({top:0});}} style={{background:'none',border:'1px solid rgba(200,168,80,0.3)',color:'#c8a850',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
+              Vendor Calendar
+            </button>
+          )}
+          {authUser && userEvents.length > 0 && (
+            <button onClick={()=>{setTab('host-calendar');window.scrollTo({top:0});}} style={{background:'none',border:'1px solid rgba(200,168,80,0.3)',color:'#c8a850',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
+              Host Calendar
+            </button>
+          )}
           {authUser ? (
             <button onClick={handleLogout} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log Out</button>
           ) : (
