@@ -855,6 +855,39 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
               )}
             </div>
           ))}
+
+          {/* Service provider rate & details — inside the service type flow */}
+          <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginTop:16,marginBottom:8}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:12}}>Your Rate & Availability</div>
+            <div className="form-grid" style={{gap:10}}>
+              <div className="form-group"><label>Primary Service Type *</label>
+                <select value={form.serviceType} onChange={e=>set('serviceType',e.target.value)}>
+                  <option value="">Select your service...</option>
+                  {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+                </select>
+                {form.serviceType==='Other' && <input placeholder="Describe your service..." value={form.serviceTypeOther||''} onChange={e=>set('serviceTypeOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
+              </div>
+              <div className="form-group"><label>Minimum Booking Duration</label>
+                <select value={form.minBookingDuration} onChange={e=>set('minBookingDuration',e.target.value)}>
+                  {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
+                </select>
+                {form.minBookingDuration==='Other' && <input placeholder="Describe your availability..." value={form.minBookingDurationOther||''} onChange={e=>set('minBookingDurationOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
+              </div>
+              <div className="form-group"><label>Rate Type</label>
+                <select value={form.serviceRateType} onChange={e=>set('serviceRateType',e.target.value)}>
+                  <option value="fixed">Fixed Rate</option>
+                  <option value="range">Rate Range</option>
+                  <option value="quote">Quote Based</option>
+                </select>
+              </div>
+              {form.serviceRateType==='fixed' && <div className="form-group"><label>Your Rate</label><input placeholder="e.g. $500/event" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>}
+              {form.serviceRateType==='range' && <>
+                <div className="form-group"><label>Starting At</label><input placeholder="e.g. $200" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>
+                <div className="form-group"><label>Up To</label><input placeholder="e.g. $800" value={form.serviceRateMax} onChange={e=>set('serviceRateMax',e.target.value)} /></div>
+              </>}
+            </div>
+            <div className="form-group" style={{marginTop:8}}><label>What You Offer</label><textarea placeholder="Describe your service — style, equipment provided, what's included..." value={form.serviceDescription} onChange={e=>set('serviceDescription',e.target.value)} style={{minHeight:60}} /></div>
+          </div>
         </>
       )}
 
@@ -862,104 +895,64 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       <h3 className="form-section-title"><span className="dot" />Event Fit</h3>
       <CheckboxGroup label="Event Types You're Open To" options={EVENT_TYPES} selected={form.eventTypes} onChange={v=>set('eventTypes',v)} otherValue={form.otherEventType} onOtherChange={v=>set('otherEventType',v)} />
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
-      <div className="form-grid">
-        <div className="form-group">
-          <label>Do You Carry Liability Insurance?</label>
-          <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
-            <option value="no">No — I do not carry liability insurance</option>
-            <option value="yes">Yes — I have a certificate of insurance (COI)</option>
-          </select>
-          <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
-        </div>
-        <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
-          <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
-            <option value={0}>Free / No fee</option>
-            <option value={25}>$25/day</option>
-            <option value={50}>$50/day</option>
-            <option value={75}>$75/day</option>
-            <option value={100}>$100/day</option>
-            <option value={125}>$125/day</option>
-            <option value={150}>$150/day</option>
-            <option value={200}>$200/day</option>
-            <option value={250}>$250/day</option>
-            <option value={300}>$300/day</option>
-            <option value={400}>$400/day</option>
-            <option value={500}>$500/day</option>
-            <option value={750}>$750/day</option>
-            <option value={1000}>$1,000/day</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label>Minimum Purchase Requirement?</label>
-          <select value={form.hasMinPurchase?'yes':'no'} onChange={e=>set('hasMinPurchase',e.target.value==='yes')}>
-            <option value="no">No minimum purchase</option>
-            <option value="yes">Yes — I require a minimum</option>
-          </select>
-          {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
-        </div>
-        <div className="form-group">
-          {/* Private event fee removed */}
-        </div>
-        <div className="form-group"><label>Setup Time Needed</label>
-          <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
-            <option value={10}>10 minutes</option>
-            <option value={15}>15 minutes</option>
-            <option value={20}>20 minutes</option>
-            <option value={30}>30 minutes</option>
-            <option value={45}>45 minutes</option>
-            <option value={60}>1 hour</option>
-            <option value={90}>1.5 hours</option>
-            <option value={120}>2 hours</option>
-          </select>
-        </div>
-        <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
-        <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
-      </div>
-
-
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Service Provider (Optional)</h3>
-      <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>If you provide event services like music, photography, or entertainment, fill out this section.</p>
-      <div className="form-group" style={{marginBottom:12}}>
-        <label>Are you a service provider?</label>
-        <div style={{display:'flex',gap:10}}>
-          <button type="button" onClick={()=>set('isServiceProvider',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isServiceProvider?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isServiceProvider?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
-          <button type="button" onClick={()=>set('isServiceProvider',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isServiceProvider?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isServiceProvider?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
-        </div>
-      </div>
-      {form.isServiceProvider && (
-        <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:16}}>
-          <div className="form-grid" style={{gap:10}}>
-            <div className="form-group"><label>Service Type *</label>
-              <select value={form.serviceType} onChange={e=>set('serviceType',e.target.value)}>
-                <option value="">Select your service...</option>
-                {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+      {/* Booth & Logistics — only for market vendors */}
+      {form.vendorType.market && (
+        <>
+          <hr className="form-divider" />
+          <h3 className="form-section-title"><span className="dot" />Booth & Logistics</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Do You Carry Liability Insurance?</label>
+              <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
+                <option value="no">No — I do not carry liability insurance</option>
+                <option value="yes">Yes — I have a certificate of insurance (COI)</option>
               </select>
-              {form.serviceType==='Other' && <input placeholder="Describe your service..." value={form.serviceTypeOther||''} onChange={e=>set('serviceTypeOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
+              <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
             </div>
-            <div className="form-group"><label>Minimum Booking Duration</label>
-              <select value={form.minBookingDuration} onChange={e=>set('minBookingDuration',e.target.value)}>
-                {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
-              </select>
-              {form.minBookingDuration==='Other' && <input placeholder="Describe your availability..." value={form.minBookingDurationOther||''} onChange={e=>set('minBookingDurationOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
-            </div>
-            <div className="form-group"><label>Rate Type</label>
-              <select value={form.serviceRateType} onChange={e=>set('serviceRateType',e.target.value)}>
-                <option value="fixed">Fixed Rate</option>
-                <option value="range">Rate Range</option>
-                <option value="quote">Quote Based</option>
+            <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
+              <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
+                <option value={0}>Free / No fee</option>
+                <option value={25}>$25/day</option><option value={50}>$50/day</option><option value={75}>$75/day</option>
+                <option value={100}>$100/day</option><option value={125}>$125/day</option><option value={150}>$150/day</option>
+                <option value={200}>$200/day</option><option value={250}>$250/day</option><option value={300}>$300/day</option>
+                <option value={500}>$500/day</option><option value={1000}>$1,000/day</option>
               </select>
             </div>
-            {form.serviceRateType==='fixed' && <div className="form-group"><label>Your Rate</label><input placeholder="e.g. $500/event" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>}
-            {form.serviceRateType==='range' && <>
-              <div className="form-group"><label>Starting At</label><input placeholder="e.g. $200" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>
-              <div className="form-group"><label>Up To</label><input placeholder="e.g. $800" value={form.serviceRateMax} onChange={e=>set('serviceRateMax',e.target.value)} /></div>
-            </>}
+            <div className="form-group">
+              <label>Minimum Purchase Requirement?</label>
+              <select value={form.hasMinPurchase?'yes':'no'} onChange={e=>set('hasMinPurchase',e.target.value==='yes')}>
+                <option value="no">No minimum purchase</option>
+                <option value="yes">Yes — I require a minimum</option>
+              </select>
+              {form.hasMinPurchase && <div style={{marginTop:8}}><div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>Minimum per customer</div><select value={form.minPurchaseAmt} onChange={e=>set('minPurchaseAmt',+e.target.value)}>{[10,15,20,25,30,40,50,75,100].map(a=><option key={a} value={a}>${a}</option>)}</select></div>}
+            </div>
+            <div className="form-group"><label>Setup Time Needed</label>
+              <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
+                <option value={10}>10 minutes</option><option value={15}>15 minutes</option><option value={20}>20 minutes</option>
+                <option value={30}>30 minutes</option><option value={45}>45 minutes</option><option value={60}>1 hour</option>
+                <option value={90}>1.5 hours</option><option value={120}>2 hours</option>
+              </select>
+            </div>
+            <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
+            <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
           </div>
-          <div className="form-group" style={{marginTop:8}}><label>What You Offer</label><textarea placeholder="Describe your service — style, equipment provided, what's included..." value={form.serviceDescription} onChange={e=>set('serviceDescription',e.target.value)} style={{minHeight:60}} /></div>
-        </div>
+        </>
+      )}
+
+      {/* Insurance for service providers who aren't market vendors */}
+      {form.vendorType.service && !form.vendorType.market && (
+        <>
+          <hr className="form-divider" />
+          <h3 className="form-section-title"><span className="dot" />Insurance</h3>
+          <div className="form-group">
+            <label>Do You Carry Liability Insurance?</label>
+            <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
+              <option value="no">No — I do not carry liability insurance</option>
+              <option value="yes">Yes — I have a certificate of insurance (COI)</option>
+            </select>
+            <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured service providers. This shows as a badge on your profile.</div>
+          </div>
+        </>
       )}
 
       <hr className="form-divider" />
@@ -4332,7 +4325,7 @@ function AppInner() {
       vendorType: form.vendorType || {market:false,service:false},
       serviceCategories: form.serviceCategories || [],
       serviceSubcategories: form.serviceSubcategories || [],
-      isServiceProvider: form.isServiceProvider || false,
+      isServiceProvider: form.vendorType?.service || form.isServiceProvider || false,
       serviceType: form.serviceType || null,
       serviceRateMin: form.serviceRateMin || null,
       serviceRateMax: form.serviceRateMax || null,
