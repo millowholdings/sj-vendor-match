@@ -3923,29 +3923,8 @@ function AppInner() {
     const url = newTab === 'home' ? '/' : '/' + newTab;
     window.history.pushState({ tab: newTab }, '', url);
   };
-  const modalOpenRef = useRef(false);
-  const anyModalOpen = showAuthModal || showContactModal || showFeedbackModal || showEventGoerSignup || mobileMenuOpen;
-
-  // Push history when a modal opens, so back button closes it
-  useEffect(() => {
-    if (anyModalOpen && !modalOpenRef.current) {
-      window.history.pushState({ modal: true }, '');
-      modalOpenRef.current = true;
-    } else if (!anyModalOpen) {
-      modalOpenRef.current = false;
-    }
-  }, [anyModalOpen]);
-
   useEffect(() => {
     const onPop = () => {
-      // If a modal is open, close all modals
-      if (modalOpenRef.current) {
-        setShowAuthModal(false); setShowContactModal(false);
-        setShowFeedbackModal(false); setShowEventGoerSignup(false);
-        setMobileMenuOpen(false);
-        modalOpenRef.current = false;
-        return;
-      }
       const t = getTabFromUrl();
       setTabRaw(t);
       window.scrollTo({ top: 0 });
@@ -4035,6 +4014,32 @@ function AppInner() {
 
   const [loadError, setLoadError] = useState(null);
   const [loading, setLoading] = useState(true);
+
+  // Modal back-button support
+  const modalOpenRef = useRef(false);
+  const anyModalOpen = showAuthModal || showContactModal || showFeedbackModal || showEventGoerSignup || mobileMenuOpen;
+  useEffect(() => {
+    if (anyModalOpen && !modalOpenRef.current) {
+      window.history.pushState({ modal: true }, '');
+      modalOpenRef.current = true;
+    } else if (!anyModalOpen) {
+      modalOpenRef.current = false;
+    }
+  }, [anyModalOpen]);
+
+  useEffect(() => {
+    const onPop = () => {
+      if (modalOpenRef.current) {
+        setShowAuthModal(false); setShowContactModal(false);
+        setShowFeedbackModal(false); setShowEventGoerSignup(false);
+        setMobileMenuOpen(false);
+        modalOpenRef.current = false;
+        return;
+      }
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
