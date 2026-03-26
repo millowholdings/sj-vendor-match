@@ -4549,18 +4549,8 @@ function AppInner() {
         )}
         <nav className="nav">
           <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
-          {/* Quick nav + Auth + Hamburger on right */}
+          {/* Auth + Hamburger on right */}
           <div style={{display:'flex',alignItems:'center',gap:8}}>
-          {authUser && vendorProfile && (
-            <button onClick={()=>{setTab('calendar');window.scrollTo({top:0});}} style={{background:'none',border:'1px solid rgba(200,168,80,0.3)',color:'#c8a850',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
-              Vendor Calendar
-            </button>
-          )}
-          {authUser && userEvents.length > 0 && (
-            <button onClick={()=>{setTab('host-calendar');window.scrollTo({top:0});}} style={{background:'none',border:'1px solid rgba(200,168,80,0.3)',color:'#c8a850',borderRadius:6,padding:'6px 12px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
-              Host Calendar
-            </button>
-          )}
           {authUser ? (
             <button onClick={handleLogout} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log Out</button>
           ) : (
@@ -4603,14 +4593,14 @@ function AppInner() {
                 <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Join as Vendor</button>
                 <button className={`mobile-menu-item${tab==='opportunities'?' active':''}`} onClick={()=>navTo('opportunities')}>Opportunities</button>
                 <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
-                <button className={`mobile-menu-item${tab==='calendar'?' active':''}`} onClick={()=>navTo('calendar')}>My Calendar</button>
+                {authUser && <button className={`mobile-menu-item${tab==='calendar'?' active':''}`} onClick={()=>navTo('calendar')}>My Calendar</button>}
               </div>
               <div className="mobile-menu-section">
                 <div className="mobile-menu-label">Hosts</div>
                 <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Post Event</button>
                 <button className={`mobile-menu-item${tab==='matches'?' active':''}`} onClick={()=>navTo('matches')}>Browse Vendors</button>
                 <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
-                <button className={`mobile-menu-item${tab==='host-calendar'?' active':''}`} onClick={()=>navTo('host-calendar')}>My Calendar</button>
+                {authUser && <button className={`mobile-menu-item${tab==='host-calendar'?' active':''}`} onClick={()=>navTo('host-calendar')}>My Calendar</button>}
               </div>
               <div className="mobile-menu-section">
                 <button className={`mobile-menu-item${tab==='pricing'?' active':''}`} onClick={()=>navTo('pricing')}>Pricing</button>
@@ -4681,9 +4671,9 @@ function AppInner() {
             <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:1200,width:'100%',margin:'0 auto',padding:'32px 32px 0'}}>
               {[
                 { title:'Vendors', desc:'Create your profile, set your travel radius, and get matched with events looking for what you offer.',
-                  buttons:[{label:'Join as a Vendor',tab:'vendor'},{label:'Browse Opportunities',tab:'opportunities'}] },
+                  buttons:[{label:'Join as a Vendor',tab:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
-                  buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'}] },
+                  buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
                 { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup'}] },
               ].map(card=>(
