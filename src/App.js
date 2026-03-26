@@ -3923,7 +3923,7 @@ function AppInner() {
     const url = newTab === 'home' ? '/' : '/' + newTab;
     window.history.pushState({ tab: newTab }, '', url);
   };
-  const modalOpenRef = React.useRef(false);
+  const modalOpenRef = useRef(false);
   const anyModalOpen = showAuthModal || showContactModal || showFeedbackModal || showEventGoerSignup || mobileMenuOpen;
 
   // Push history when a modal opens, so back button closes it
