@@ -44,6 +44,8 @@ const EVENT_TYPES = [
 ];
 const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration"];
 
+const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Other"];
+const SERVICE_DURATIONS = ["1 hour","2 hours","3 hours","4 hours","Half day","Full day","Other"];
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 
 // Zip code lat/lng for South Jersey distance calculation
@@ -129,6 +131,13 @@ function dbVendorToApp(v) {
     responseTime:      m.responseTime   || "",
     bookingLeadTime:   m.bookingLeadTime|| "",
     eventFrequency:    m.eventFrequency || "",
+    isServiceProvider: m.isServiceProvider || false,
+    serviceType:       m.serviceType    || "",
+    serviceRateMin:    m.serviceRateMin || "",
+    serviceRateMax:    m.serviceRateMax || "",
+    serviceRateType:   m.serviceRateType|| "fixed",
+    minBookingDuration:m.minBookingDuration || "",
+    serviceDescription:m.serviceDescription || "",
   };
 }
 
@@ -160,6 +169,7 @@ function dbEventToApp(e) {
     userId:           e.user_id           || "",
     adminNotes:       e.admin_notes       || "",
     rejectionReason:  e.rejection_reason  || "",
+    servicesNeeded:   (() => { try { return typeof e.services_needed === 'string' ? JSON.parse(e.services_needed) : (e.services_needed || []); } catch { return []; } })(),
   };
 }
 
@@ -654,7 +664,8 @@ const DEFAULT_VENDOR_FORM = {
   otherCategory:'', otherEventType:'',
   responseTime:'24hrs', bookingLeadTime:'2weeks', eventFrequency:'flexible', emailFrequency:'weekly',
   setupTime:30, tableSize:'6ft', needsElectric:false,
-  yearsActive:'', password:''
+  yearsActive:'', password:'',
+  isServiceProvider:false, serviceType:'', serviceRateMin:'', serviceRateMax:'', serviceRateType:'fixed', minBookingDuration:'1 hour', serviceDescription:''
 };
 
 function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
@@ -829,6 +840,47 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 
 
       <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Service Provider (Optional)</h3>
+      <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>If you provide event services like music, photography, or entertainment, fill out this section.</p>
+      <div className="form-group" style={{marginBottom:12}}>
+        <label>Are you a service provider?</label>
+        <div style={{display:'flex',gap:10}}>
+          <button type="button" onClick={()=>set('isServiceProvider',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isServiceProvider?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isServiceProvider?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
+          <button type="button" onClick={()=>set('isServiceProvider',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isServiceProvider?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isServiceProvider?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
+        </div>
+      </div>
+      {form.isServiceProvider && (
+        <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:16}}>
+          <div className="form-grid" style={{gap:10}}>
+            <div className="form-group"><label>Service Type *</label>
+              <select value={form.serviceType} onChange={e=>set('serviceType',e.target.value)}>
+                <option value="">Select your service...</option>
+                {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Minimum Booking Duration</label>
+              <select value={form.minBookingDuration} onChange={e=>set('minBookingDuration',e.target.value)}>
+                {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Rate Type</label>
+              <select value={form.serviceRateType} onChange={e=>set('serviceRateType',e.target.value)}>
+                <option value="fixed">Fixed Rate</option>
+                <option value="range">Rate Range</option>
+                <option value="quote">Quote Based</option>
+              </select>
+            </div>
+            {form.serviceRateType==='fixed' && <div className="form-group"><label>Your Rate</label><input placeholder="e.g. $500/event" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>}
+            {form.serviceRateType==='range' && <>
+              <div className="form-group"><label>Starting At</label><input placeholder="e.g. $200" value={form.serviceRateMin} onChange={e=>set('serviceRateMin',e.target.value)} /></div>
+              <div className="form-group"><label>Up To</label><input placeholder="e.g. $800" value={form.serviceRateMax} onChange={e=>set('serviceRateMax',e.target.value)} /></div>
+            </>}
+          </div>
+          <div className="form-group" style={{marginTop:8}}><label>What You Offer</label><textarea placeholder="Describe your service — style, equipment provided, what's included..." value={form.serviceDescription} onChange={e=>set('serviceDescription',e.target.value)} style={{minHeight:60}} /></div>
+        </div>
+      )}
+
+      <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Communication & Availability</h3>
       <div className="form-grid">
 
@@ -919,7 +971,7 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
   applyByDate:'', eventLink:'',
-  budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false,
+  budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[],
   vendorDiscovery:'both', password:''
 };
 
@@ -1165,6 +1217,48 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
         otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
       />
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Services Needed</h3>
+      <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>Need entertainment, photography, or other services? Add them below.</p>
+      {form.servicesNeeded.map((svc, idx) => (
+        <div key={idx} style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:12}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}}>
+            <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>Service {idx+1}</div>
+            <button onClick={()=>set('servicesNeeded',form.servicesNeeded.filter((_,i)=>i!==idx))} style={{background:'none',border:'none',color:'#c0392b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif'}}>Remove</button>
+          </div>
+          <div className="form-grid" style={{gap:10}}>
+            <div className="form-group"><label>Service Type</label>
+              <select value={svc.type} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],type:e.target.value};set('servicesNeeded',n);}}>
+                <option value="">Select service...</option>
+                {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Duration</label>
+              <select value={svc.duration} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],duration:e.target.value};set('servicesNeeded',n);}}>
+                {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
+              </select>
+            </div>
+            <div className="form-group"><label>Budget</label>
+              <select value={svc.budgetType} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],budgetType:e.target.value};set('servicesNeeded',n);}}>
+                <option value="fixed">Fixed Amount</option>
+                <option value="range">Budget Range</option>
+                <option value="open">Open to Quotes</option>
+              </select>
+            </div>
+            {svc.budgetType==='fixed' && <div className="form-group"><label>Amount</label><input type="text" placeholder="e.g. $500" value={svc.budgetAmount||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],budgetAmount:e.target.value};set('servicesNeeded',n);}} /></div>}
+            {svc.budgetType==='range' && <>
+              <div className="form-group"><label>Min</label><input type="text" placeholder="e.g. $200" value={svc.budgetMin||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],budgetMin:e.target.value};set('servicesNeeded',n);}} /></div>
+              <div className="form-group"><label>Max</label><input type="text" placeholder="e.g. $800" value={svc.budgetMax||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],budgetMax:e.target.value};set('servicesNeeded',n);}} /></div>
+            </>}
+          </div>
+          <div className="form-group" style={{marginTop:8}}><label>Specific Requirements</label><input placeholder="Any special needs or requests for this service..." value={svc.notes||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],notes:e.target.value};set('servicesNeeded',n);}} /></div>
+        </div>
+      ))}
+      <button onClick={()=>set('servicesNeeded',[...form.servicesNeeded,{type:'',duration:'2 hours',budgetType:'open',budgetAmount:'',budgetMin:'',budgetMax:'',notes:''}])}
+        style={{background:'#fff',border:'2px dashed #e8ddd0',borderRadius:10,padding:'12px 20px',width:'100%',cursor:'pointer',fontSize:14,fontWeight:600,color:'#7a6a5a',fontFamily:'DM Sans,sans-serif',marginBottom:16}}>
+        + Add a Service
+      </button>
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />How Would You Like to Find Vendors?</h3>
@@ -2010,6 +2104,17 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
               <Field label="Booking Lead Time" val={v.bookingLeadTime} />
             </div>
           </div>
+
+          {/* Service Provider info */}
+          {v.isServiceProvider && (
+            <div style={{marginBottom:24,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'2px solid #e8c97a',paddingBottom:6}}>Service Provider</div>
+              <Field label="Service" val={v.serviceType} />
+              <Field label="Rate" val={v.serviceRateType==='quote' ? 'Quote based' : v.serviceRateType==='range' ? `${v.serviceRateMin} – ${v.serviceRateMax}` : v.serviceRateMin} />
+              <Field label="Min Duration" val={v.minBookingDuration} />
+              {v.serviceDescription && <Field label="What's Included" val={v.serviceDescription} />}
+            </div>
+          )}
 
           {/* Social links */}
           {socials.length > 0 && (
@@ -3398,6 +3503,19 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
                           </div>
                         </div>
                       )}
+                      {opp.servicesNeeded && opp.servicesNeeded.length > 0 && (
+                        <div style={{marginBottom:14}}>
+                          <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600, marginBottom:6 }}>Services Needed</div>
+                          {opp.servicesNeeded.map((svc,i)=>(
+                            <div key={i} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px',marginBottom:6,fontSize:13}}>
+                              <strong style={{color:'#1a1410'}}>{svc.type || 'Service'}</strong>
+                              <span style={{color:'#7a6a5a'}}> · {svc.duration}</span>
+                              <span style={{color:'#7a6a5a'}}> · Budget: {svc.budgetType==='open' ? 'Open to quotes' : svc.budgetType==='fixed' ? (svc.budgetAmount||'TBD') : (svc.budgetMin||'?')+' – '+(svc.budgetMax||'?')}</span>
+                              {svc.notes && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>{svc.notes}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <div style={{ display:"flex", gap:10, flexWrap:'wrap' }}>
                         {showSection==='open' && (opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
                           <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, minWidth:140, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
@@ -4063,6 +4181,13 @@ function AppInner() {
       needsElectric: form.needsElectric,
       yearsActive: form.yearsActive || null,
       allCategories: form.categories,
+      isServiceProvider: form.isServiceProvider || false,
+      serviceType: form.serviceType || null,
+      serviceRateMin: form.serviceRateMin || null,
+      serviceRateMax: form.serviceRateMax || null,
+      serviceRateType: form.serviceRateType || 'fixed',
+      minBookingDuration: form.minBookingDuration || null,
+      serviceDescription: form.serviceDescription || null,
     };
     const vendorPayload = {
       name:                form.businessName,
@@ -4225,6 +4350,7 @@ function AppInner() {
       event_link: form.eventLink || null,
       is_ticketed: form.isTicketedEvent || false,
       ticket_price: form.isTicketedEvent ? (form.ticketPrice || null) : null,
+      services_needed: form.servicesNeeded.length > 0 ? JSON.stringify(form.servicesNeeded) : null,
       allow_duplicate_categories: form.allowDuplicateCategories,
       vendor_discovery: form.vendorDiscovery || 'both',
       ...(hostUserId ? { user_id: hostUserId } : {}),

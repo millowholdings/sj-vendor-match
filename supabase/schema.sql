@@ -127,6 +127,9 @@ alter table events add column if not exists is_ticketed      boolean not null de
 alter table events add column if not exists ticket_price     text;
 create index if not exists events_status_idx on events (status);
 
+-- ─── Events: services needed ────────────────────────────────────────────────
+alter table events add column if not exists services_needed jsonb;
+
 -- ─── Event Goers ────────────────────────────────────────────────────────────
 create table if not exists event_goers (
   id              serial primary key,
