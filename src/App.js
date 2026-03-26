@@ -4148,6 +4148,18 @@ function AppInner() {
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
+              {/* Auth — first item */}
+              <div className="mobile-menu-section">
+                {authUser ? (
+                  <>
+                    {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
+                    {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
+                    <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
+                  </>
+                ) : (
+                  <button className="mobile-menu-item" style={{color:'#c8a850',fontWeight:700}} onClick={()=>{setShowAuthModal(true);setMobileMenuOpen(false);}}>Log In / Sign Up</button>
+                )}
+              </div>
               <div className="mobile-menu-section">
                 <button className={`mobile-menu-item${tab==='home'?' active':''}`} onClick={()=>navTo('home')}>Home</button>
                 <button className={`mobile-menu-item${tab==='upcoming-markets'?' active':''}`} onClick={()=>navTo('upcoming-markets')}>Upcoming Markets</button>
@@ -4170,17 +4182,6 @@ function AppInner() {
                 <button className={`mobile-menu-item${tab==='pricing'?' active':''}`} onClick={()=>navTo('pricing')}>Pricing</button>
                 <button className="mobile-menu-item" onClick={()=>{setShowContactModal(true);setMobileMenuOpen(false);}}>Contact Us</button>
                 <button className={`mobile-menu-item${tab==='tos'?' active':''}`} onClick={()=>navTo('tos')}>Terms</button>
-              </div>
-              <div className="mobile-menu-section">
-                {authUser ? (
-                  <>
-                    {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
-                    {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
-                    <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
-                  </>
-                ) : (
-                  <button className="mobile-menu-item" style={{color:'#c8a850',fontWeight:700}} onClick={()=>{setShowAuthModal(true);setMobileMenuOpen(false);}}>Log In / Sign Up</button>
-                )}
               </div>
             </div>
           )}
