@@ -46,6 +46,16 @@ const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Recepti
 
 const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Other"];
 const SERVICE_DURATIONS = ["1 hour","2 hours","3 hours","4 hours","Half day","Full day","Other"];
+const SERVICE_CATEGORIES = ["Entertainment","Visual & Media","Kids & Activities","Food & Beverage Services","Wellness & Beauty Services","Decor & Setup","Other Services"];
+const SERVICE_SUBCATEGORIES = {
+  "Entertainment": ["Solo Acoustic","Acoustic Duo","Full Band","DJ (with MC)","DJ (Music Only)","Cover Band","Jazz Ensemble","Classical/String Quartet","Karaoke Host","Comedian","Magician","Strolling Entertainer","Fire Performer","Other"],
+  "Visual & Media": ["Event Photography","Videography","Photo Booth Operator","Portrait Sessions","Drone Photography","Live Painter","Other"],
+  "Kids & Activities": ["Face Painter","Balloon Artist","Caricature Artist","Bounce House/Inflatables","Character Performer","Crafts Station","Other"],
+  "Food & Beverage Services": ["Mobile Bar/Bartender","Food Truck","Catering","Coffee/Espresso Cart","Cotton Candy/Popcorn","Ice Cream Cart","Other"],
+  "Wellness & Beauty Services": ["Henna Artist","Airbrush Makeup","Hair Styling","Massage Therapist","Tarot/Palm Reader","Other"],
+  "Decor & Setup": ["Event Decorator","Balloon Garland/Arch","Tent/Canopy Rental","Lighting Setup","Sound System Rental","Other"],
+  "Other Services": ["Other"],
+};
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 
 // Zip code lat/lng for South Jersey distance calculation
@@ -654,7 +664,9 @@ function getSessionId() {
 const DEFAULT_VENDOR_FORM = {
   businessName:'', ownerName:'', email:'', phone:'',
   homeZip:'', radius:20,
+  vendorType:{market:false, service:false},
   categories:[], subcategories:[],
+  serviceCategories:[], serviceSubcategories:[],
   description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
   eventTypes:[],
   insurance:false,
@@ -770,13 +782,75 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Categories & Specialties</h3>
-      <CategorySubcategoryPicker
-        categories={form.categories} subcategories={form.subcategories}
-        onCategoriesChange={v=>set('categories',v)} onSubcategoriesChange={v=>set('subcategories',v)}
-        otherCategory={form.otherCategory} onOtherCategoryChange={v=>set('otherCategory',v)}
-        otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
-      />
+      <h3 className="form-section-title"><span className="dot" />What Type of Vendor Are You?</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply — you can be both!</p>
+      <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
+        <div onClick={()=>set('vendorType',{...form.vendorType,market:!form.vendorType.market})}
+          style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.market?'#c8a850':'#e8ddd0'}`,background:form.vendorType.market?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Market Vendor</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products at events and pay booth fees</div>
+          {form.vendorType.market && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
+        </div>
+        <div onClick={()=>set('vendorType',{...form.vendorType,service:!form.vendorType.service})}
+          style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.service?'#c8a850':'#e8ddd0'}`,background:form.vendorType.service?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Event Service Provider</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I provide services and get paid by hosts</div>
+          {form.vendorType.service && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
+        </div>
+      </div>
+
+      {form.vendorType.market && (
+        <>
+          <h3 className="form-section-title"><span className="dot" />Product Categories</h3>
+          <CategorySubcategoryPicker
+            categories={form.categories} subcategories={form.subcategories}
+            onCategoriesChange={v=>set('categories',v)} onSubcategoriesChange={v=>set('subcategories',v)}
+            otherCategory={form.otherCategory} onOtherCategoryChange={v=>set('otherCategory',v)}
+            otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
+          />
+        </>
+      )}
+
+      {form.vendorType.service && (
+        <>
+          <h3 className="form-section-title" style={{marginTop:form.vendorType.market?24:0}}><span className="dot" />Service Categories</h3>
+          <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Select the types of services you provide.</p>
+          <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:16}}>
+            {SERVICE_CATEGORIES.map(cat=>(
+              <button key={cat} onClick={()=>{
+                const has = form.serviceCategories.includes(cat);
+                set('serviceCategories', has ? form.serviceCategories.filter(c=>c!==cat) : [...form.serviceCategories, cat]);
+                if (has) set('serviceSubcategories', form.serviceSubcategories.filter(s=>!(SERVICE_SUBCATEGORIES[cat]||[]).includes(s)));
+              }} style={{
+                padding:'8px 16px',borderRadius:20,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',
+                border:'1.5px solid',transition:'all 0.15s',
+                background:form.serviceCategories.includes(cat)?'#c8a850':'#fff',
+                color:form.serviceCategories.includes(cat)?'#1a1410':'#7a6a5a',
+                borderColor:form.serviceCategories.includes(cat)?'#c8a850':'#e8ddd0',
+              }}>{cat}</button>
+            ))}
+          </div>
+          {form.serviceCategories.map(cat=>(
+            <div key={cat} style={{marginBottom:12}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:6}}>{cat}</div>
+              <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                {(SERVICE_SUBCATEGORIES[cat]||[]).map(sub=>(
+                  <button key={sub} onClick={()=>{
+                    const has = form.serviceSubcategories.includes(sub);
+                    set('serviceSubcategories', has ? form.serviceSubcategories.filter(s=>s!==sub) : [...form.serviceSubcategories, sub]);
+                  }} style={{
+                    padding:'5px 12px',borderRadius:16,fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif',
+                    border:'1px solid',
+                    background:form.serviceSubcategories.includes(sub)?'#1a1410':'#fff',
+                    color:form.serviceSubcategories.includes(sub)?'#e8c97a':'#5a4a3a',
+                    borderColor:form.serviceSubcategories.includes(sub)?'#1a1410':'#e8ddd0',
+                  }}>{sub}</button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </>
+      )}
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Event Fit</h3>
@@ -971,7 +1045,7 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
   applyByDate:'', eventLink:'',
-  budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[],
+  budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
   vendorDiscovery:'both', password:''
 };
 
@@ -1207,19 +1281,42 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Vendor Categories You Need</h3>
-      <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>Select the categories and specific types of vendors you want at your event.</p>
-      <CategorySubcategoryPicker
-        categories={form.vendorCategories}
-        subcategories={form.vendorSubcategories}
-        onCategoriesChange={v=>set('vendorCategories',v)}
-        onSubcategoriesChange={v=>set('vendorSubcategories',v)}
-        otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
-        otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
-      />
+      <h3 className="form-section-title"><span className="dot" />What Type of Vendors Do You Need?</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply for your event.</p>
+      <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+        <div onClick={()=>set('needsMarketVendors',!form.needsMarketVendors)}
+          style={{flex:'1 1 220px',padding:'14px 18px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.needsMarketVendors?'#c8a850':'#e8ddd0'}`,background:form.needsMarketVendors?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
+          <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>Market Vendors</div>
+          <div style={{fontSize:12,color:'#7a6a5a'}}>Product sellers who pay booth fees</div>
+          {form.needsMarketVendors && <div style={{color:'#c8a850',fontSize:16,marginTop:4}}>&#10003;</div>}
+        </div>
+        <div onClick={()=>set('needsServiceProviders',!form.needsServiceProviders)}
+          style={{flex:'1 1 220px',padding:'14px 18px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.needsServiceProviders?'#c8a850':'#e8ddd0'}`,background:form.needsServiceProviders?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
+          <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>Event Service Providers</div>
+          <div style={{fontSize:12,color:'#7a6a5a'}}>Entertainment, photography, etc. — you pay them</div>
+          {form.needsServiceProviders && <div style={{color:'#c8a850',fontSize:16,marginTop:4}}>&#10003;</div>}
+        </div>
+      </div>
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Event Services Needed</h3>
+      {form.needsMarketVendors && (
+        <>
+          <h3 className="form-section-title"><span className="dot" />Market Vendor Categories</h3>
+          <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>Select the product categories you want at your event.</p>
+          <CategorySubcategoryPicker
+            categories={form.vendorCategories}
+            subcategories={form.vendorSubcategories}
+            onCategoriesChange={v=>set('vendorCategories',v)}
+            onSubcategoriesChange={v=>set('vendorSubcategories',v)}
+            otherCategory={form.otherVendorCategory} onOtherCategoryChange={v=>set('otherVendorCategory',v)}
+            otherSubcategories={otherSubcategories} onOtherSubcategoryChange={(cat,val)=>setOtherSubcategories(p=>{const n={...p};if(val===null)delete n[cat];else n[cat]=val;return n;})}
+          />
+        </>
+      )}
+
+      {form.needsServiceProviders && (
+        <>
+          <hr className="form-divider" />
+          <h3 className="form-section-title"><span className="dot" />Event Services Needed</h3>
       <p style={{ color:'#7a6a5a', fontSize:14, marginBottom:16 }}>Need entertainment, photography, or other services? Add them below.</p>
       {form.servicesNeeded.map((svc, idx) => (
         <div key={idx} style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:12}}>
@@ -1259,6 +1356,8 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         style={{background:'#fff',border:'2px dashed #e8ddd0',borderRadius:10,padding:'12px 20px',width:'100%',cursor:'pointer',fontSize:14,fontWeight:600,color:'#7a6a5a',fontFamily:'DM Sans,sans-serif',marginBottom:16}}>
         + Add a Service
       </button>
+        </>
+      )}
 
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />How Would You Like to Find Vendors?</h3>
@@ -4215,6 +4314,9 @@ function AppInner() {
       needsElectric: form.needsElectric,
       yearsActive: form.yearsActive || null,
       allCategories: form.categories,
+      vendorType: form.vendorType || {market:false,service:false},
+      serviceCategories: form.serviceCategories || [],
+      serviceSubcategories: form.serviceSubcategories || [],
       isServiceProvider: form.isServiceProvider || false,
       serviceType: form.serviceType || null,
       serviceRateMin: form.serviceRateMin || null,
