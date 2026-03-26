@@ -666,7 +666,7 @@ const DEFAULT_VENDOR_FORM = {
   homeZip:'', radius:20,
   vendorType:{market:false, service:false},
   categories:[], subcategories:[],
-  serviceCategories:[], serviceSubcategories:[],
+  serviceCategories:[], serviceSubcategories:[], serviceOtherText:{},
   description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
   eventTypes:[],
   insurance:false,
@@ -847,6 +847,12 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
                   }}>{sub}</button>
                 ))}
               </div>
+              {form.serviceSubcategories.includes('Other') && (SERVICE_SUBCATEGORIES[cat]||[]).includes('Other') && (
+                <input placeholder={`Describe your ${cat} service...`}
+                  value={(form.serviceOtherText||{})[cat]||''}
+                  onChange={e=>set('serviceOtherText',{...(form.serviceOtherText||{}), [cat]:e.target.value})}
+                  style={{width:'100%',marginTop:8,border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />
+              )}
             </div>
           ))}
         </>
@@ -931,11 +937,13 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
                 <option value="">Select your service...</option>
                 {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
               </select>
+              {form.serviceType==='Other' && <input placeholder="Describe your service..." value={form.serviceTypeOther||''} onChange={e=>set('serviceTypeOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
             </div>
             <div className="form-group"><label>Minimum Booking Duration</label>
               <select value={form.minBookingDuration} onChange={e=>set('minBookingDuration',e.target.value)}>
                 {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
               </select>
+              {form.minBookingDuration==='Other' && <input placeholder="Describe your availability..." value={form.minBookingDurationOther||''} onChange={e=>set('minBookingDurationOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
             </div>
             <div className="form-group"><label>Rate Type</label>
               <select value={form.serviceRateType} onChange={e=>set('serviceRateType',e.target.value)}>
@@ -1330,11 +1338,13 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
                 <option value="">Select service...</option>
                 {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
               </select>
+              {svc.type==='Other' && <input placeholder="Describe the service you need..." value={svc.otherType||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],otherType:e.target.value};set('servicesNeeded',n);}} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
             </div>
             <div className="form-group"><label>Duration</label>
               <select value={svc.duration} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],duration:e.target.value};set('servicesNeeded',n);}}>
                 {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
               </select>
+              {svc.duration==='Other' && <input placeholder="Describe duration needed..." value={svc.otherDuration||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],otherDuration:e.target.value};set('servicesNeeded',n);}} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
             </div>
             <div className="form-group"><label>Budget</label>
               <select value={svc.budgetType} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],budgetType:e.target.value};set('servicesNeeded',n);}}>
