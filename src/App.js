@@ -4133,13 +4133,20 @@ function AppInner() {
         )}
         <nav className="nav">
           <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
-          {/* Hamburger button — mobile only */}
+          {/* Auth + Hamburger on right */}
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+          {authUser ? (
+            <button onClick={handleLogout} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log Out</button>
+          ) : (
+            <button onClick={()=>setShowAuthModal(true)} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log In / Sign Up</button>
+          )}
           <button className="hamburger-btn" onClick={()=>setMobileMenuOpen(!mobileMenuOpen)} aria-label="Menu">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round">
               {mobileMenuOpen ? <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></> : <><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>}
             </svg>
           </button>
-          {/* Mobile menu panel */}
+          </div>
+          {/* Menu panel */}
           {mobileMenuOpen && (
             <div className="mobile-menu">
               <div className="mobile-menu-header">
