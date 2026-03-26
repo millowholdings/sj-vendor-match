@@ -2600,6 +2600,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
 
+  // Auto-unlock when admin email is detected (handles late auth load)
+  useEffect(() => { if (isAdmin) setUnlocked(true); }, [isAdmin]);
+
   const attemptUnlock = () => {
     if (pw === ADMIN_PW) { sessionStorage.setItem('sjvm_admin','1'); setUnlocked(true); }
     else { setPwError(true); setPw(''); }
@@ -4304,6 +4307,7 @@ function AppInner() {
                   <>
                     {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
                     {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
+                    {isAdmin && <button className={`mobile-menu-item${tab==='admin'?' active':''}`} onClick={()=>navTo('admin')} style={{color:'#e8c97a'}}>Admin Panel</button>}
                     <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
                   </>
                 ) : (
