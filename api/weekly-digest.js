@@ -86,7 +86,7 @@ module.exports = async function handler(req, res) {
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'hello@southjerseyvendormarket.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
   const today = new Date().toISOString().split('T')[0];

@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -15,14 +16,29 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
 
+  // Save to Supabase
+  const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try {
+      const supabase = createClient(supabaseUrl, supabaseKey);
+      await supabase.from('contact_submissions').insert({
+        name: name || null,
+        email,
+        subject: subject || null,
+        message,
+      });
+    } catch (e) { console.error('Failed to save contact to DB:', e); }
+  }
+
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'bookings@southjerseyvendormarket.com';
-  const supportAddr = 'support@southjerseyvendormarket.com';
+  const fromAddr = process.env.RESEND_FROM_EMAIL || 'hello@southjerseyvendormarket.com';
+  const adminEmail = 'millowholdings@gmail.com';
 
   try {
     const { error } = await resend.emails.send({
-      from: `SJVM Contact Form <${fromAddr}>`,
-      to: [supportAddr],
+      from: `South Jersey Vendor Market <${fromAddr}>`,
+      to: [adminEmail],
       reply_to: email,
       subject: `[Contact Form] ${subject || 'New message'} — from ${name || email}`,
       html: `
@@ -30,10 +46,11 @@ module.exports = async function handler(req, res) {
   <h2 style="color:#1a1410">New Contact Form Submission</h2>
   <table style="border-collapse:collapse;width:100%">
     <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold;width:80px">Name:</td><td style="padding:8px">${name || '—'}</td></tr>
-    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Email:</td><td style="padding:8px"><a href="mailto:${email}">${email}</a></td></tr>
+    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Email:</td><td style="padding:8px">${email}</td></tr>
     <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Subject:</td><td style="padding:8px">${subject || '—'}</td></tr>
   </table>
   <div style="margin-top:16px;padding:16px;background:#f5f0ea;border-radius:8px;white-space:pre-wrap">${message}</div>
+  <div style="margin-top:16px;font-size:12px;color:#a89a8a">Reply directly to this email to respond to ${name || 'the submitter'}.</div>
 </div>`,
     });
     if (error) {

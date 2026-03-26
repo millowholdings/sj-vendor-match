@@ -150,6 +150,16 @@ create policy "Public read event_goers" on event_goers for select using (true);
 create policy "Anon insert event_goers" on event_goers for insert with check (true);
 create policy "Anon update event_goers" on event_goers for update using (true);
 
+-- ─── Contact form submissions ───────────────────────────────────────────────
+create table if not exists contact_submissions (
+  id         serial primary key,
+  name       text,
+  email      text not null,
+  subject    text,
+  message    text not null,
+  created_at timestamptz not null default now()
+);
+
 -- ─── Admin removal log ──────────────────────────────────────────────────────
 create table if not exists admin_removal_log (
   id          serial primary key,
