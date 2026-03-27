@@ -4612,6 +4612,21 @@ function AppInner() {
     if (newVendor?.id) {
       setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other', home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories?.length ? form.categories : form.serviceCategories || [] }, subcategories: form.subcategories || [] }, ...p]);
     }
+    // Send notification emails
+    try {
+      await fetch('/api/send-vendor-notification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: form.businessName,
+          contactName: form.ownerName,
+          vendorEmail: form.email,
+          phone: form.phone,
+          category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other',
+          vendorType: form.vendorType?.market && form.vendorType?.service ? 'both' : form.vendorType?.service ? 'service' : 'market',
+        }),
+      });
+    } catch (e) { console.error('Notification email failed:', e); }
+
     setVendorConfirm({ ref: generateRef(), email: form.email, name: form.businessName });
     setVendorSuccess(true);
     window.scrollTo({top:0, behavior:"smooth"});
