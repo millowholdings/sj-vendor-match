@@ -1493,6 +1493,10 @@ function EventGoerSignupModal({ onClose, onSuccess, defaultEmail, defaultName })
     }, { onConflict: 'email' });
     if (dbErr) { setError('Failed to save. Please try again.'); setSaving(false); return; }
     setSaved(true); setSaving(false);
+    // Send welcome email
+    fetch('/api/send-guest-welcome', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:form.email, name:form.name, zip:form.zip, radius:form.radius, eventTypes:form.eventTypes, frequency: form.wantsAlerts ? form.frequency : 'none' }),
+    }).catch(()=>{});
     if (onSuccess) onSuccess();
   };
 
@@ -4839,6 +4843,14 @@ function AppInner() {
         });
       } catch (e) { console.error('Concierge email failed:', e); }
     }
+    // Send host confirmation email
+    try {
+      await fetch('/api/send-host-confirmation', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostEmail: form.email, hostName: form.contactName, eventName: form.eventName || form.eventType, eventDate: form.date, eventType: form.eventType, isConcierge: form.fullServiceBooking }),
+      });
+    } catch (e) { console.error('Host confirmation email failed:', e); }
+
     // Pending events don't appear in public feed — they go through admin approval
     // Only add to user's own events list for their dashboard
     if (newEvent) {
