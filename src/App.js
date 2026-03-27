@@ -37,12 +37,18 @@ const SUBCATEGORIES = {
 };
 
 const EVENT_TYPES = [
-  "Pop-Up Market", "Vendor Market", "Craft Fair", "Food Festival",
-  "Community Festival", "Flea Market", "Farmers Market", "Art Show",
-  "Holiday Market", "Night Market", "Sip & Shop", "Fundraiser",
-  "Grand Opening", "Block Party", "Girls Night Out", "Other"
+  "Pop-Up & Vendor Market", "Craft & Art Fair", "Farmers & Flea Market",
+  "Holiday Market", "Night Market", "Sip & Shop", "Food Festival",
+  "Community Festival", "Fundraiser"
 ];
-const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration"];
+const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Girls Night Out","Other"];
+const EVENT_TYPE_MAP = {
+  "Pop-Up Market":"Pop-Up & Vendor Market","Vendor Market":"Pop-Up & Vendor Market",
+  "Craft Fair":"Craft & Art Fair","Art Show":"Craft & Art Fair",
+  "Flea Market":"Farmers & Flea Market","Farmers Market":"Farmers & Flea Market",
+  "Grand Opening":"Community Festival","Block Party":"Community Festival",
+  "Girls Night Out":"Sip & Shop","Other":"Community Festival",
+};
 
 const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Other"];
 const SERVICE_DURATIONS = ["1 hour","2 hours","3 hours","4 hours","Half day","Full day","Other"];
@@ -155,7 +161,7 @@ function dbEventToApp(e) {
   return {
     id:               e.id,
     eventName:        e.event_name,
-    eventType:        REMOVED_EVENT_TYPES.includes(e.event_type) ? 'Community Event' : e.event_type,
+    eventType:        EVENT_TYPE_MAP[e.event_type] || (REMOVED_EVENT_TYPES.includes(e.event_type) ? 'Community Festival' : e.event_type),
     zip:              e.zip,
     date:             e.date,
     startTime:        e.start_time ? e.start_time.slice(0, 5) : "",
