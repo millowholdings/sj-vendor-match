@@ -4865,6 +4865,10 @@ function AppInner() {
         body: JSON.stringify({ hostEmail: form.email, hostName: form.contactName, eventName: form.eventName || form.eventType, eventDate: form.date, eventType: form.eventType, isConcierge: form.fullServiceBooking }),
       });
     } catch (e) { console.error('Host confirmation email failed:', e); }
+    // Notify admin of new event submission
+    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`New Event Submitted: ${form.eventName||form.eventType}${form.fullServiceBooking?' [CONCIERGE]':''}`, message:`Host: ${form.contactName} (${form.email})\nEvent: ${form.eventName||form.eventType}\nType: ${form.eventType}\nDate: ${form.date}\nZip: ${form.eventZip}\n${form.fullServiceBooking?'CONCIERGE REQUEST — requires follow-up\n':''}Review in admin panel.` }),
+    }).catch(()=>{});
 
     // Pending events don't appear in public feed — they go through admin approval
     // Only add to user's own events list for their dashboard
@@ -5324,6 +5328,12 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
           : `❌ Booking declined. ${vendorMsg ? 'Reason: ' + vendorMsg : 'The vendor is unavailable for this date.'} We recommend messaging other vendors.`;
         return {...c, status: status==='accepted'?'booked':'active', messages: [...c.messages, {id:Date.now(), from:'system', text: msg, ts:new Date().toISOString()}]};
       }));
+      // Email host about booking response
+      if (req.hostEmail) {
+        fetch('/api/send-booking-response', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ hostEmail:req.hostEmail, hostName:req.hostName, vendorName:req.vendorName, vendorCategory:req.vendorCategory, eventName:req.eventName, eventDate:req.eventDate, status, vendorMessage:vendorMsg }),
+        }).catch(()=>{});
+      }
     }
   };
 

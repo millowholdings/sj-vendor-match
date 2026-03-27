@@ -1,4 +1,6 @@
 const { Resend } = require('resend');
+const { createClient } = require('@supabase/supabase-js');
+function logEmail(to, subject, type) { const u=process.env.REACT_APP_SUPABASE_URL||process.env.SUPABASE_URL, k=process.env.SUPABASE_SERVICE_ROLE_KEY||process.env.REACT_APP_SUPABASE_ANON_KEY; if(u&&k) createClient(u,k).from('email_log').insert({to_email:to,subject,email_type:type}).then(()=>{}).catch(()=>{}); }
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,6 +60,7 @@ module.exports = async function handler(req, res) {
   </div>
 </body></html>`,
     });
+    logEmail(adminEmail, `New Vendor Application: ${businessName}`, 'vendor_admin_notification');
   } catch (e) { console.error('Admin notification error:', e); }
 
   // 2. Confirmation email to vendor
@@ -105,6 +108,7 @@ module.exports = async function handler(req, res) {
   </div>
 </body></html>`,
     });
+    logEmail(vendorEmail, `Application Received: ${businessName}`, 'vendor_confirmation');
   } catch (e) { console.error('Vendor confirmation error:', e); }
 
   return res.status(200).json({ success: true });

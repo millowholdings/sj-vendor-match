@@ -160,6 +160,15 @@ create table if not exists contact_submissions (
   created_at timestamptz not null default now()
 );
 
+-- ─── Email log ──────────────────────────────────────────────────────────────
+create table if not exists email_log (
+  id         serial primary key,
+  to_email   text not null,
+  subject    text,
+  email_type text,
+  sent_at    timestamptz not null default now()
+);
+
 -- ─── Admin removal log ──────────────────────────────────────────────────────
 create table if not exists admin_removal_log (
   id          serial primary key,

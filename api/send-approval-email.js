@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { createClient } = require('@supabase/supabase-js');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -75,6 +76,13 @@ module.exports = async function handler(req, res) {
     </div>
   </div>
 </body></html>`;
+
+  // Log to database
+  const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
+  if (supabaseUrl && supabaseKey) {
+    try { const sb = createClient(supabaseUrl, supabaseKey); await sb.from('email_log').insert({ to_email:to, subject, email_type: `${type}_${approved?'approved':'rejected'}` }); } catch(e) { console.error('Email log error:', e); }
+  }
 
   try {
     const { error } = await resend.emails.send({
