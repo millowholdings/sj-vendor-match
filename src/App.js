@@ -3058,18 +3058,32 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (error) { alert('Failed to remove event: ' + error.message); return; }
       setOpps(prev => prev.filter(e => e.id !== id));
       setAllEvents(prev => prev.filter(e => e.id !== id));
-      // Notify host
       if (evt?.contactEmail) {
-        fetch('/api/send-event-rejection', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ hostEmail: evt.contactEmail, hostName: evt.contactName, eventName: evt.eventName, reason: 'Your event has been removed: ' + removeReason }),
-        }).catch(() => {});
+        fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ to:evt.contactEmail, name:evt.contactName, type:'event', entityName:evt.eventName, approved:false, reason:'Your event has been removed: '+removeReason }),
+        }).catch(()=>{});
       }
     } else if (type === 'vendor') {
+      const v = vendors.find(x => x.id === id) || pendingVendors.find(x => x.id === id);
       const { error } = await supabase.from('vendors').delete().eq('id', id);
       if (error) { alert('Failed to remove vendor: ' + error.message); return; }
-      setVendors(prev => prev.filter(v => v.id !== id));
-      setPendingVendors(prev => prev.filter(v => v.id !== id));
+      setVendors(prev => prev.filter(x => x.id !== id));
+      setPendingVendors(prev => prev.filter(x => x.id !== id));
+      if (v?.contactEmail || v?.contact_email) {
+        fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ to:v.contactEmail||v.contact_email, name:v.contactName||v.contact_name||v.name, type:'vendor', entityName:v.name, approved:false, reason:'Your vendor listing has been removed: '+removeReason }),
+        }).catch(()=>{});
+      }
+    } else if (type === 'event_guest') {
+      const g = eventGoers.find(x => x.id === id);
+      const { error } = await supabase.from('event_goers').update({ active: false }).eq('id', id);
+      if (error) { alert('Failed to remove event guest: ' + error.message); return; }
+      setEventGoers(prev => prev.filter(x => x.id !== id));
+      if (g?.email) {
+        fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ to:g.email, name:g.name, type:'vendor', entityName:'Event Guest Account', approved:false, reason:'Your event guest account has been removed: '+removeReason }),
+        }).catch(()=>{});
+      }
     }
     setRemoveDialog(null);
     setRemoveReason('');
@@ -3355,7 +3369,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       {eventGoers.length===0
         ? <div className="empty-state"><div className="big">📬</div><p>No event guests signed up yet.</p></div>
         : <table className="admin-table">
-            <thead><tr><th>Name</th><th>Email</th><th>Zip</th><th>Radius</th><th>Event Types</th><th>Frequency</th><th>Signed Up</th></tr></thead>
+            <thead><tr><th>Name</th><th>Email</th><th>Zip</th><th>Radius</th><th>Event Types</th><th>Frequency</th><th>Signed Up</th><th>Actions</th></tr></thead>
             <tbody>
               {eventGoers.map(eg=>(
                 <tr key={eg.id}>
@@ -3366,6 +3380,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td style={{fontSize:11}}>{(eg.event_types||[]).join(', ')||'—'}</td>
                   <td>{eg.email_frequency}</td>
                   <td style={{fontSize:11}}>{new Date(eg.created_at).toLocaleDateString()}</td>
+                  <td><button onClick={()=>setRemoveDialog({type:'event_guest',id:eg.id,name:eg.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button></td>
                 </tr>
               ))}
             </tbody>
