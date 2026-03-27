@@ -2883,12 +2883,29 @@ function PendingVendorCard({ v, onApprove, onReject }) {
               <Field label="Owner" val={v.contact_name} />
               <Field label="Email" val={v.contact_email} />
               <Field label="Phone" val={v.contact_phone} />
-              <Field label="Website" val={v.website} />
-              <Field label="Instagram" val={v.instagram} />
-              <Field label="Facebook" val={m.facebook} />
-              <Field label="TikTok" val={m.tiktok} />
-              <Field label="Other Social" val={m.otherSocial} />
               <Field label="Years Active" val={m.yearsActive} />
+              {/* Clickable links for verification */}
+              <div style={{marginTop:10,borderTop:'1px solid #e8ddd0',paddingTop:10}}>
+                <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:8}}>Links (click to verify)</div>
+                {[
+                  {label:'🌐 Website', url:v.website},
+                  {label:'📸 Instagram', url:v.instagram},
+                  {label:'👤 Facebook', url:m.facebook},
+                  {label:'🎵 TikTok', url:m.tiktok},
+                  {label:'▶️ YouTube', url:m.youtube},
+                  {label:'🔗 Other', url:m.otherSocial},
+                ].filter(l=>l.url).map(l=>(
+                  <div key={l.label} style={{marginBottom:6}}>
+                    <a href={l.url.startsWith('http')?l.url:'https://'+l.url} target="_blank" rel="noopener noreferrer"
+                      style={{fontSize:13,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4,wordBreak:'break-all'}}>
+                      {l.label}: {l.url}
+                    </a>
+                  </div>
+                ))}
+                {![v.website,v.instagram,m.facebook,m.tiktok,m.youtube,m.otherSocial].some(Boolean) && (
+                  <div style={{fontSize:12,color:'#a89a8a',fontStyle:'italic'}}>No links provided</div>
+                )}
+              </div>
             </div>
             <div>
               <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12,borderBottom:'1px solid #e8ddd0',paddingBottom:6}}>Categories & Details</div>
