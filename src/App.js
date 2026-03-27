@@ -1047,11 +1047,11 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       <h3 className="form-section-title"><span className="dot" />Videos & Social Links</h3>
       <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Link your social profiles so hosts can see your work. No file uploads needed — just paste your links.</p>
       <div className="form-grid">
+        <div className="form-group"><label>Website</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
         <div className="form-group"><label>Instagram</label><input placeholder="https://instagram.com/yourbusiness" value={form.instagram} onChange={e=>set('instagram',e.target.value)} /></div>
+        <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
         <div className="form-group"><label>TikTok</label><input placeholder="https://tiktok.com/@yourbusiness" value={form.tiktok} onChange={e=>set('tiktok',e.target.value)} /></div>
         <div className="form-group"><label>YouTube</label><input placeholder="https://youtube.com/@yourchannel" value={form.youtube||''} onChange={e=>set('youtube',e.target.value)} /></div>
-        <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
-        <div className="form-group"><label>Website</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
         <div className="form-group"><label>Other Link</label><input placeholder="Etsy, Pinterest, Yelp, etc." value={form.otherSocial} onChange={e=>set('otherSocial',e.target.value)} /></div>
       </div>
 
