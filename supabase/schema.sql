@@ -171,6 +171,9 @@ create table if not exists admin_removal_log (
   removed_by  text default 'admin'
 );
 
+-- ─── Vendors: allow null category for service-only providers ────────────────
+alter table vendors alter column category drop not null;
+
 -- ─── Vendors: founding vendor status ────────────────────────────────────────
 alter table vendors add column if not exists founding_vendor boolean not null default false;
 

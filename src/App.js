@@ -4545,7 +4545,7 @@ function AppInner() {
     const vendorPayload = {
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
-      category:            form.categories[0],
+      category:            form.categories?.[0] || form.serviceCategories?.[0] || 'Other',
       subcategories:       form.subcategories || [],
       home_zip:            form.homeZip,
       radius:              form.radius,
@@ -4610,7 +4610,7 @@ function AppInner() {
 
     setVendorSubs(v => [form, ...v]);
     if (newVendor?.id) {
-      setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories[0], home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories }, subcategories: form.subcategories || [] }, ...p]);
+      setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other', home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories?.length ? form.categories : form.serviceCategories || [] }, subcategories: form.subcategories || [] }, ...p]);
     }
     setVendorConfirm({ ref: generateRef(), email: form.email, name: form.businessName });
     setVendorSuccess(true);
