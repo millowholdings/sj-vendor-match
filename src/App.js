@@ -4805,17 +4805,17 @@ function AppInner() {
                 { title:'Event Guests', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup'}] },
               ].map(card=>(
-                <div key={card.title} className="home-col" style={{background:'#c8a850',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center'}}>
-                  <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#1a1410',margin:'0 0 8px',lineHeight:1.2,fontWeight:700}}>
+                <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
+                  <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 8px',lineHeight:1.2,fontWeight:700}}>
                     {card.title}
                   </h2>
-                  <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(11px,0.85vw,14px)',color:'#1a1410',lineHeight:1.5,margin:'0 0 16px'}}>
+                  <p style={{fontFamily:"'Public Sans',sans-serif",fontSize:'clamp(11px,0.85vw,14px)',color:'#c8a850',lineHeight:1.5,margin:'0 0 16px'}}>
                     {card.desc}
                   </p>
                   <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
                       <button key={b.label} onClick={()=>{ if(b.action==='eventGoerSignup') setShowEventGoerSignup(true); else {setTab(b.tab);window.scrollTo({top:0});} }}
-                        style={{width:'100%',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
+                        style={{width:'100%',background: b.action ? '#c8a850' : '#0e0c0a',color: b.action ? '#1a1410' : '#fff',border:'2px solid #c8a850',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
                     ))}
