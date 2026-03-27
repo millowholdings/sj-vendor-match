@@ -4841,18 +4841,15 @@ function AppInner() {
             </div>
 
             {/* Stats bar */}
-            <div style={{background:'#0a0908',padding:'20px 24px',display:'flex',justifyContent:'space-around',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',marginTop:32,gap:12}}>
+            <div style={{padding:'16px 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',marginTop:32}}>
               {[
-                {icon:'🛍️', num: vendors.length || 0, label:'Active Vendors'},
-                {icon:'📅', num: opps.length || 0, label:'Upcoming Events'},
-                {icon:'📍', num: new Set([...vendors.map(v=>v.homeZip),...opps.map(o=>o.zip)].filter(Boolean)).size || 0, label:'Areas Covered'},
-                {icon:'🎪', num: hostCount || 0, label:'Event Hosts'},
-                {icon:'👥', num: eventGoers.length || 0, label:'Event Guests'},
+                {num: vendors.length || '—', label:'Active Vendors'},
+                {num: CATEGORIES.length - 1, label:'Categories'},
+                {num: opps.length || '—', label:'Live Events'},
               ].map(s=>(
-                <div key={s.label} style={{textAlign:'center',minWidth:80}}>
-                  <div style={{fontSize:16,marginBottom:2}}>{s.icon}</div>
-                  <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(24px,2.8vw,38px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
-                  <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:10,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:4}}>{s.label}</div>
+                <div key={s.label} style={{textAlign:'center'}}>
+                  <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(22px,2.4vw,34px)',fontWeight:700,color:'#fff',lineHeight:1}}>{s.num}</div>
+                  <div style={{fontFamily:"'Public Sans',sans-serif",fontSize:10,color:'#c8a850',letterSpacing:1.5,textTransform:'uppercase',fontWeight:600,marginTop:2}}>{s.label}</div>
                 </div>
               ))}
             </div>
