@@ -2930,16 +2930,20 @@ function PendingVendorCard({ v, onApprove, onReject }) {
           )}
 
           {/* Uploaded files */}
+          <div style={{marginTop:20,borderTop:'1px solid #e8ddd0',paddingTop:16}}>
+            <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12}}>Uploaded Files & Attachments</div>
+            {photos.length === 0 && !coiUrl && !lookbookUrl && (
+              <div style={{fontSize:13,color:'#a89a8a',fontStyle:'italic',marginBottom:12}}>No files uploaded with this application.</div>
+            )}
           {(photos.length > 0 || coiUrl || lookbookUrl) && (
-            <div style={{marginTop:20,borderTop:'1px solid #e8ddd0',paddingTop:16}}>
-              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12}}>Uploaded Files</div>
+            <div>
               {photos.length > 0 && (
                 <div style={{marginBottom:16}}>
                   <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',textTransform:'uppercase',letterSpacing:0.5,marginBottom:8}}>Business Photos ({photos.length})</div>
                   <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
                     {photos.map((url,i) => (
                       <a key={i} href={url} target="_blank" rel="noopener noreferrer" style={{display:'block'}}>
-                        <img src={url} alt={`Photo ${i+1}`} style={{width:120,height:120,objectFit:'cover',borderRadius:8,border:'1px solid #e0d5c5',cursor:'pointer'}} />
+                        <img src={url} alt={`Photo ${i+1}`} style={{width:180,height:180,objectFit:'cover',borderRadius:8,border:'1px solid #e0d5c5',cursor:'pointer'}} />
                       </a>
                     ))}
                   </div>
@@ -2961,6 +2965,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
               </div>
             </div>
           )}
+          </div>
 
           {/* Bottom action bar */}
           <div style={{marginTop:20,paddingTop:16,borderTop:'1px solid #e8ddd0',display:'flex',gap:10,justifyContent:'flex-end'}}>
@@ -4673,7 +4678,13 @@ function AppInner() {
 
     setVendorSubs(v => [form, ...v]);
     if (newVendor?.id) {
-      setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other', home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { allCategories: form.categories?.length ? form.categories : form.serviceCategories || [] }, subcategories: form.subcategories || [] }, ...p]);
+      // Re-fetch the vendor from DB to get the complete record with file URLs
+      const { data: fullVendor } = await supabase.from('vendors').select('*').eq('id', newVendor.id).single();
+      if (fullVendor) {
+        setPendingVendors(p => [fullVendor, ...p]);
+      } else {
+        setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other', home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { ...metadataPayload }, subcategories: form.subcategories || [] }, ...p]);
+      }
     }
     // Send notification emails
     try {
