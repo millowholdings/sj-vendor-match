@@ -171,6 +171,9 @@ create table if not exists admin_removal_log (
   removed_by  text default 'admin'
 );
 
+-- ─── Vendors: founding vendor status ────────────────────────────────────────
+alter table vendors add column if not exists founding_vendor boolean not null default false;
+
 -- ─── Stripe: vendor subscription fields ─────────────────────────────────────
 alter table vendors add column if not exists stripe_customer_id     text;
 alter table vendors add column if not exists stripe_subscription_id text;

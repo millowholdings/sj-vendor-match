@@ -154,6 +154,7 @@ function dbVendorToApp(v) {
     serviceRateType:   m.serviceRateType|| "fixed",
     minBookingDuration:m.minBookingDuration || "",
     serviceDescription:m.serviceDescription || "",
+    foundingVendor:    v.founding_vendor    || false,
   };
 }
 
@@ -1905,6 +1906,16 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
 
+      {vendorProfile?.founding_vendor && (
+        <div style={{background:'linear-gradient(135deg,#1a1410,#2d2118)',border:'2px solid #c8a850',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:24}}>⭐</span>
+          <div>
+            <div style={{fontWeight:700,fontSize:15,color:'#e8c97a'}}>Founding Vendor</div>
+            <div style={{fontSize:12,color:'#b8a888'}}>You are a founding member of South Jersey Vendor Market. Your listing is permanently active — no subscription required, ever.</div>
+          </div>
+        </div>
+      )}
+
       {subMessage && (
         <div style={{
           background: subMessage.type === 'success' ? '#d4f4e0' : '#e8f4fd',
@@ -3220,14 +3231,27 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       {vendors.length===0
         ? <div className="empty-state"><div className="big">🛍️</div><p>No approved vendors yet.</p></div>
         : <table className="admin-table">
-            <thead><tr><th>Business</th><th>Category</th><th>Zip</th><th>Contact</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Business</th><th>Category</th><th>Zip</th><th>Contact</th><th>Founding</th><th>Actions</th></tr></thead>
             <tbody>
               {vendors.map(v=>(
                 <tr key={v.id}>
-                  <td><strong>{v.name}</strong></td>
+                  <td><strong>{v.name}</strong>{v.foundingVendor && <span style={{marginLeft:6,background:'#c8a850',color:'#1a1410',padding:'1px 6px',borderRadius:8,fontSize:9,fontWeight:700}}>FOUNDING</span>}</td>
                   <td>{v.category}</td>
                   <td>{v.homeZip}</td>
                   <td style={{fontSize:12}}>{v.contactEmail}</td>
+                  <td>
+                    <button onClick={async()=>{
+                      const newVal = !v.foundingVendor;
+                      const{error}=await supabase.from('vendors').update({founding_vendor:newVal}).eq('id',v.id);
+                      if(error){alert('Failed to update');return;}
+                      setVendors(prev=>prev.map(x=>x.id===v.id?{...x,foundingVendor:newVal}:x));
+                    }} style={{
+                      background:v.foundingVendor?'#c8a850':'#fff',
+                      color:v.foundingVendor?'#1a1410':'#7a6a5a',
+                      border:`1px solid ${v.foundingVendor?'#c8a850':'#e8ddd0'}`,
+                      borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600
+                    }}>{v.foundingVendor?'✓ Founding':'Mark Founding'}</button>
+                  </td>
                   <td><button onClick={()=>setRemoveDialog({type:'vendor',id:v.id,name:v.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button></td>
                 </tr>
               ))}
