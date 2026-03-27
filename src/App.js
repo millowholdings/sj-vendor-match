@@ -4463,8 +4463,24 @@ function AppInner() {
   };
 
   const handleVendorSubmit = async (form, files = {}) => {
-    if (!form.businessName || !form.email || form.categories.length === 0) {
-      alert("Please fill in Business Name, Email, and at least one Category.");
+    if (!form.businessName || !form.email) {
+      alert("Please fill in Business Name and Email.");
+      return;
+    }
+    const hasMarketCats = form.categories && form.categories.length > 0;
+    const hasServiceCats = form.serviceCategories && form.serviceCategories.length > 0;
+    const isMarket = form.vendorType?.market;
+    const isService = form.vendorType?.service;
+    if (!isMarket && !isService) {
+      alert("Please select whether you are a Market Vendor, Event Service Provider, or both.");
+      return;
+    }
+    if (isMarket && !hasMarketCats) {
+      alert("Please select at least one product category for your Market Vendor profile.");
+      return;
+    }
+    if (isService && !hasServiceCats) {
+      alert("Please select at least one service category for your Service Provider profile.");
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) {
