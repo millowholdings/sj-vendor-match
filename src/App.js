@@ -2883,6 +2883,22 @@ function PendingVendorCard({ v, onApprove, onReject }) {
             </div>
           </div>
 
+          {/* Service Provider details */}
+          {(m.isServiceProvider || m.vendorType?.service) && (
+            <div style={{marginTop:16,borderTop:'1px solid #e8ddd0',paddingTop:16}}>
+              <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:12}}>Service Provider Details</div>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'0 32px'}}>
+                <Field label="Vendor Type" val={m.vendorType?.market && m.vendorType?.service ? 'Market Vendor + Service Provider' : m.vendorType?.service ? 'Service Provider Only' : 'Market Vendor'} />
+                <Field label="Service Type" val={m.serviceType} />
+                <Field label="Rate" val={m.serviceRateType==='quote' ? 'Quote based' : m.serviceRateType==='range' ? `${m.serviceRateMin} – ${m.serviceRateMax}` : m.serviceRateMin} />
+                <Field label="Min Duration" val={m.minBookingDuration} />
+                <Field label="Service Categories" val={(m.serviceCategories||[]).join(', ') || null} />
+                <Field label="Service Subcategories" val={(m.serviceSubcategories||[]).join(', ') || null} />
+              </div>
+              {m.serviceDescription && <Field label="Service Description" val={m.serviceDescription} />}
+            </div>
+          )}
+
           {/* Uploaded files */}
           {(photos.length > 0 || coiUrl || lookbookUrl) && (
             <div style={{marginTop:20,borderTop:'1px solid #e8ddd0',paddingTop:16}}>
@@ -3095,9 +3111,25 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Deadline:</span> {evt.deadline ? fmtDate(evt.deadline) : '—'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Phone:</span> {evt.contactPhone || '—'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Source:</span> {evt.source}</div>
-                    <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Categories:</span> {(evt.categoriesNeeded||[]).join(', ') || '—'}</div>
-                    {evt.notes && <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Host Notes:</span> {evt.notes}</div>}
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Ticketed:</span> {evt.isTicketed ? `Yes — ${evt.ticketPrice||'Price TBD'}` : 'No — Free admission'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Contact Email:</span> {evt.contactEmail || '—'}</div>
+                    <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Categories Needed:</span> {(evt.categoriesNeeded||[]).join(', ') || '—'}</div>
+                    {evt.notes && <div style={{gridColumn:'1/-1',background:'#fdf9f5',borderRadius:6,padding:'8px 12px',borderLeft:'3px solid #e8c97a'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Host Notes:</span><div style={{fontSize:13,color:'#1a1410',marginTop:4}}>{evt.notes}</div></div>}
                   </div>
+                  {/* Services Needed */}
+                  {evt.servicesNeeded && evt.servicesNeeded.length > 0 && (
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Services Needed ({evt.servicesNeeded.length})</div>
+                      {evt.servicesNeeded.map((svc,i)=>(
+                        <div key={i} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px',marginBottom:6,fontSize:13}}>
+                          <strong>{svc.type||'Service'}{svc.otherType ? ` — ${svc.otherType}`:''}</strong>
+                          <span style={{color:'#7a6a5a'}}> · {svc.duration}{svc.otherDuration ? ` (${svc.otherDuration})`:''}</span>
+                          <span style={{color:'#7a6a5a'}}> · Budget: {svc.budgetType==='open'?'Open to quotes':svc.budgetType==='fixed'?(svc.budgetAmount||'TBD'):`${svc.budgetMin||'?'} – ${svc.budgetMax||'?'}`}</span>
+                          {svc.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:2,fontStyle:'italic'}}>{svc.notes}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {/* Event Link — prominent for verification */}
                   {evt.eventLink && (
                     <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'10px 14px',marginBottom:16}}>
