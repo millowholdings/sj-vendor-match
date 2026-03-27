@@ -130,7 +130,7 @@ create index if not exists events_status_idx on events (status);
 -- ─── Events: services needed ────────────────────────────────────────────────
 alter table events add column if not exists services_needed jsonb;
 
--- ─── Event Goers ────────────────────────────────────────────────────────────
+-- ─── Event Guests ───────────────────────────────────────────────────────────
 create table if not exists event_goers (
   id              serial primary key,
   name            text not null,

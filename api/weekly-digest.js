@@ -167,7 +167,7 @@ module.exports = async function handler(req, res) {
     } catch (err) { errors.push({ type: 'vendor', name: vendor.name, error: err.message }); }
   }
 
-  // ─── Send to Event Goers ──────────────────────────────────────────────────
+  // ─── Send to Event Guests ─────────────────────────────────────────────────
   const { data: goers } = await supabase.from('event_guests').select('*').eq('active', true);
 
   // Determine if this is a biweekly week (even week number)
