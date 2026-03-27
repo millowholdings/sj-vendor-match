@@ -791,7 +791,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div onClick={()=>set('vendorType',{...form.vendorType,market:!form.vendorType.market})}
           style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.market?'#c8a850':'#e8ddd0'}`,background:form.vendorType.market?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Market Vendor</div>
-          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products at events and pay booth fees</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products/services at events and pay booth fees</div>
           {form.vendorType.market && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
         </div>
         <div onClick={()=>set('vendorType',{...form.vendorType,service:!form.vendorType.service})}
