@@ -1433,7 +1433,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   );
 }
 
-// ─── Event Goer Signup Modal ─────────────────────────────────────────────────
+// ─── Event Guest Signup Modal ─────────────────────────────────────────────────
 function EventGoerSignupModal({ onClose, onSuccess }) {
   const [form, setForm] = useState({ name:'', email:'', zip:'', radius:20, eventTypes:[], wantsAlerts:true, frequency:'weekly' });
   const [saving, setSaving] = useState(false);
@@ -1784,7 +1784,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
                   <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
                     {roleBtn('vendor', 'Vendor', '🛍️', 'Sell products or services at events')}
                     {roleBtn('host', 'Event Host', '🎪', 'Organize events and find vendors')}
-                    {roleBtn('eventGoer', 'Event Goer', '📍', 'Discover local markets near me')}
+                    {roleBtn('eventGoer', 'Event Guest', '📍', 'Discover local markets near me')}
                   </div>
                   {(roles.vendor && roles.host) || (roles.vendor && roles.eventGoer) || (roles.host && roles.eventGoer) ? (
                     <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'8px 12px',marginTop:10,fontSize:12,color:'#1a4a6b'}}>
@@ -2118,7 +2118,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   );
 }
 
-// ─── Event Goer Dashboard ─────────────────────────────────────────────────────
+// ─── Event Guest Dashboard ─────────────────────────────────────────────────────
 function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbackModal }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name:profile.name, zip:profile.zip, radius:profile.radius, eventTypes:profile.event_types||[], frequency:profile.email_frequency });
@@ -2142,7 +2142,7 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
 
   return (
     <div className="section" style={{maxWidth:900}}>
-      <div className="section-title" style={{color:'#e8c97a'}}>Event Goer Dashboard</div>
+      <div className="section-title" style={{color:'#e8c97a'}}>Event Guest Dashboard</div>
       <p className="section-sub" style={{color:'#b8a888'}}>Welcome back, {profile.name}</p>
 
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
@@ -3043,7 +3043,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{conciergeEvents.length}</div><div className="admin-stat-label">Concierge</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
-        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Goers</div></div>
+        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Guests</div></div>
       </div>
 
       {/* ── Pending Event Review ─────────────────────────────── */}
@@ -3229,10 +3229,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
           </table>
       }
 
-      {/* ── Event Goers ────────────────────────────────────── */}
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Event Goers ({eventGoers.length})</h3>
+      {/* ── Event Guests ────────────────────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Event Guests ({eventGoers.length})</h3>
       {eventGoers.length===0
-        ? <div className="empty-state"><div className="big">📬</div><p>No event goers signed up yet.</p></div>
+        ? <div className="empty-state"><div className="big">📬</div><p>No event guests signed up yet.</p></div>
         : <table className="admin-table">
             <thead><tr><th>Name</th><th>Email</th><th>Zip</th><th>Radius</th><th>Event Types</th><th>Frequency</th><th>Signed Up</th></tr></thead>
             <tbody>
@@ -4073,7 +4073,7 @@ function AppInner() {
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
     if (!authUser) { setVendorProfile(null); setUserEvents([]); setEventGoerProfile(null); return; }
-    // Check if user is an event goer
+    // Check if user is an event guest
     supabase.from('event_goers').select('*').eq('email', authUser.email).limit(1).single()
       .then(({ data }) => { if (data) setEventGoerProfile(data); });
     // Find vendor linked to this user
@@ -4207,7 +4207,7 @@ function AppInner() {
         setAllEvents(eventRows.map(dbEventToApp));
       }
 
-      // Load event goers for admin
+      // Load event guests for admin
       supabase.from('event_goers').select('*').eq('active', true).order('created_at', { ascending: false })
         .then(({ data }) => { if (data) setEventGoers(data); });
 
@@ -4704,7 +4704,7 @@ function AppInner() {
                   <>
                     {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
                     {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
-                    {eventGoerProfile && <button className={`mobile-menu-item${tab==='event-goer-dashboard'?' active':''}`} onClick={()=>navTo('event-goer-dashboard')}>Event Goer Dashboard</button>}
+                    {eventGoerProfile && <button className={`mobile-menu-item${tab==='event-goer-dashboard'?' active':''}`} onClick={()=>navTo('event-goer-dashboard')}>Event Guest Dashboard</button>}
                     {isAdmin && <button className={`mobile-menu-item${tab==='admin'?' active':''}`} onClick={()=>navTo('admin')} style={{color:'#e8c97a'}}>Admin Panel</button>}
                     <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
                   </>
@@ -4802,7 +4802,7 @@ function AppInner() {
                   buttons:[{label:'Join as a Vendor',tab:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
                   buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
-                { title:'Event Goers', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
+                { title:'Event Guests', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup'}] },
               ].map(card=>(
                 <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>

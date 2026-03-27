@@ -168,7 +168,7 @@ module.exports = async function handler(req, res) {
   }
 
   // ─── Send to Event Goers ──────────────────────────────────────────────────
-  const { data: goers } = await supabase.from('event_goers').select('*').eq('active', true);
+  const { data: goers } = await supabase.from('event_guests').select('*').eq('active', true);
 
   // Determine if this is a biweekly week (even week number)
   const weekNum = Math.floor((Date.now() - new Date('2026-01-01').getTime()) / (7*24*60*60*1000));
@@ -235,16 +235,16 @@ module.exports = async function handler(req, res) {
         subject: `${matched.length} market${matched.length !== 1 ? 's' : ''} near you this week!`,
         html,
       });
-      if (sendErr) { errors.push({ type: 'event_goer', name: goer.name, error: sendErr.message }); }
+      if (sendErr) { errors.push({ type: 'event_guest', name: goer.name, error: sendErr.message }); }
       else { emailsSent++; }
-    } catch (err) { errors.push({ type: 'event_goer', name: goer.name, error: err.message }); }
+    } catch (err) { errors.push({ type: 'event_guest', name: goer.name, error: err.message }); }
   }
 
   return res.status(200).json({
     message: 'Weekly digest sent',
     emailsSent,
     totalVendors: (vendors || []).length,
-    totalEventGoers: (goers || []).length,
+    totalEventGuests: (goers || []).length,
     totalEvents: approvedEvents.length,
     errors: errors.length > 0 ? errors : undefined,
   });
