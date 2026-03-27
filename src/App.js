@@ -137,6 +137,7 @@ function dbVendorToApp(v) {
     instagram:         v.instagram      || "",
     facebook:          m.facebook       || "",
     tiktok:            m.tiktok         || "",
+    youtube:           m.youtube        || "",
     otherSocial:       m.otherSocial    || "",
     photoUrls:         m.photoUrls      || [],
     lookbookUrl:       m.lookbookUrl    || "",
@@ -674,7 +675,7 @@ const DEFAULT_VENDOR_FORM = {
   vendorType:{market:false, service:false},
   categories:[], subcategories:[],
   serviceCategories:[], serviceSubcategories:[], serviceOtherText:{},
-  description:'', website:'', facebook:'', instagram:'', tiktok:'', otherSocial:'',
+  description:'', website:'', facebook:'', instagram:'', tiktok:'', youtube:'', otherSocial:'',
   eventTypes:[],
   insurance:false,
   hasMinPurchase:false, minPurchaseAmt:25,
@@ -766,11 +767,6 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </select>
         </div>
         <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special..." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
-        <div className="form-group"><label>Website URL</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
-        <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
-        <div className="form-group"><label>Instagram</label><input placeholder="https://instagram.com/yourbusiness" value={form.instagram} onChange={e=>set('instagram',e.target.value)} /></div>
-        <div className="form-group"><label>TikTok</label><input placeholder="https://tiktok.com/@yourbusiness" value={form.tiktok} onChange={e=>set('tiktok',e.target.value)} /></div>
-        <div className="form-group"><label>Other Social / Link</label><input placeholder="Etsy, Pinterest, etc." value={form.otherSocial} onChange={e=>set('otherSocial',e.target.value)} /></div>
       </div>
 
       <hr className="form-divider" />
@@ -1017,13 +1013,46 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Documents & Photos</h3>
+      <h3 className="form-section-title"><span className="dot" />Photos & Documents</h3>
+
+      {/* Photo uploads with preview */}
+      <div style={{marginBottom:20}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <label style={{fontSize:14,fontWeight:600,color:'#1a1410'}}>Business Photos</label>
+          <span style={{fontSize:12,color: photoFiles.length >= 6 ? '#1a6b3a' : '#a89a8a',fontWeight:600}}>{photoFiles.length} of 6 photos</span>
+        </div>
+        {photoFiles.length > 0 && (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {photoFiles.map((f,i)=>(
+              <div key={i} style={{position:'relative',width:90,height:90}}>
+                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:90,height:90,objectFit:'cover',borderRadius:8,border:'1px solid #e8ddd0'}} />
+                <button onClick={()=>setPhotoFiles(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-6,right:-6,width:20,height:20,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:12,cursor:'pointer',lineHeight:'20px',textAlign:'center',padding:0}}>x</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {photoFiles.length < 6 && (
+          <UploadZone label="Add Photos" accept="image/*" hint={`JPG, PNG — ${6 - photoFiles.length} more allowed`} multiple onChange={files => setPhotoFiles(p => [...p, ...files].slice(0,6))} />
+        )}
+      </div>
+
       <div className="form-grid">
-        <div className="form-group"><label>Business Photos</label><UploadZone label="Photos" accept="image/*" hint="JPG, PNG — up to 6 photos of products, booth, or branding" multiple onChange={files => setPhotoFiles(files.slice(0,6))} /></div>
         {form.insurance && (
           <div className="form-group"><label>Certificate of Insurance</label><UploadZone label="Insurance COI" accept=".pdf,image/*" hint="PDF or image — required for many events" onChange={file => setCoiFile(file)} /></div>
         )}
-        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" accept=".pdf,image/*" hint="PDF — helps hosts understand your offerings" onChange={file => setLookbookFile(file)} /></div>
+        <div className="form-group full"><label>Price Menu / Lookbook (Optional)</label><UploadZone label="Price Sheet / Lookbook" accept=".pdf,image/*" hint="PDF or image — helps hosts understand your offerings" onChange={file => setLookbookFile(file)} /></div>
+      </div>
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Videos & Social Links</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Link your social profiles so hosts can see your work. No file uploads needed — just paste your links.</p>
+      <div className="form-grid">
+        <div className="form-group"><label>Instagram</label><input placeholder="https://instagram.com/yourbusiness" value={form.instagram} onChange={e=>set('instagram',e.target.value)} /></div>
+        <div className="form-group"><label>TikTok</label><input placeholder="https://tiktok.com/@yourbusiness" value={form.tiktok} onChange={e=>set('tiktok',e.target.value)} /></div>
+        <div className="form-group"><label>YouTube</label><input placeholder="https://youtube.com/@yourchannel" value={form.youtube||''} onChange={e=>set('youtube',e.target.value)} /></div>
+        <div className="form-group"><label>Facebook</label><input placeholder="https://facebook.com/yourbusiness" value={form.facebook} onChange={e=>set('facebook',e.target.value)} /></div>
+        <div className="form-group"><label>Website</label><input placeholder="https://yourwebsite.com" value={form.website} onChange={e=>set('website',e.target.value)} /></div>
+        <div className="form-group"><label>Other Link</label><input placeholder="Etsy, Pinterest, Yelp, etc." value={form.otherSocial} onChange={e=>set('otherSocial',e.target.value)} /></div>
       </div>
 
       
@@ -2236,6 +2265,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
     v.instagram && { icon: '📸', label: 'Instagram', url: v.instagram },
     v.facebook && { icon: '👤', label: 'Facebook', url: v.facebook },
     v.tiktok && { icon: '🎵', label: 'TikTok', url: v.tiktok },
+    v.youtube && { icon: '▶️', label: 'YouTube', url: v.youtube },
     v.otherSocial && { icon: '🔗', label: 'Other', url: v.otherSocial },
   ].filter(Boolean);
 
@@ -4554,6 +4584,7 @@ function AppInner() {
     const metadataPayload = {
       facebook: form.facebook || null,
       tiktok: form.tiktok || null,
+      youtube: form.youtube || null,
       otherSocial: form.otherSocial || null,
       responseTime: form.responseTime,
       bookingLeadTime: form.bookingLeadTime,
