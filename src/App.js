@@ -3086,6 +3086,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     const updated = { ...evt, status: 'approved', adminNotes: notes };
     setAllEvents(prev => prev.map(e => e.id === evt.id ? updated : e));
     setOpps(prev => [updated, ...prev]);
+    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(()=>{});
   };
 
   const rejectEvent = async (evt) => {
@@ -3095,13 +3096,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     if (error) { alert('Failed to reject event: ' + error.message); return; }
     setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: 'rejected', rejectionReason: reason } : e));
     // Send rejection notification email
-    try {
-      await fetch('/api/send-event-rejection', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostEmail: evt.contactEmail, hostName: evt.contactName, eventName: evt.eventName, reason }),
-      });
-    } catch (e) { console.error('Rejection email failed:', e); }
+    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:false,reason})}).catch(()=>{});
   };
 
   const markConciergeActive = async (evt) => {
@@ -3304,12 +3299,15 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   if(error){alert('Error approving vendor. Please try again.');return;}
                   setPendingVendors(p=>p.filter(x=>x.id!==v.id));
                   setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
                 }}
                 onReject={async()=>{
-                  if(!window.confirm(`Reject "${v.name}"? This cannot be undone.`))return;
+                  const reason = window.prompt(`Reject "${v.name}"? Enter a reason (sent to vendor):`);
+                  if(!reason) return;
                   const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
                   if(error){alert('Error rejecting vendor. Please try again.');return;}
                   setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:false,reason})}).catch(()=>{});
                 }}
               />
             ))}
