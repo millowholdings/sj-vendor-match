@@ -4831,7 +4831,7 @@ function AppInner() {
                   <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
                       <button key={b.label} onClick={()=>{ if(b.action==='eventGoerSignup') setShowEventGoerSignup(true); else {setTab(b.tab);window.scrollTo({top:0});} }}
-                        style={{width:'100%',background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
+                        style={{width:'100%',background:'#0e0c0a',color:'#e8c97a',border:'1px solid rgba(255,255,255,0.4)',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
                     ))}
