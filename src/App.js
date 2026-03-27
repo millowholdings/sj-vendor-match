@@ -1441,8 +1441,8 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 }
 
 // ─── Event Guest Signup Modal ─────────────────────────────────────────────────
-function EventGoerSignupModal({ onClose, onSuccess }) {
-  const [form, setForm] = useState({ name:'', email:'', zip:'', radius:20, eventTypes:[], wantsAlerts:true, frequency:'weekly' });
+function EventGoerSignupModal({ onClose, onSuccess, defaultEmail, defaultName }) {
+  const [form, setForm] = useState({ name:defaultName||'', email:defaultEmail||'', zip:'', radius:20, eventTypes:[], wantsAlerts:true, frequency:'weekly' });
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
@@ -1773,14 +1773,19 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
               <div style={{fontSize:32,marginBottom:8}}>📧</div>
               <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>Check your email to confirm</div>
               <div style={{fontSize:14,color:'#7a6a5a',marginBottom:8}}>We sent a confirmation link to <strong>{email}</strong></div>
-              <div style={{fontSize:13,color:'#a89a8a',marginBottom:20,lineHeight:1.5}}>Click the link in the email to activate your account, then come back and log in.</div>
+              <div style={{fontSize:13,color:'#a89a8a',marginBottom:16,lineHeight:1.5}}>Click the link in the email to activate your account, then come back and log in.</div>
+              {signupRoles && (
+                <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',marginBottom:16,textAlign:'left',fontSize:13,color:'#7a6a5a',lineHeight:1.6}}>
+                  <div style={{fontWeight:700,color:'#1a1410',marginBottom:6}}>After you confirm, here's what's next:</div>
+                  {signupRoles.vendor && <div>• Complete your vendor profile to start getting matched with events</div>}
+                  {signupRoles.eventGoer && <div>• Set up your event preferences so we can send you personalized market alerts</div>}
+                  {signupRoles.host && <div>• Your host dashboard will be ready — post your first event whenever you're ready</div>}
+                </div>
+              )}
               <button onClick={()=>{
+                // Save roles for post-login routing
+                if (signupRoles) localStorage.setItem('sjvm_pending_roles', JSON.stringify(signupRoles));
                 onClose();
-                if (setTab && signupRoles) {
-                  if (signupRoles.vendor) setTab('vendor');
-                  else if (signupRoles.host) setTab('host');
-                  else if (signupRoles.eventGoer && setShowEventGoerSignup) setShowEventGoerSignup(true);
-                }
               }} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Got it</button>
             </div>
           ) : (
@@ -4100,6 +4105,27 @@ function AppInner() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Post-login: check for pending signup roles and route accordingly
+  useEffect(() => {
+    if (!authUser) return;
+    const pendingStr = localStorage.getItem('sjvm_pending_roles');
+    if (!pendingStr) return;
+    localStorage.removeItem('sjvm_pending_roles');
+    try {
+      const roles = JSON.parse(pendingStr);
+      // Priority: vendor form first, then event guest preferences, then host message
+      if (roles.vendor) {
+        setTab('vendor');
+        // If also event guest, open preferences after a short delay
+        if (roles.eventGoer) setTimeout(() => setShowEventGoerSignup(true), 500);
+      } else if (roles.eventGoer) {
+        setShowEventGoerSignup(true);
+      } else if (roles.host) {
+        setTab('host');
+      }
+    } catch {}
+  }, [authUser]);
+
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
     if (!authUser) { setVendorProfile(null); setUserEvents([]); setEventGoerProfile(null); return; }
@@ -4987,7 +5013,7 @@ function AppInner() {
       {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} setShowEventGoerSignup={setShowEventGoerSignup} />}
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
-      {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); }} />}
+      {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} defaultEmail={authUser?.email||''} defaultName={vendorProfile?.contact_name||''} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); if(authUser) supabase.from('event_goers').select('*').eq('email',authUser.email).limit(1).single().then(({data})=>{if(data)setEventGoerProfile(data);}); }} />}
     </>
   );
 }
