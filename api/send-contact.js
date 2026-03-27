@@ -33,7 +33,7 @@ module.exports = async function handler(req, res) {
 
   const resend = new Resend(resendKey);
   const fromAddr = process.env.RESEND_FROM_EMAIL || 'hello@southjerseyvendormarket.com';
-  const adminEmail = 'millowholdings@gmail.com';
+  const adminEmail = 'tiffany@southjerseyvendormarket.com';
 
   try {
     const { error } = await resend.emails.send({
