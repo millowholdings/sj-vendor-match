@@ -4868,7 +4868,7 @@ function AppInner() {
             <div style={{padding:'16px 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',marginTop:32}}>
               {[
                 {num: vendors.length || '—', label:'Active Vendors'},
-                {num: CATEGORIES.length - 1, label:'Categories'},
+                {num: eventGoers.length || '—', label:'Event Guests'},
                 {num: opps.length || '—', label:'Live Events'},
               ].map(s=>(
                 <div key={s.label} style={{textAlign:'center'}}>
