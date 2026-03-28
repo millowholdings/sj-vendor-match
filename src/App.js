@@ -1874,10 +1874,58 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal }) {
+function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
   const [requests, setRequests] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const m = vendorProfile?.metadata || {};
+  const [editForm, setEditForm] = useState({
+    name: vendorProfile?.name||'', contact_name: vendorProfile?.contact_name||'', contact_email: vendorProfile?.contact_email||'',
+    contact_phone: vendorProfile?.contact_phone||'', home_zip: vendorProfile?.home_zip||'', radius: vendorProfile?.radius||20,
+    description: vendorProfile?.description||'', website: vendorProfile?.website||'', instagram: vendorProfile?.instagram||'',
+    facebook: m.facebook||'', tiktok: m.tiktok||'', youtube: m.youtube||'', otherSocial: m.otherSocial||'',
+  });
+  const ef = (k,v) => setEditForm(f=>({...f,[k]:v}));
+  const SIGNIFICANT_FIELDS = ['home_zip','radius'];
+
+  const saveProfile = async () => {
+    setSaving(true);
+    const changes = {};
+    const vp = vendorProfile;
+    if (editForm.name !== vp.name) changes.name = {old:vp.name, new:editForm.name};
+    if (editForm.contact_name !== vp.contact_name) changes.contact_name = {old:vp.contact_name, new:editForm.contact_name};
+    if (editForm.contact_phone !== (vp.contact_phone||'')) changes.contact_phone = {old:vp.contact_phone, new:editForm.contact_phone};
+    if (editForm.home_zip !== vp.home_zip) changes.home_zip = {old:vp.home_zip, new:editForm.home_zip};
+    if (editForm.radius !== vp.radius) changes.radius = {old:vp.radius, new:editForm.radius};
+    if (editForm.description !== (vp.description||'')) changes.description = {old:'(updated)', new:'(updated)'};
+
+    const significant = Object.keys(changes).some(k => SIGNIFICANT_FIELDS.includes(k));
+    const updatePayload = {
+      name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
+      home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
+      website: editForm.website||null, instagram: editForm.instagram||null,
+      metadata: { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null },
+    };
+    const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vp.id);
+    if (error) { alert('Failed to save: ' + error.message); setSaving(false); return; }
+
+    // Log changes
+    if (Object.keys(changes).length > 0) {
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vp.id, entity_name:editForm.name, changed_by:user.email, changes, significant }).catch(()=>{});
+      if (significant) {
+        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} [SIGNIFICANT]`, message:`${editForm.name} made significant changes:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nReview in admin panel.` }),
+        }).catch(()=>{});
+      }
+    }
+
+    // Refresh profile
+    const { data: updated } = await supabase.from('vendors').select('*').eq('id', vp.id).single();
+    if (updated && setVendorProfile) setVendorProfile(updated);
+    setEditing(false); setSaving(false);
+  };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const subStatus = params.get('subscription');
@@ -1969,17 +2017,40 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       )}
 
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
-        <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Profile</h3>
-        <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px'}}>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Business:</span> {vendorProfile?.name}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Contact:</span> {vendorProfile?.contact_name}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {vendorProfile?.contact_email}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Phone:</span> {vendorProfile?.contact_phone || '—'}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Zip:</span> {vendorProfile?.home_zip}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Radius:</span> {vendorProfile?.radius}mi</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.category}</div>
-          <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
+          <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
+          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||''});setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
         </div>
+        {editing ? (
+          <>
+            <div className="form-grid" style={{gap:10,marginBottom:14}}>
+              <div className="form-group"><label>Business Name</label><input value={editForm.name} onChange={e=>ef('name',e.target.value)} /></div>
+              <div className="form-group"><label>Contact Name</label><input value={editForm.contact_name} onChange={e=>ef('contact_name',e.target.value)} /></div>
+              <div className="form-group"><label>Phone</label><input value={editForm.contact_phone} onChange={e=>ef('contact_phone',e.target.value)} /></div>
+              <div className="form-group"><label>Zip Code</label><input value={editForm.home_zip} onChange={e=>ef('home_zip',e.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
+              <div className="form-group"><label>Travel Radius</label><select value={editForm.radius} onChange={e=>ef('radius',+e.target.value)}>{[5,10,15,20,30,50].map(r=><option key={r} value={r}>{r} miles</option>)}</select></div>
+              <div className="form-group full"><label>Description</label><textarea value={editForm.description} onChange={e=>ef('description',e.target.value)} style={{minHeight:60}} /></div>
+              <div className="form-group"><label>Website</label><input value={editForm.website} onChange={e=>ef('website',e.target.value)} /></div>
+              <div className="form-group"><label>Instagram</label><input value={editForm.instagram} onChange={e=>ef('instagram',e.target.value)} /></div>
+              <div className="form-group"><label>Facebook</label><input value={editForm.facebook} onChange={e=>ef('facebook',e.target.value)} /></div>
+              <div className="form-group"><label>TikTok</label><input value={editForm.tiktok} onChange={e=>ef('tiktok',e.target.value)} /></div>
+              <div className="form-group"><label>YouTube</label><input value={editForm.youtube} onChange={e=>ef('youtube',e.target.value)} /></div>
+              <div className="form-group"><label>Other Link</label><input value={editForm.otherSocial} onChange={e=>ef('otherSocial',e.target.value)} /></div>
+            </div>
+            <button onClick={saveProfile} disabled={saving} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:saving?0.6:1}}>{saving?'Saving...':'Save Changes'}</button>
+          </>
+        ) : (
+          <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px'}}>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Business:</span> {vendorProfile?.name}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Contact:</span> {vendorProfile?.contact_name}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {vendorProfile?.contact_email}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Phone:</span> {vendorProfile?.contact_phone || '—'}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Zip:</span> {vendorProfile?.home_zip}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Radius:</span> {vendorProfile?.radius}mi</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.category}</div>
+            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
+          </div>
+        )}
       </div>
 
       {/* Subscription Card */}
@@ -2074,9 +2145,54 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventForm, setEventForm] = useState({});
+  const [savingEvent, setSavingEvent] = useState(false);
+  const SIG_EVENT_FIELDS = ['date','zip','event_name'];
+
+  const startEditEvent = (e) => {
+    setEventForm({ event_name:e.event_name, event_type:e.event_type, date:e.date, start_time:e.start_time||'', end_time:e.end_time||'', zip:e.zip, booth_fee:e.booth_fee||'', spots:e.spots||0, notes:e.notes||'', deadline:e.deadline||'', ticket_price:e.ticket_price||'', is_ticketed:e.is_ticketed||false });
+    setEditingEvent(e.id);
+  };
+  const eSet = (k,v) => setEventForm(f=>({...f,[k]:v}));
+
+  const saveEvent = async (evt) => {
+    setSavingEvent(true);
+    const changes = {};
+    if (eventForm.event_name !== evt.event_name) changes.event_name = {old:evt.event_name, new:eventForm.event_name};
+    if (eventForm.date !== evt.date) changes.date = {old:evt.date, new:eventForm.date};
+    if (eventForm.zip !== evt.zip) changes.zip = {old:evt.zip, new:eventForm.zip};
+    if (eventForm.spots !== evt.spots) changes.spots = {old:evt.spots, new:eventForm.spots};
+    const significant = Object.keys(changes).some(k => SIG_EVENT_FIELDS.includes(k));
+
+    const updatePayload = {
+      event_name:eventForm.event_name, event_type:eventForm.event_type, date:eventForm.date,
+      start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
+      booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
+      deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
+    };
+    if (significant && evt.status === 'approved') updatePayload.status = 'pending_review';
+
+    const { error } = await supabase.from('events').update(updatePayload).eq('id', evt.id);
+    if (error) { alert('Failed to save: ' + error.message); setSavingEvent(false); return; }
+
+    if (Object.keys(changes).length > 0) {
+      supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant }).catch(()=>{});
+      if (significant) {
+        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} [SIGNIFICANT — needs re-review]`, message:`Host ${user.email} changed:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent flagged for re-review.` }),
+        }).catch(()=>{});
+      }
+    }
+
+    // Refresh events
+    const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
+    if (data && setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
+    setEditingEvent(null); setSavingEvent(false);
+  };
 
   useEffect(() => {
     if (!userEvents || userEvents.length === 0) { setLoadingApps(false); return; }
@@ -2111,17 +2227,40 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
                   <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
                 </div>
-                <span style={{
-                  padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',
-                  background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
-                  color: e.status==='approved' ? '#1a6b3a' : e.status==='rejected' ? '#8b1a1a' : e.status==='concierge_active' ? '#1a6b3a' : '#7a5a10',
-                }}>
-                  {e.status==='approved' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='concierge_pending' ? 'Awaiting Payment' : e.status==='concierge_active' ? 'Concierge Active' : e.status==='pending_review' ? 'Pending Review' : 'Live'}
-                </span>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <button onClick={()=>editingEvent===e.id?setEditingEvent(null):startEditEvent(e)} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editingEvent===e.id?'Cancel':'Edit'}</button>
+                  <span style={{
+                    padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',
+                    background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
+                    color: e.status==='approved' ? '#1a6b3a' : e.status==='rejected' ? '#8b1a1a' : e.status==='concierge_active' ? '#1a6b3a' : '#7a5a10',
+                  }}>
+                    {e.status==='approved' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='concierge_pending' ? 'Awaiting Payment' : e.status==='concierge_active' ? 'Concierge Active' : e.status==='pending_review' ? 'Pending Review' : 'Live'}
+                  </span>
+                </div>
               </div>
               {e.status==='rejected' && e.rejection_reason && (
                 <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:6,padding:'8px 12px',marginTop:8,fontSize:12,color:'#8b1a1a'}}>
                   <strong>Reason:</strong> {e.rejection_reason}
+                </div>
+              )}
+              {editingEvent===e.id && (
+                <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
+                  <div className="form-grid" style={{gap:10,marginBottom:12}}>
+                    <div className="form-group"><label>Event Name</label><input value={eventForm.event_name} onChange={ev=>eSet('event_name',ev.target.value)} /></div>
+                    <div className="form-group"><label>Event Type</label><select value={eventForm.event_type} onChange={ev=>eSet('event_type',ev.target.value)}>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+                    <div className="form-group"><label>Date</label><input type="date" value={eventForm.date} onChange={ev=>eSet('date',ev.target.value)} /></div>
+                    <div className="form-group"><label>Zip</label><input value={eventForm.zip} onChange={ev=>eSet('zip',ev.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
+                    <div className="form-group"><label>Start Time</label><input type="time" value={eventForm.start_time} onChange={ev=>eSet('start_time',ev.target.value)} /></div>
+                    <div className="form-group"><label>End Time</label><input type="time" value={eventForm.end_time} onChange={ev=>eSet('end_time',ev.target.value)} /></div>
+                    <div className="form-group"><label>Booth Fee</label><input value={eventForm.booth_fee} onChange={ev=>eSet('booth_fee',ev.target.value)} /></div>
+                    <div className="form-group"><label>Spots</label><input type="number" value={eventForm.spots} onChange={ev=>eSet('spots',+ev.target.value)} /></div>
+                    <div className="form-group"><label>Apply By</label><input type="date" value={eventForm.deadline} onChange={ev=>eSet('deadline',ev.target.value)} /></div>
+                    <div className="form-group"><label>Ticketed</label><select value={eventForm.is_ticketed?'yes':'no'} onChange={ev=>eSet('is_ticketed',ev.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
+                    {eventForm.is_ticketed && <div className="form-group"><label>Ticket Price</label><input value={eventForm.ticket_price} onChange={ev=>eSet('ticket_price',ev.target.value)} /></div>}
+                    <div className="form-group full"><label>Notes</label><textarea value={eventForm.notes} onChange={ev=>eSet('notes',ev.target.value)} style={{minHeight:50}} /></div>
+                  </div>
+                  {e.status==='approved' && <div style={{fontSize:12,color:'#7a5a10',marginBottom:8,background:'#fdf4dc',padding:'6px 10px',borderRadius:6}}>Changing date, location, or event name will flag this event for admin re-review.</div>}
+                  <button onClick={()=>saveEvent(e)} disabled={savingEvent} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:savingEvent?0.6:1}}>{savingEvent?'Saving...':'Save Changes'}</button>
                 </div>
               )}
             </div>
@@ -5162,8 +5301,8 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
         {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}

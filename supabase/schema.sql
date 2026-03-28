@@ -169,6 +169,18 @@ create table if not exists email_log (
   sent_at    timestamptz not null default now()
 );
 
+-- ─── Change history log ─────────────────────────────────────────────────────
+create table if not exists change_log (
+  id          serial primary key,
+  entity_type text not null,       -- 'vendor' or 'event'
+  entity_id   text not null,
+  entity_name text,
+  changed_by  text,
+  changes     jsonb,               -- {field: {old, new}}
+  significant boolean default false,
+  created_at  timestamptz not null default now()
+);
+
 -- ─── Admin removal log ──────────────────────────────────────────────────────
 create table if not exists admin_removal_log (
   id          serial primary key,
