@@ -1942,6 +1942,236 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
   );
 }
 
+// ─── Dashboard Mini-Calendars ─────────────────────────────────────────────────
+function DashboardMiniCal({ dates, onDateClick, label }) {
+  const today = new Date();
+  const [mo, setMo] = useState(today.getMonth());
+  const [yr, setYr] = useState(today.getFullYear());
+  const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const first = new Date(yr, mo, 1).getDay();
+  const dim = new Date(yr, mo+1, 0).getDate();
+  const ds = (d) => `${yr}-${String(mo+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const todayStr = today.toISOString().split('T')[0];
+  const prev = () => { if(mo===0){setMo(11);setYr(y=>y-1);}else setMo(m=>m-1); };
+  const next = () => { if(mo===11){setMo(0);setYr(y=>y+1);}else setMo(m=>m+1); };
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+        <button onClick={prev} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:16,fontWeight:700}}>‹</button>
+        <div style={{fontSize:13,fontWeight:700,color:'#e8c97a'}}>{MONTHS[mo]} {yr}</div>
+        <button onClick={next} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:16,fontWeight:700}}>›</button>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(7,1fr)',gap:2,textAlign:'center'}}>
+        {DAYS.map(d=><div key={d} style={{fontSize:9,color:'#a89a8a',fontWeight:600,padding:2}}>{d}</div>)}
+        {Array(first).fill(null).map((_,i)=><div key={'e'+i}/>)}
+        {Array(dim).fill(null).map((_,i)=>{
+          const d=i+1, s=ds(d), info=dates[s];
+          const isToday=s===todayStr;
+          const bg = info?.type==='accepted'?'#1a6b3a':info?.type==='pending'?'#c8a84b':info?.type==='event'?'#c8a84b':'transparent';
+          const color = info?'#fff':(isToday?'#c8a84b':'#7a6a5a');
+          return (
+            <div key={d} onClick={()=>info&&onDateClick&&onDateClick(s,info)}
+              style={{fontSize:11,fontWeight:isToday?800:500,color,background:bg,borderRadius:4,padding:'3px 0',
+                cursor:info?'pointer':'default',border:isToday&&!info?'1px solid #c8a84b':'1px solid transparent',
+                lineHeight:'18px',minHeight:20}}>
+              {d}
+            </div>
+          );
+        })}
+      </div>
+      {label && <div style={{fontSize:10,color:'#a89a8a',textAlign:'center',marginTop:6}}>{label}</div>}
+    </div>
+  );
+}
+
+function VendorDashboardCalendar({ vendorProfile, user, setTab }) {
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!vendorProfile) { setLoading(false); return; }
+    let mounted = true;
+    (async () => {
+      let allReqs = [];
+      if (vendorProfile.id) {
+        const { data } = await supabase.from('booking_requests').select('*').eq('vendor_id', vendorProfile.id);
+        if (data) allReqs = data;
+      }
+      if (allReqs.length === 0 && vendorProfile.contact_email) {
+        const { data } = await supabase.from('booking_requests').select('*').ilike('host_email', vendorProfile.contact_email);
+        if (data) allReqs = data;
+      }
+      if (allReqs.length === 0 && vendorProfile.name) {
+        const { data } = await supabase.from('booking_requests').select('*').ilike('vendor_name', vendorProfile.name);
+        if (data) allReqs = data;
+      }
+      const seen = new Set(); allReqs = allReqs.filter(r => { if(seen.has(r.id)) return false; seen.add(r.id); return true; });
+      if (mounted) { setBookings(allReqs); setLoading(false); }
+    })();
+    return () => { mounted = false; };
+  }, [vendorProfile]);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcoming = bookings.filter(b => (b.event_date||'') >= todayStr).sort((a,b) => (a.event_date||'').localeCompare(b.event_date||''));
+  const confirmed = upcoming.filter(b => b.status === 'accepted');
+  const pending = upcoming.filter(b => b.status === 'pending');
+
+  // Build dates map for mini calendar
+  const calDates = {};
+  bookings.forEach(b => {
+    if (b.event_date) calDates[b.event_date] = { type: b.status === 'accepted' ? 'accepted' : b.status === 'pending' ? 'pending' : null, booking: b };
+  });
+
+  const fmtD = (d) => d ? new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+
+  return (
+    <div style={{marginBottom:24}}>
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Bookings & Calendar</h3>
+      {loading ? <div style={{color:'#a89a8a',padding:16}}>Loading bookings...</div> : bookings.length === 0 ? (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a',marginBottom:8}}>No bookings yet.</div>
+          <button onClick={()=>setTab('opportunities')} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
+        </div>
+      ) : (
+        <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+          {/* Mini calendar */}
+          <div style={{flex:'0 0 220px',background:'#1a1410',borderRadius:10,padding:16}}>
+            <DashboardMiniCal dates={calDates} onDateClick={(s,info)=>setExpanded(expanded===s?null:s)}
+              label={`${confirmed.length} confirmed · ${pending.length} pending`} />
+            <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>
+              <div style={{display:'flex',alignItems:'center',gap:4,fontSize:9,color:'#a89a8a'}}><div style={{width:8,height:8,borderRadius:2,background:'#1a6b3a'}}/> Confirmed</div>
+              <div style={{display:'flex',alignItems:'center',gap:4,fontSize:9,color:'#a89a8a'}}><div style={{width:8,height:8,borderRadius:2,background:'#c8a84b'}}/> Pending</div>
+            </div>
+          </div>
+          {/* Upcoming list */}
+          <div style={{flex:1,minWidth:280}}>
+            {confirmed.length > 0 && (
+              <div style={{marginBottom:12}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#1a6b3a',marginBottom:6}}>Confirmed Bookings</div>
+                {confirmed.slice(0,5).map(b => (
+                  <div key={b.id} onClick={()=>setExpanded(expanded===b.event_date?null:b.event_date)} style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'10px 12px',marginBottom:6,cursor:'pointer'}}>
+                    <div style={{fontWeight:600,fontSize:13,color:'#1a1410'}}>{b.event_name||'Event'}</div>
+                    <div style={{fontSize:11,color:'#2d7a50'}}>{fmtD(b.event_date)} · Zip {b.event_zip||'—'}</div>
+                    {expanded===b.event_date && <div style={{marginTop:6,fontSize:11,color:'#1a6b3a',borderTop:'1px solid #b8e8c8',paddingTop:6}}>Host: {b.host_name||'—'}{b.host_email ? ` · ${b.host_email}` : ''}{b.start_time ? ` · ${b.start_time}` : ''}</div>}
+                  </div>
+                ))}
+              </div>
+            )}
+            {pending.length > 0 && (
+              <div>
+                <div style={{fontSize:12,fontWeight:700,color:'#7a5a10',marginBottom:6}}>Pending Applications</div>
+                {pending.slice(0,5).map(b => (
+                  <div key={b.id} style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'10px 12px',marginBottom:6}}>
+                    <div style={{fontWeight:600,fontSize:13,color:'#1a1410'}}>{b.event_name||'Event'}</div>
+                    <div style={{fontSize:11,color:'#7a5a10'}}>{fmtD(b.event_date)} · Zip {b.event_zip||'—'} · Awaiting response</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {upcoming.length > 5 && (
+              <button onClick={()=>setTab('calendar')} style={{background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',marginTop:4,fontFamily:'DM Sans,sans-serif'}}>View full calendar →</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HostDashboardCalendar({ user, userEvents, setTab }) {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(null);
+
+  useEffect(() => {
+    if (!userEvents || userEvents.length === 0) { setLoading(false); return; }
+    const names = userEvents.map(e => e.event_name).filter(Boolean);
+    if (names.length === 0) { setLoading(false); return; }
+    supabase.from('booking_requests').select('*').in('event_name', names).order('created_at',{ascending:false})
+      .then(({ data }) => { if (data) setApplications(data); setLoading(false); });
+  }, [userEvents]);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const upcoming = (userEvents||[]).filter(e => (e.date||'') >= todayStr).sort((a,b) => (a.date||'').localeCompare(b.date||''));
+
+  // Build dates map
+  const calDates = {};
+  (userEvents||[]).forEach(e => {
+    if (e.date) {
+      const apps = applications.filter(a => a.event_name === e.event_name);
+      const acc = apps.filter(a => a.status === 'accepted').length;
+      calDates[e.date] = { type: 'event', event: e, accepted: acc, total: apps.length };
+    }
+  });
+
+  const fmtD = (d) => d ? new Date(d+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+  const totalAccepted = applications.filter(a => a.status === 'accepted').length;
+  const totalPending = applications.filter(a => a.status === 'pending').length;
+
+  return (
+    <div style={{marginBottom:24}}>
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Events Calendar</h3>
+      {loading ? <div style={{color:'#a89a8a',padding:16}}>Loading...</div> : (userEvents||[]).length === 0 ? (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a'}}>No events posted yet.</div>
+        </div>
+      ) : (
+        <div style={{display:'flex',gap:16,flexWrap:'wrap'}}>
+          {/* Mini calendar */}
+          <div style={{flex:'0 0 220px',background:'#1a1410',borderRadius:10,padding:16}}>
+            <DashboardMiniCal dates={calDates} onDateClick={(s,info)=>setExpanded(expanded===s?null:s)}
+              label={`${upcoming.length} upcoming · ${totalAccepted} vendors`} />
+            <div style={{display:'flex',gap:8,justifyContent:'center',marginTop:8}}>
+              <div style={{display:'flex',alignItems:'center',gap:4,fontSize:9,color:'#a89a8a'}}><div style={{width:8,height:8,borderRadius:2,background:'#c8a84b'}}/> Event</div>
+            </div>
+          </div>
+          {/* Upcoming events list */}
+          <div style={{flex:1,minWidth:280}}>
+            {upcoming.slice(0,6).map(e => {
+              const apps = applications.filter(a => a.event_name === e.event_name);
+              const acc = apps.filter(a => a.status === 'accepted').length;
+              const pend = apps.filter(a => a.status === 'pending').length;
+              const isExp = expanded === e.date;
+              return (
+                <div key={e.id} onClick={()=>setExpanded(isExp?null:e.date)}
+                  style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 12px',marginBottom:6,cursor:'pointer'}}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:8}}>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13,color:'#1a1410'}}>{e.event_name}</div>
+                      <div style={{fontSize:11,color:'#7a6a5a'}}>{fmtD(e.date)} · {e.event_type} · Zip {e.zip}</div>
+                    </div>
+                    <div style={{display:'flex',gap:4}}>
+                      {acc > 0 && <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:700}}>{acc}/{e.spots||'?'} filled</span>}
+                      {pend > 0 && <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:700}}>{pend} pending</span>}
+                      <span style={{background:e.status==='approved'?'#d4f4e0':e.status==='rejected'?'#fdecea':'#fdf4dc',color:e.status==='approved'?'#1a6b3a':e.status==='rejected'?'#8b1a1a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:600}}>{e.status==='approved'?'Live':e.status}</span>
+                    </div>
+                  </div>
+                  {isExp && apps.length > 0 && (
+                    <div style={{marginTop:8,borderTop:'1px solid #e8ddd0',paddingTop:8}}>
+                      <div style={{fontSize:11,fontWeight:600,color:'#a89a8a',marginBottom:4}}>Vendor Applications ({apps.length})</div>
+                      {apps.slice(0,5).map(a => (
+                        <div key={a.id} style={{fontSize:11,color:'#1a1410',padding:'3px 0',display:'flex',justifyContent:'space-between'}}>
+                          <span>{a.vendor_name||'Vendor'} · {a.vendor_category||'—'}</span>
+                          <span style={{color:a.status==='accepted'?'#1a6b3a':a.status==='pending'?'#7a5a10':'#8b1a1a',fontWeight:600}}>{a.status}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {upcoming.length > 6 && (
+              <button onClick={()=>setTab('host-calendar')} style={{background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',marginTop:4,fontFamily:'DM Sans,sans-serif'}}>View full calendar →</button>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
 function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
   const [requests, setRequests] = useState([]);
@@ -2399,6 +2629,9 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         )}
       </div>
 
+      {/* ── My Bookings & Calendar ── */}
+      <VendorDashboardCalendar vendorProfile={vendorProfile} user={user} setTab={setTab} />
+
       {/* Contact & Feedback */}
       <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
         <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your listing?</div>
@@ -2715,6 +2948,9 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           ))}
         </div>
       )}
+
+      {/* ── My Events Calendar ── */}
+      <HostDashboardCalendar user={user} userEvents={userEvents} setTab={setTab} />
 
       {/* Contact & Feedback */}
       <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
