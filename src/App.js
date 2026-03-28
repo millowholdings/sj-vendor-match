@@ -1957,7 +1957,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     facebook: m.facebook||'', tiktok: m.tiktok||'', youtube: m.youtube||'', otherSocial: m.otherSocial||'',
     yearsActive: m.yearsActive||'', insurance: vendorProfile?.insurance||false,
     // Service provider fields
-    isServiceProvider: m.isServiceProvider||false,
+    isServiceProvider: m.isServiceProvider || m.vendorType?.service || false,
     serviceCategories: m.serviceCategories||[],
     serviceSubcategories: m.serviceSubcategories||[],
     serviceType: m.serviceType||'', serviceRateType: m.serviceRateType||'fixed',
@@ -2294,16 +2294,51 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
             <button onClick={saveProfile} disabled={saving} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:saving?0.6:1}}>{saving?'Saving...':'Save Changes'}</button>
           </>
         ) : (
-          <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px'}}>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Business:</span> {vendorProfile?.name}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Contact:</span> {vendorProfile?.contact_name}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {vendorProfile?.contact_email}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Phone:</span> {vendorProfile?.contact_phone || '—'}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Zip:</span> {vendorProfile?.home_zip}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Radius:</span> {vendorProfile?.radius}mi</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.category}</div>
-            <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
-          </div>
+          <>
+            {/* Photos */}
+            {(m.photoUrls||[]).length > 0 && (
+              <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:16}}>
+                {(m.photoUrls||[]).map((url,i)=>(
+                  <img key={i} src={url} alt={`Photo ${i+1}`} style={{width:100,height:100,objectFit:'cover',borderRadius:8,border:'1px solid #e8ddd0'}} />
+                ))}
+              </div>
+            )}
+            {/* Info grid */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px',marginBottom:14}}>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Business:</span> {vendorProfile?.name}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Contact:</span> {vendorProfile?.contact_name}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Email:</span> {vendorProfile?.contact_email}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Phone:</span> {vendorProfile?.contact_phone || '—'}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Location:</span> Zip {vendorProfile?.home_zip} · {vendorProfile?.radius}mi radius</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Category:</span> {vendorProfile?.isServiceProvider ? (vendorProfile.serviceCategories||[]).join(', ')||vendorProfile?.category : vendorProfile?.category}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Insurance:</span> {vendorProfile?.insurance ? '✓ Insured' : 'Not insured'}</div>
+              <div><span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>Status:</span> <span style={{background:vendorProfile?.status==='approved'?'#d4f4e0':'#fdf4dc',color:vendorProfile?.status==='approved'?'#1a6b3a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:11,fontWeight:600}}>{vendorProfile?.status || 'pending'}</span></div>
+            </div>
+            {/* Description */}
+            {vendorProfile?.description && <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,marginBottom:14,padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{vendorProfile.description}</div>}
+            {/* Service provider info */}
+            {vendorProfile?.isServiceProvider && (
+              <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px',marginBottom:14}}>
+                <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:6}}>Service Provider</div>
+                <div style={{fontSize:13,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px'}}>
+                  <div><span style={{color:'#a89a8a',fontSize:11}}>Type:</span> {vendorProfile.serviceType||'—'}</div>
+                  <div><span style={{color:'#a89a8a',fontSize:11}}>Rate:</span> {vendorProfile.serviceRateType==='quote'?'Quote based':vendorProfile.serviceRateType==='range'?`${vendorProfile.serviceRateMin} – ${vendorProfile.serviceRateMax}`:vendorProfile.serviceRateMin||'—'}</div>
+                  <div><span style={{color:'#a89a8a',fontSize:11}}>Duration:</span> {vendorProfile.minBookingDuration||'—'}</div>
+                </div>
+                {vendorProfile.serviceDescription && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>{vendorProfile.serviceDescription}</div>}
+              </div>
+            )}
+            {/* Links */}
+            {[vendorProfile?.website,vendorProfile?.instagram,m.facebook,m.tiktok,m.youtube,m.otherSocial].some(Boolean) && (
+              <div style={{display:'flex',flexWrap:'wrap',gap:8,marginBottom:14}}>
+                {[{l:'🌐 Website',u:vendorProfile?.website},{l:'📸 Instagram',u:vendorProfile?.instagram},{l:'👤 Facebook',u:m.facebook},{l:'🎵 TikTok',u:m.tiktok},{l:'▶️ YouTube',u:m.youtube},{l:'🔗 Other',u:m.otherSocial}].filter(x=>x.u).map(x=>(
+                  <a key={x.l} href={x.u.startsWith('http')?x.u:'https://'+x.u} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',background:'#e8f4fd',padding:'4px 10px',borderRadius:6}}>{x.l}</a>
+                ))}
+              </div>
+            )}
+            {m.lookbookUrl && <div style={{marginBottom:8}}><a href={m.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>📋 View Price Menu / Lookbook</a></div>}
+            <div style={{fontSize:11,color:'#a89a8a',marginTop:8}}>This is how your profile appears to hosts. Click "Edit Profile" to make changes.</div>
+          </>
         )}
       </div>
 
@@ -2403,6 +2438,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
+  const [viewingEvent, setViewingEvent] = useState(null);
   const [eventForm, setEventForm] = useState({});
   const [savingEvent, setSavingEvent] = useState(false);
   const [editExistingPhotos, setEditExistingPhotos] = useState([]);
@@ -2509,7 +2545,8 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  <button onClick={()=>editingEvent===e.id?setEditingEvent(null):startEditEvent(e)} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editingEvent===e.id?'Cancel':'Edit'}</button>
+                  <button onClick={()=>setViewingEvent(viewingEvent===e.id?null:e.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{viewingEvent===e.id?'Hide':'View'}</button>
+                  <button onClick={()=>{setViewingEvent(null);editingEvent===e.id?setEditingEvent(null):startEditEvent(e);}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editingEvent===e.id?'Cancel':'Edit'}</button>
                   <span style={{
                     padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',
                     background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
@@ -2522,6 +2559,30 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
               {e.status==='rejected' && e.rejection_reason && (
                 <div style={{background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:6,padding:'8px 12px',marginTop:8,fontSize:12,color:'#8b1a1a'}}>
                   <strong>Reason:</strong> {e.rejection_reason}
+                </div>
+              )}
+              {viewingEvent===e.id && !editingEvent && (
+                <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
+                  {(e.event_photos||[]).length > 0 && (
+                    <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:12}}>
+                      {e.event_photos.map((url,i)=><img key={i} src={url} alt={`Event photo ${i+1}`} style={{width:90,height:90,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />)}
+                    </div>
+                  )}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 20px',fontSize:13,marginBottom:12}}>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Type:</span> {e.event_type}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Date:</span> {fmtDate(e.date)}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Time:</span> {e.start_time ? fmtTime(e.start_time) : '—'}{e.end_time ? ' – '+fmtTime(e.end_time) : ''}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Location:</span> Zip {e.zip}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Booth Fee:</span> {e.booth_fee||'—'}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Spots:</span> {e.spots||0}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Ticketed:</span> {e.is_ticketed ? `Yes — ${e.ticket_price||'TBD'}` : 'Free'}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Deadline:</span> {e.deadline ? fmtDate(e.deadline) : '—'}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Duplicates (Cat):</span> {e.allow_duplicate_categories!==false ? 'Allowed' : 'One per category'}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Duplicates (Sub):</span> {e.allow_duplicate_subcategories!==false ? 'Allowed' : 'One per specialty'}</div>
+                  </div>
+                  {e.notes && <div style={{fontSize:13,color:'#7a6a5a',marginBottom:10,padding:'8px 10px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{e.notes}</div>}
+                  {e.event_link && <div style={{marginBottom:8}}><a href={e.event_link} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>🔗 Event Page</a></div>}
+                  <div style={{fontSize:11,color:'#a89a8a'}}>This is how your event appears to vendors.</div>
                 </div>
               )}
               {editingEvent===e.id && (
