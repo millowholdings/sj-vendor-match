@@ -1774,15 +1774,15 @@ function FeedbackModal({ onClose, userEmail }) {
 }
 
 // ─── Auth Modal ───────────────────────────────────────────────────────────────
-function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSignup }) {
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSignup, defaultMode, defaultRole }) {
+  const [mode, setMode] = useState(defaultMode || 'login');
   const [email, setEmail] = useState(defaultEmail || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [confirmSent, setConfirmSent] = useState(false);
-  const [roles, setRoles] = useState({ vendor: false, host: false, eventGoer: false });
+  const [roles, setRoles] = useState({ vendor: defaultRole==='vendor', host: defaultRole==='host', eventGoer: defaultRole==='eventGoer' });
   const [signupRoles, setSignupRoles] = useState(null);
 
   const toggleRole = (role) => setRoles(r => ({ ...r, [role]: !r[role] }));
@@ -1834,9 +1834,9 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
       <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:440,width:'100%',overflow:'hidden'}}>
         <div style={{background:'#1a1410',padding:'24px 28px',textAlign:'center'}}>
           <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>
-            {mode==='login' ? 'Welcome Back' : 'Create Account'}
+            {mode==='login' ? 'Welcome Back' : 'Welcome to South Jersey Vendor Market!'}
           </div>
-          <div style={{fontSize:13,color:'#a89a8a',marginTop:4}}>South Jersey Vendor Market</div>
+          <div style={{fontSize:13,color:'#a89a8a',marginTop:4}}>{mode==='login' ? 'South Jersey Vendor Market' : 'Create your free account — select all that apply'}</div>
         </div>
         <div style={{padding:'24px 28px'}}>
           {resetSent ? (
@@ -1881,6 +1881,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
                       You'll have access to all selected features under one account.
                     </div>
                   ) : null}
+                  <div style={{fontSize:11,color:'#a89a8a',marginTop:8,textAlign:'center'}}>You can always add more roles later from your dashboard.</div>
                 </div>
               )}
               <div className="form-group" style={{marginBottom:12}}>
@@ -4537,6 +4538,10 @@ function AppInner() {
   }, []);
   const [authUser, setAuthUser] = useState(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState(null);
+  const [authModalRole, setAuthModalRole] = useState(null);
+  const openSignup = (role) => { setAuthModalMode('signup'); setAuthModalRole(role||null); setShowAuthModal(true); };
+  const openLogin = () => { setAuthModalMode(null); setAuthModalRole(null); setShowAuthModal(true); };
   const [authEmail, setAuthEmail] = useState('');
   const [vendorProfile, setVendorProfile] = useState(null); // raw DB row for logged-in vendor
   const [userEvents, setUserEvents] = useState([]); // raw DB rows for logged-in host
@@ -5387,11 +5392,11 @@ function AppInner() {
             <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:1200,width:'100%',margin:'0 auto',padding:'32px 32px 0'}}>
               {[
                 { title:'Vendors', desc:'Create your profile, set your travel radius, and get matched with events looking for what you offer.',
-                  buttons:[{label:'Join as a Vendor',tab:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
+                  buttons:[{label:'Join as a Vendor',tab:'vendor',signupRole:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
-                  buttons:[{label:'Post Your Event',tab:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
+                  buttons:[{label:'Post Your Event',tab:'host',signupRole:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
                 { title:'Event Guests', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
-                  buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup'}] },
+                  buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup',signupRole:'eventGoer'}] },
               ].map(card=>(
                 <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
                   <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 8px',lineHeight:1.2,fontWeight:700}}>
@@ -5402,7 +5407,12 @@ function AppInner() {
                   </p>
                   <div style={{display:'flex',flexDirection:'column',gap:8,marginTop:'auto'}}>
                     {card.buttons.map(b=>(
-                      <button key={b.label} onClick={()=>{ if(b.action==='eventGoerSignup') setShowEventGoerSignup(true); else {setTab(b.tab);window.scrollTo({top:0});} }}
+                      <button key={b.label} onClick={()=>{
+                        // If not logged in and this is a primary signup action, open unified signup
+                        if (!authUser && b.signupRole) { openSignup(b.signupRole); return; }
+                        if (b.action==='eventGoerSignup') { if(authUser) setShowEventGoerSignup(true); else openSignup('eventGoer'); return; }
+                        setTab(b.tab); window.scrollTo({top:0});
+                      }}
                         style={{width:'100%',background:'#0e0c0a',color:'#e8c97a',border:'1px solid rgba(255,255,255,0.4)',borderRadius:8,padding:'10px 0',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
                         {b.label}
                       </button>
@@ -5532,7 +5542,7 @@ function AppInner() {
         </div>
         <div style={{fontSize:11,color:'#5a4a3a'}}>support@southjerseyvendormarket.com</div>
       </footer>
-      {showAuthModal && <AuthModal onClose={()=>setShowAuthModal(false)} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} setShowEventGoerSignup={setShowEventGoerSignup} />}
+      {showAuthModal && <AuthModal onClose={()=>{setShowAuthModal(false);setAuthModalMode(null);setAuthModalRole(null);}} onAuth={()=>{}} defaultEmail={authEmail} setTab={setTab} setShowEventGoerSignup={setShowEventGoerSignup} defaultMode={authModalMode} defaultRole={authModalRole} />}
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
       {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} defaultEmail={authUser?.email||''} defaultName={vendorProfile?.contact_name||''} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); if(authUser) supabase.from('event_goers').select('*').eq('email',authUser.email).limit(1).single().then(({data})=>{if(data)setEventGoerProfile(data);}); }} />}
