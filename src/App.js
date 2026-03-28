@@ -576,6 +576,22 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
+function PasswordInput({ value, onChange, placeholder, onKeyDown, style }) {
+  const [show, setShow] = useState(false);
+  return (
+    <div style={{position:'relative'}}>
+      <input type={show?'text':'password'} value={value} onChange={onChange} placeholder={placeholder} onKeyDown={onKeyDown} style={{...style, paddingRight:36}} />
+      <button type="button" onClick={()=>setShow(s=>!s)} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',padding:2,color:'#c8a850',fontSize:16,lineHeight:1}}>
+        {show ? (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+        ) : (
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c8a850" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        )}
+      </button>
+    </div>
+  );
+}
+
 function UploadZone({ label, hint, accept, onChange, multiple }) {
   const [fileNames, setFileNames] = useState([]);
   const inputRef = useRef(null);
@@ -735,7 +751,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
-            <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
+            <div className="form-group"><label>Create Password *</label><PasswordInput placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
           </div>
           <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
             Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(typeof setShowAuthModal==='function')setShowAuthModal(true);}}>Log in</button> and your profile will be linked.
@@ -1130,7 +1146,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
-            <div className="form-group"><label>Create Password *</label><input type="password" placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
+            <div className="form-group"><label>Create Password *</label><PasswordInput placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
           </div>
           <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
             Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}}>Log in</button> and your event will be linked.
@@ -1873,7 +1889,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
               </div>
               <div className="form-group" style={{marginBottom:16}}>
                 <label>Password</label>
-                <input type="password" value={password} onChange={e=>setPassword(e.target.value)}
+                <PasswordInput value={password} onChange={e=>setPassword(e.target.value)}
                   placeholder={mode==='signup'?'Create a password (min 6 chars)':'Your password'}
                   onKeyDown={e=>{if(e.key==='Enter')handleSubmit();}} />
               </div>
@@ -3335,7 +3351,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         <div style={{background:'#fff',border:'1.5px solid #e8ddd0',borderRadius:14,padding:32,marginTop:16}}>
           <div style={{fontSize:36,marginBottom:12}}>🔒</div>
           <p style={{color:'#7a6a5a',fontSize:14,marginBottom:20}}>Enter the admin password to continue.</p>
-          <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setPwError(false);}}
+          <PasswordInput value={pw} onChange={e=>{setPw(e.target.value);setPwError(false);}}
             onKeyDown={e=>{ if(e.key==='Enter') attemptUnlock(); }}
             placeholder="Password"
             style={{width:'100%',border:`1.5px solid ${pwError?'#c0392b':'#e0d5c5'}`,borderRadius:8,padding:'10px 14px',
