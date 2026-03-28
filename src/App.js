@@ -1950,13 +1950,24 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const [newCoi, setNewCoi] = useState(null);
   const [newLookbook, setNewLookbook] = useState(null);
   const m = vendorProfile?.metadata || {};
-  const [editForm, setEditForm] = useState({
+  const initEditForm = () => ({
     name: vendorProfile?.name||'', contact_name: vendorProfile?.contact_name||'', contact_email: vendorProfile?.contact_email||'',
     contact_phone: vendorProfile?.contact_phone||'', home_zip: vendorProfile?.home_zip||'', radius: vendorProfile?.radius||20,
     description: vendorProfile?.description||'', website: vendorProfile?.website||'', instagram: vendorProfile?.instagram||'',
     facebook: m.facebook||'', tiktok: m.tiktok||'', youtube: m.youtube||'', otherSocial: m.otherSocial||'',
     yearsActive: m.yearsActive||'', insurance: vendorProfile?.insurance||false,
+    // Service provider fields
+    isServiceProvider: m.isServiceProvider||false,
+    serviceCategories: m.serviceCategories||[],
+    serviceSubcategories: m.serviceSubcategories||[],
+    serviceType: m.serviceType||'', serviceRateType: m.serviceRateType||'fixed',
+    serviceRateMin: m.serviceRateMin||'', serviceRateMax: m.serviceRateMax||'',
+    minBookingDuration: m.minBookingDuration||'1 hour',
+    serviceDescription: m.serviceDescription||'',
+    availabilityNotes: m.availabilityNotes||'',
+    equipmentNotes: m.equipmentNotes||'',
   });
+  const [editForm, setEditForm] = useState(initEditForm);
   const ef = (k,v) => setEditForm(f=>({...f,[k]:v}));
   const SIGNIFICANT_FIELDS = ['home_zip','radius'];
 
@@ -2008,7 +2019,13 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
     if (!hasProfileChanges && !hasFileChanges) { setEditing(false); setSaving(false); return; }
 
-    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl };
+    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl,
+      isServiceProvider:editForm.isServiceProvider, serviceCategories:editForm.serviceCategories, serviceSubcategories:editForm.serviceSubcategories,
+      serviceType:editForm.serviceType||null, serviceRateType:editForm.serviceRateType, serviceRateMin:editForm.serviceRateMin||null, serviceRateMax:editForm.serviceRateMax||null,
+      minBookingDuration:editForm.minBookingDuration||null, serviceDescription:editForm.serviceDescription||null,
+      availabilityNotes:editForm.availabilityNotes||null, equipmentNotes:editForm.equipmentNotes||null,
+      bookingLeadTime:editForm.bookingLeadTime||m.bookingLeadTime||null,
+    };
     const updatePayload = {
       name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
       home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
@@ -2127,7 +2144,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
-          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||'',yearsActive:m.yearsActive||'',insurance:vendorProfile?.insurance||false});setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
+          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm(initEditForm());setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
         </div>
         {editing ? (
           <>
@@ -2155,6 +2172,75 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
               <div className="form-group"><label>YouTube</label><input value={editForm.youtube} onChange={e=>ef('youtube',e.target.value)} /></div>
               <div className="form-group"><label>Other Link</label><input value={editForm.otherSocial} onChange={e=>ef('otherSocial',e.target.value)} /></div>
             </div>
+            {/* Service Provider Section */}
+            {editForm.isServiceProvider && (
+              <div style={{marginTop:16,marginBottom:14,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+                <div style={{fontSize:14,fontWeight:700,color:'#1a1410',marginBottom:12}}>Service Provider Details</div>
+                <div className="form-grid" style={{gap:10}}>
+                  <div className="form-group"><label>Service Categories</label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                      {SERVICE_CATEGORIES.map(cat=>(
+                        <button key={cat} type="button" onClick={()=>{const has=editForm.serviceCategories.includes(cat);ef('serviceCategories',has?editForm.serviceCategories.filter(c=>c!==cat):[...editForm.serviceCategories,cat]);}} style={{padding:'5px 12px',borderRadius:16,fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:'1px solid',background:editForm.serviceCategories.includes(cat)?'#c8a850':'#fff',color:editForm.serviceCategories.includes(cat)?'#1a1410':'#7a6a5a',borderColor:editForm.serviceCategories.includes(cat)?'#c8a850':'#e8ddd0'}}>{cat}</button>
+                      ))}
+                    </div>
+                  </div>
+                  {editForm.serviceCategories.length>0 && (
+                    <div className="form-group full"><label>Service Subcategories</label>
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                        {editForm.serviceCategories.flatMap(cat=>(SERVICE_SUBCATEGORIES[cat]||[]).filter(s=>s!=='Other')).map(sub=>(
+                          <button key={sub} type="button" onClick={()=>{const has=editForm.serviceSubcategories.includes(sub);ef('serviceSubcategories',has?editForm.serviceSubcategories.filter(s=>s!==sub):[...editForm.serviceSubcategories,sub]);}} style={{padding:'4px 10px',borderRadius:14,fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:'1px solid',background:editForm.serviceSubcategories.includes(sub)?'#1a1410':'#fff',color:editForm.serviceSubcategories.includes(sub)?'#e8c97a':'#5a4a3a',borderColor:editForm.serviceSubcategories.includes(sub)?'#1a1410':'#e8ddd0'}}>{sub}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="form-group"><label>Primary Service</label>
+                    <select value={editForm.serviceType} onChange={e=>ef('serviceType',e.target.value)}>
+                      <option value="">Select...</option>
+                      {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Rate Type</label>
+                    <select value={editForm.serviceRateType} onChange={e=>ef('serviceRateType',e.target.value)}>
+                      <option value="fixed">Fixed Rate</option>
+                      <option value="range">Rate Range</option>
+                      <option value="quote">Open to Quotes</option>
+                    </select>
+                  </div>
+                  {editForm.serviceRateType==='fixed' && <div className="form-group"><label>Your Rate</label><input placeholder="e.g. $500/event" value={editForm.serviceRateMin} onChange={e=>ef('serviceRateMin',e.target.value)} /></div>}
+                  {editForm.serviceRateType==='range' && <>
+                    <div className="form-group"><label>Starting At</label><input placeholder="e.g. $200" value={editForm.serviceRateMin} onChange={e=>ef('serviceRateMin',e.target.value)} /></div>
+                    <div className="form-group"><label>Up To</label><input placeholder="e.g. $800" value={editForm.serviceRateMax} onChange={e=>ef('serviceRateMax',e.target.value)} /></div>
+                  </>}
+                  <div className="form-group"><label>Min Booking Duration</label>
+                    <select value={editForm.minBookingDuration} onChange={e=>ef('minBookingDuration',e.target.value)}>
+                      {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group"><label>Min Booking Notice</label>
+                    <select value={editForm.bookingLeadTime||m.bookingLeadTime||''} onChange={e=>ef('bookingLeadTime',e.target.value)}>
+                      <option value="1week">At least 1 week</option>
+                      <option value="2weeks">At least 2 weeks</option>
+                      <option value="1month">At least 1 month</option>
+                      <option value="2months">2+ months</option>
+                      <option value="flexible">Flexible — last minute OK</option>
+                    </select>
+                  </div>
+                  <div className="form-group full">
+                    <label>What's Included</label>
+                    <textarea placeholder="Describe what the host gets — duration, equipment, setup/breakdown, setlist customization, etc." value={editForm.serviceDescription} onChange={e=>ef('serviceDescription',e.target.value)} style={{minHeight:60}} />
+                  </div>
+                  <div className="form-group full">
+                    <label>Availability Notes</label>
+                    <textarea placeholder="e.g. Weekends only, no holidays, available year-round..." value={editForm.availabilityNotes} onChange={e=>ef('availabilityNotes',e.target.value)} style={{minHeight:40}} />
+                  </div>
+                  <div className="form-group full">
+                    <label>Equipment & Requirements</label>
+                    <textarea placeholder="What you bring vs what the venue needs to provide..." value={editForm.equipmentNotes} onChange={e=>ef('equipmentNotes',e.target.value)} style={{minHeight:40}} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Photos */}
             <div style={{marginTop:16,marginBottom:14}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
