@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing vendorEmail or responseToken' });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
   const respondUrl = `${baseUrl}?respond=${responseToken}`;
 
   const fmtDate = (d) => {
@@ -84,6 +84,9 @@ module.exports = async function handler(req, res) {
         </div>
         <div style="text-align:center;font-size:12px;color:#a89a8a;margin-top:12px">
           Click the button above to accept or decline this booking request.
+        </div>
+        <div style="text-align:center;font-size:11px;color:#a89a8a;margin-top:8px;word-break:break-all">
+          Or copy this link: <a href="${respondUrl}" style="color:#c8a84b">${respondUrl}</a>
         </div>
       </div>
     </div>

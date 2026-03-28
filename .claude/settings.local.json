@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(cmd /c \"npm install @supabase/supabase-js\" 2>&1)",
+      "Bash(cmd /c \"npm install @supabase/supabase-js 2>&1\")",
+      "Bash(powershell -Command \"cd 'C:\\\\Users\\\\whymy\\\\Documents\\\\sj-vendor-match'; npm install @supabase/supabase-js\")",
+      "Bash(npm run:*)",
+      "Bash(notepad:*)",
+      "Bash(ls:*)",
+      "WebFetch(domain:sj-vendor-match.vercel.app)",
+      "Bash(curl:*)",
+      "Bash(npx react-scripts:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(Role\" link in the Account nav to onboard into the other role:*)",
+      "Bash(after booking accepted\" instead of blurred placeholder text:*)",
+      "Bash(profiles\" and Sign Up Free button:*)",
+      "Bash(apply\" and Sign Up Free button:*)",
+      "Bash(Consultation\" button that opens contact form:*)",
+      "Bash(hours\" on success:*)",
+      "Bash(grep:*)",
+      "Bash(per-event basis through a free consultation\" instead of \"$150\":*)",
+      "Bash(git revert:*)",
+      "Bash(apply\"\\):*)",
+      "Bash(successfully!\" with auto-dismiss after 5 seconds. No blocking alert dialog:*)",
+      "Bash(for f:*)",
+      "Bash(do sed:*)",
+      "Bash(done)"
+    ]
+  }
+}

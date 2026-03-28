@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
 
   const stripe = new Stripe(stripeKey);
   const supabase = createClient(supabaseUrl, supabaseKey);
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
 
   try {
     // Check if vendor already has a Stripe customer
