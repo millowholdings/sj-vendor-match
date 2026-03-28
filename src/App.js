@@ -1978,7 +1978,13 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const saveProfile = async () => {
     setSaving(true);
     const emailDomain = (vendorProfile?.contact_email || user?.email || '').split('@')[1] || 'unknown';
-    console.log('SAVE: started, vendor email domain:', emailDomain);
+    // Diagnostic: log all IDs to verify linkage
+    const authUid = user?.id || 'no-auth-id';
+    const profileUserId = vendorProfile?.user_id || 'no-user-id';
+    const profileVendorId = vendorProfile?.id || 'no-vendor-id';
+    const profileEmail = vendorProfile?.contact_email || 'no-email';
+    const authEmail = user?.email || 'no-auth-email';
+    console.log('SAVE DEBUG:', JSON.stringify({ authUid, profileUserId, profileVendorId, profileEmail, authEmail, emailDomain, match: authUid === profileUserId }));
     try {
       const vp = vendorProfile;
       if (!vp || !vp.id) { alert('Error: Vendor profile not loaded. Please refresh and try again.'); return; }
