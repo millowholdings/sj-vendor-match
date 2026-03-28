@@ -25,6 +25,9 @@ Use a clear, descriptive commit message summarizing what was changed and why.
 - Supabase credentials are stored in `.env` (never commit this file)
 - No TypeScript, no component library — plain React with inline styles
 
+## Vendor Feature Parity Rule
+Any feature, fix, or update that applies to market vendors must also apply to service provider vendors and vice versa. They are both vendor types on the same platform and should always have feature parity. This includes but is not limited to: profile editing, photo uploads, booking requests, dashboard features, email notifications, admin panel management, subscription handling, founding vendor status, content gating, and any future features added to the vendor experience. Whenever making changes to vendor functionality always check and update both vendor types.
+
 ## Database Tables (Supabase)
 - `vendors` — vendor profiles (name, category, subcategories, home_zip, radius, tags, pricing flags, contact info)
 - `events` — event/opportunity listings (event_name, event_type, zip, date, times, booth_fee, spots, categories_needed, contact info)
