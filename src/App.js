@@ -3140,12 +3140,23 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     <div className="section" style={{ maxWidth:1100 }}>
       <div className="section-title">Admin Dashboard</div>
       <p className="section-sub">Manage vendors, hosts, and bookings across South Jersey.</p>
+      {/* Pending action alert */}
+      {(pendingEvents.length > 0 || pendingVendors.length > 0) && (
+        <div style={{background:'#fdf4dc',border:'2px solid #ffd966',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',gap:12}}>
+          <span style={{fontSize:22}}>⚠️</span>
+          <div style={{fontSize:14,color:'#7a5a10',fontWeight:600}}>
+            {pendingEvents.length + pendingVendors.length} pending approval{pendingEvents.length + pendingVendors.length !== 1 ? 's' : ''}
+            {pendingEvents.length > 0 && ` — ${pendingEvents.length} event${pendingEvents.length!==1?'s':''}`}
+            {pendingVendors.length > 0 && ` — ${pendingVendors.length} vendor${pendingVendors.length!==1?'s':''}`}
+          </div>
+        </div>
+      )}
       <div className="admin-grid">
-        <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Events</div></div>
-        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{pendingEvents.length}</div><div className="admin-stat-label">Events Pending Review</div></div>
+        <div className="admin-stat" style={{border:pendingVendors.length>0?'2px solid #ffd966':undefined}}><div className="admin-stat-num" style={{color:pendingVendors.length>0?'#c8a84b':undefined}}>{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
+        <div className="admin-stat" style={{border:pendingEvents.length>0?'2px solid #ffd966':undefined}}><div className="admin-stat-num" style={{color:pendingEvents.length>0?'#c8a84b':undefined}}>{pendingEvents.length}</div><div className="admin-stat-label">Events Pending</div></div>
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{conciergeEvents.length}</div><div className="admin-stat-label">Concierge</div></div>
-        <div className="admin-stat"><div className="admin-stat-num">{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Events</div></div>
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Guests</div></div>
       </div>
 
@@ -3232,6 +3243,33 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         </div>
       }
 
+      {/* ── Pending Vendor Applications ──────────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🔍 Pending Vendor Applications ({pendingVendors.length})</h3>
+      {pendingVendors.length===0
+        ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
+        : <div style={{display:'flex',flexDirection:'column',gap:16}}>
+            {pendingVendors.map(v=>(
+              <PendingVendorCard key={v.id} v={v}
+                onApprove={async()=>{
+                  const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+                  if(error){alert('Error approving vendor. Please try again.');return;}
+                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                  setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
+                }}
+                onReject={async()=>{
+                  const reason = window.prompt(`Reject "${v.name}"? Enter a reason (sent to vendor):`);
+                  if(!reason) return;
+                  const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
+                  if(error){alert('Error rejecting vendor. Please try again.');return;}
+                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:false,reason})}).catch(()=>{});
+                }}
+              />
+            ))}
+          </div>
+      }
+
       {/* ── Concierge Requests ───────────────────────────────── */}
       {conciergeEvents.length > 0 && (
         <>
@@ -3305,32 +3343,6 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
           </table>
       }
 
-      {/* ── Pending Vendor Applications ──────────────────────── */}
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Pending Vendor Applications ({pendingVendors.length})</h3>
-      {pendingVendors.length===0
-        ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
-        : <div style={{display:'flex',flexDirection:'column',gap:16}}>
-            {pendingVendors.map(v=>(
-              <PendingVendorCard key={v.id} v={v}
-                onApprove={async()=>{
-                  const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
-                  if(error){alert('Error approving vendor. Please try again.');return;}
-                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
-                  setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
-                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
-                }}
-                onReject={async()=>{
-                  const reason = window.prompt(`Reject "${v.name}"? Enter a reason (sent to vendor):`);
-                  if(!reason) return;
-                  const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
-                  if(error){alert('Error rejecting vendor. Please try again.');return;}
-                  setPendingVendors(p=>p.filter(x=>x.id!==v.id));
-                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:false,reason})}).catch(()=>{});
-                }}
-              />
-            ))}
-          </div>
-      }
       {/* ── Approved Vendors ────────────────────────────────── */}
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Approved Vendors ({vendors.length})</h3>
       {vendors.length===0
@@ -4893,8 +4905,13 @@ function AppInner() {
         )}
         <nav className="nav">
           <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
-          {/* Auth + Hamburger on right */}
+          {/* Admin + Auth + Hamburger on right */}
           <div style={{display:'flex',alignItems:'center',gap:8}}>
+          {isAdmin && (
+            <button onClick={()=>{setTab('admin');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
+              Admin{(pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length) > 0 ? ` (${pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length})` : ''}
+            </button>
+          )}
           {authUser ? (
             <button onClick={handleLogout} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log Out</button>
           ) : (
