@@ -1977,145 +1977,75 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
   const saveProfile = async () => {
     setSaving(true);
-    const vp = vendorProfile;
-    const vid = vp.id;
-    const bucket = 'vendor-files';
-    const safeName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-    const uploadFile = async (file, path) => {
-      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
-      if (upErr) { console.error('Upload error:', upErr); return null; }
-      return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-    };
-
-    // Upload new photos
-    let photoUrls = [...existingPhotos];
-    if (editPhotos.length > 0) {
-      const startIdx = existingPhotos.length;
-      const newUrls = await Promise.all(editPhotos.map((f, i) => uploadFile(f, `${vid}/photos/${startIdx+i}-${safeName(f.name)}`)));
-      photoUrls = [...photoUrls, ...newUrls.filter(Boolean)];
-    }
-
-    // Upload new COI
-    let coiUrl = m.coiUrl || null;
-    if (newCoi) {
-      const url = await uploadFile(newCoi, `${vid}/coi/${safeName(newCoi.name)}`);
-      if (url) coiUrl = url;
-    }
-
-    // Upload new lookbook
-    let lookbookUrl = m.lookbookUrl || null;
-    if (newLookbook) {
-      const url = await uploadFile(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`);
-      if (url) lookbookUrl = url;
-    }
-
-    // Build complete metadata with ALL fields
-    const newMeta = {
-      ...m,
-      facebook: editForm.facebook||null, tiktok: editForm.tiktok||null, youtube: editForm.youtube||null,
-      otherSocial: editForm.otherSocial||null, yearsActive: editForm.yearsActive||null,
-      photoUrls, coiUrl, lookbookUrl,
-      // Service provider fields
-      isServiceProvider: editForm.isServiceProvider,
-      vendorType: editForm.isServiceProvider ? { market: !!vp.category, service: true } : m.vendorType,
-      serviceCategories: editForm.serviceCategories||[],
-      serviceSubcategories: editForm.serviceSubcategories||[],
-      serviceType: editForm.serviceType||null,
-      serviceRateType: editForm.serviceRateType||'fixed',
-      serviceRateMin: editForm.serviceRateMin||null,
-      serviceRateMax: editForm.serviceRateMax||null,
-      minBookingDuration: editForm.minBookingDuration||null,
-      serviceDescription: editForm.serviceDescription||null,
-      availabilityNotes: editForm.availabilityNotes||null,
-      equipmentNotes: editForm.equipmentNotes||null,
-      bookingLeadTime: editForm.bookingLeadTime||m.bookingLeadTime||null,
-    };
-
-    const updatePayload = {
-      name: editForm.name,
-      contact_name: editForm.contact_name,
-      contact_phone: editForm.contact_phone||null,
-      home_zip: editForm.home_zip,
-      radius: editForm.radius,
-      description: editForm.description,
-      website: editForm.website||null,
-      instagram: editForm.instagram||null,
-      insurance: editForm.insurance,
-      metadata: newMeta,
-      status: 'pending',
-    };
-
-    console.log('Saving vendor profile:', { vid, updatePayload });
-
-    const { data: saveResult, error } = await supabase.from('vendors').update(updatePayload).eq('id', vid).select();
-    if (error) {
-      console.error('Vendor save error:', error);
-      alert('Failed to save changes: ' + error.message + '\n\nPlease try again or contact support@southjerseyvendormarket.com');
-      setSaving(false);
-      return;
-    }
-    console.log('Vendor save result:', saveResult);
-
-    if (!saveResult || saveResult.length === 0) {
-      console.error('Vendor save returned no data — record may not exist for id:', vid);
-      alert('Save failed — could not find your vendor record. Please contact support@southjerseyvendormarket.com');
-      setSaving(false);
-      return;
-    }
-
-    // Log changes
-    const changedFields = [];
-    if (editForm.name !== vp.name) changedFields.push('business name');
-    if (editForm.description !== (vp.description||'')) changedFields.push('description');
-    if (editForm.home_zip !== vp.home_zip) changedFields.push('zip code');
-    if (editForm.radius !== vp.radius) changedFields.push('travel radius');
-    if (editForm.website !== (vp.website||'')) changedFields.push('website');
-    if (editForm.insurance !== vp.insurance) changedFields.push('insurance');
-    if (editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length) changedFields.push('photos');
-    if (newCoi) changedFields.push('certificate of insurance');
-    if (newLookbook) changedFields.push('lookbook/menu');
-    if (editForm.serviceType !== (m.serviceType||'')) changedFields.push('service type');
-    if (editForm.serviceRateMin !== (m.serviceRateMin||'')) changedFields.push('rate');
-    if (editForm.serviceDescription !== (m.serviceDescription||'')) changedFields.push('service description');
-    if (editForm.availabilityNotes !== (m.availabilityNotes||'')) changedFields.push('availability');
-    if (editForm.equipmentNotes !== (m.equipmentNotes||'')) changedFields.push('equipment');
-    if (JSON.stringify(editForm.serviceCategories) !== JSON.stringify(m.serviceCategories||[])) changedFields.push('service categories');
-
-    const summary = changedFields.length > 0 ? changedFields.join(', ') : 'profile updated';
-
-    supabase.from('change_log').insert({
-      entity_type: 'vendor', entity_id: vid, entity_name: editForm.name,
-      changed_by: user.email, changes: { summary, fields: changedFields }, significant: true,
-    }).catch(e => console.error('Change log error:', e));
-
-    // Notify admin
     try {
-      const notifResp = await fetch('/api/send-vendor-notification', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          businessName: editForm.name + ' (PROFILE UPDATE)',
-          contactName: editForm.contact_name,
-          vendorEmail: editForm.contact_email,
-          phone: editForm.contact_phone,
-          category: editForm.isServiceProvider ? (editForm.serviceCategories||[]).join(', ') : vp.category,
-          vendorType: editForm.isServiceProvider ? 'service' : 'market',
-        }),
-      });
-      const notifResult = await notifResp.json();
-      console.log('Admin notification result:', notifResult);
-      if (!notifResp.ok) console.error('Admin notification failed:', notifResult);
-    } catch (notifErr) {
-      console.error('Admin notification error:', notifErr);
-    }
+      const vp = vendorProfile;
+      const vid = vp.id;
 
-    // Refresh profile from DB
-    const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
-    if (updated && setVendorProfile) {
-      setVendorProfile(updated);
-      console.log('Profile refreshed from DB:', updated.id, updated.status);
+      // Step 1: Upload files first (with timeout)
+      let photoUrls = [...existingPhotos];
+      let coiUrl = m.coiUrl || null;
+      let lookbookUrl = m.lookbookUrl || null;
+
+      if (editPhotos.length > 0 || newCoi || newLookbook) {
+        const bucket = 'vendor-files';
+        const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+        const uploadFile = async (file, path) => {
+          try {
+            const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
+            if (upErr) { console.error('Upload error:', upErr); return null; }
+            return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+          } catch (e) { console.error('Upload exception:', e); return null; }
+        };
+
+        if (editPhotos.length > 0) {
+          const idx = existingPhotos.length;
+          const urls = await Promise.all(editPhotos.map((f,i) => uploadFile(f, `${vid}/photos/${idx+i}-${safeName(f.name)}`)));
+          photoUrls = [...photoUrls, ...urls.filter(Boolean)];
+        }
+        if (newCoi) { const u = await uploadFile(newCoi, `${vid}/coi/${safeName(newCoi.name)}`); if (u) coiUrl = u; }
+        if (newLookbook) { const u = await uploadFile(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`); if (u) lookbookUrl = u; }
+      }
+
+      // Step 2: Build update payload
+      const newMeta = { ...m,
+        facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null,
+        yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl,
+        isServiceProvider:editForm.isServiceProvider, vendorType:editForm.isServiceProvider?{market:!!vp.category,service:true}:m.vendorType,
+        serviceCategories:editForm.serviceCategories||[], serviceSubcategories:editForm.serviceSubcategories||[],
+        serviceType:editForm.serviceType||null, serviceRateType:editForm.serviceRateType||'fixed',
+        serviceRateMin:editForm.serviceRateMin||null, serviceRateMax:editForm.serviceRateMax||null,
+        minBookingDuration:editForm.minBookingDuration||null, serviceDescription:editForm.serviceDescription||null,
+        availabilityNotes:editForm.availabilityNotes||null, equipmentNotes:editForm.equipmentNotes||null,
+        bookingLeadTime:editForm.bookingLeadTime||m.bookingLeadTime||null,
+      };
+
+      // Step 3: Save to Supabase
+      const { error } = await supabase.from('vendors').update({
+        name:editForm.name, contact_name:editForm.contact_name, contact_phone:editForm.contact_phone||null,
+        home_zip:editForm.home_zip, radius:editForm.radius, description:editForm.description,
+        website:editForm.website||null, instagram:editForm.instagram||null, insurance:editForm.insurance,
+        metadata:newMeta, status:'pending',
+      }).eq('id', vid);
+
+      if (error) { alert('Failed to save: ' + error.message); setSaving(false); return; }
+
+      // Step 4: Log + notify (non-blocking)
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).then(()=>{}).catch(()=>{});
+      fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:editForm.contact_email, category:vp.category, vendorType:editForm.isServiceProvider?'service':'market' }),
+      }).catch(()=>{});
+
+      // Step 5: Refresh + close
+      const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
+      if (updated && setVendorProfile) setVendorProfile(updated);
+      setEditing(false);
+      setSaving(false);
+      alert('Your changes have been submitted and will be reviewed within 24 hours.');
+    } catch (err) {
+      console.error('Save profile error:', err);
+      alert('Something went wrong. Please try again or contact support@southjerseyvendormarket.com');
+      setSaving(false);
     }
-    setEditing(false); setSaving(false);
-    alert('Your changes have been submitted for review and will be live within 24 hours.\n\nUpdated: ' + summary);
   };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
