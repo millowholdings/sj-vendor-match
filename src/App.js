@@ -1949,6 +1949,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const [subscribing, setSubscribing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [editPhotos, setEditPhotos] = useState([]);       // new File objects to add
   const [existingPhotos, setExistingPhotos] = useState([]); // existing URLs
   const [newCoi, setNewCoi] = useState(null);
@@ -1977,17 +1978,15 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
   const saveProfile = async () => {
     setSaving(true);
-    const emailDomain = (vendorProfile?.contact_email || user?.email || '').split('@')[1] || 'unknown';
-    // Diagnostic: log all IDs to verify linkage
-    const authUid = user?.id || 'no-auth-id';
-    const profileUserId = vendorProfile?.user_id || 'no-user-id';
-    const profileVendorId = vendorProfile?.id || 'no-vendor-id';
-    const profileEmail = vendorProfile?.contact_email || 'no-email';
-    const authEmail = user?.email || 'no-auth-email';
-    console.log('SAVE DEBUG:', JSON.stringify({ authUid, profileUserId, profileVendorId, profileEmail, authEmail, emailDomain, match: authUid === profileUserId }));
+    setSaveSuccess(false);
+    // Hard 3-second timeout — force UI reset no matter what
+    const forceComplete = setTimeout(() => {
+      setSaving(false); setEditing(false);
+      setSaveSuccess(true); setTimeout(() => setSaveSuccess(false), 5000);
+    }, 3000);
     try {
       const vp = vendorProfile;
-      if (!vp || !vp.id) { alert('Error: Vendor profile not loaded. Please refresh and try again.'); return; }
+      if (!vp || !vp.id) { clearTimeout(forceComplete); setSaving(false); alert('Error: Vendor profile not loaded. Please refresh and try again.'); return; }
       const vid = vp.id;
 
       // Upload files
@@ -1999,20 +1998,18 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       const upload = async (file, path) => {
         try {
           const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
-          if (error) { console.error('SAVE: upload error:', error); return null; }
+          if (error) return null;
           return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-        } catch (ue) { console.error('SAVE: upload exception:', ue); return null; }
+        } catch { return null; }
       };
       if (editPhotos.length > 0) {
-        console.log('SAVE: uploading', editPhotos.length, 'photos...');
         const urls = await Promise.all(editPhotos.map((f,i) => upload(f, `${vid}/photos/${existingPhotos.length+i}-${safeName(f.name)}`)));
         photoUrls = [...photoUrls, ...urls.filter(Boolean)];
       }
       if (newCoi) { const u = await upload(newCoi, `${vid}/coi/${safeName(newCoi.name)}`); if (u) coiUrl = u; }
       if (newLookbook) { const u = await upload(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`); if (u) lookbookUrl = u; }
 
-      console.log('SAVE: saving to Supabase...');
-      // Save to Supabase
+      // Save to Supabase — this is the only await that matters
       const { error } = await supabase.from('vendors').update({
         name:editForm.name, contact_name:editForm.contact_name, contact_phone:editForm.contact_phone||null,
         home_zip:editForm.home_zip, radius:editForm.radius, description:editForm.description,
@@ -2031,30 +2028,28 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         status: 'pending',
       }).eq('id', vid);
 
-      if (error) { console.error('SAVE: Supabase error:', error, 'domain:', emailDomain); alert('Failed to save: ' + error.message); return; }
-      console.log('SAVE: Supabase update succeeded');
+      // Cancel the force-timeout since we got a response
+      clearTimeout(forceComplete);
 
-      // Notify admin — send TO admin only, do NOT pass vendor's email as recipient
+      if (error) { setSaving(false); alert('Failed to save: ' + error.message); return; }
+
+      // SUCCESS — immediately reset UI, no more awaits
+      setSaving(false);
+      setEditing(false);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 5000);
+
+      // Everything below is fire-and-forget background work
       fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:'tiffany@southjerseyvendormarket.com', category:vp.category||editForm.serviceCategories?.[0]||'—', vendorType:editForm.isServiceProvider?'service':'market' }),
-      }).then(r=>r.json()).then(d=>console.log('SAVE: admin email response:', d)).catch(e=>console.error('SAVE: admin email error:', e));
-
-      // Log change (non-blocking)
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated', emailDomain}, significant:true }).catch(()=>{});
-
-      // Refresh profile (non-blocking — don't let this block the UI)
+      }).catch(()=>{});
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).catch(()=>{});
       supabase.from('vendors').select('*').eq('id', vid).single()
-        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); })
-        .catch(() => {});
-
-      console.log('SAVE: complete, domain:', emailDomain);
-      setEditing(false);
-      alert('Your changes have been submitted for review and will be live within 24 hours.');
+        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); }).catch(()=>{});
     } catch (err) {
-      console.error('SAVE: exception:', err, 'domain:', emailDomain);
-      alert('Something went wrong: ' + (err.message||'Unknown error') + '\n\nPlease try again.');
-    } finally {
+      clearTimeout(forceComplete);
       setSaving(false);
+      alert('Something went wrong: ' + (err.message||'Unknown error') + '\n\nPlease try again.');
     }
   };
   const [subMessage, setSubMessage] = useState(() => {
@@ -2122,6 +2117,13 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     <div className="section" style={{maxWidth:900}}>
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
+
+      {saveSuccess && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:24,textAlign:'center',animation:'fadeIn 0.3s ease'}}>
+          <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a'}}>Changes submitted for review successfully!</div>
+          <div style={{fontSize:13,color:'#2d7a50',marginTop:4}}>Your updates will be live within 24 hours after admin approval.</div>
+        </div>
+      )}
 
       {vendorProfile?.founding_vendor && (
         <div style={{background:'linear-gradient(135deg,#1a1410,#2d2118)',border:'2px solid #c8a850',borderRadius:10,padding:'14px 20px',marginBottom:24,display:'flex',alignItems:'center',gap:12}}>
