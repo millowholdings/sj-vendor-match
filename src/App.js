@@ -6042,8 +6042,8 @@ function AppInner() {
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
-        {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />}
-        {tab==="host-calendar" && <HostCalendarPage hostEvent={hostEvent} bookingRequests={bookingRequests} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
+        {tab==="calendar"      && <VendorCalendarPage vendorId={calendarVendorId} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} vendorProfile={vendorProfile} />}
+        {tab==="host-calendar" && <HostCalendarPage authUser={authUser} userEvents={userEvents} setTab={setTab} hostConfirm={hostConfirm} clearHostConfirm={()=>setHostConfirm(null)} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
@@ -6543,8 +6543,44 @@ function BookingRequestCard({ req, respondToBooking }) {
 }
 
 // ─── Vendor Calendar Page ─────────────────────────────────────────────────────
-function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
-  if (!vendorId) {
+function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars, authUser, vendorProfile }) {
+  const [vendorBookings, setVendorBookings] = useState([]);
+  const [loadingBookings, setLoadingBookings] = useState(true);
+
+  // Fetch live booking data from Supabase
+  useEffect(() => {
+    if (!vendorId && !vendorProfile && !authUser) { setLoadingBookings(false); return; }
+    let mounted = true;
+    (async () => {
+      const vid = vendorId || vendorProfile?.id;
+      const vEmail = vendorProfile?.contact_email || authUser?.email;
+      const vName = vendorProfile?.name;
+      let allReqs = [];
+      // Try by vendor_id
+      if (vid) {
+        const { data } = await supabase.from('booking_requests').select('*').eq('vendor_id', vid);
+        if (data) allReqs = data;
+      }
+      // Also try by vendor email (host_email field in application flow)
+      if (vEmail && allReqs.length === 0) {
+        const { data } = await supabase.from('booking_requests').select('*').ilike('host_email', vEmail);
+        if (data && data.length > 0) allReqs = [...allReqs, ...data];
+      }
+      // Also try by vendor name
+      if (vName && allReqs.length === 0) {
+        const { data } = await supabase.from('booking_requests').select('*').ilike('vendor_name', vName);
+        if (data && data.length > 0) allReqs = [...allReqs, ...data];
+      }
+      // Dedupe by id
+      const seen = new Set();
+      allReqs = allReqs.filter(r => { if (seen.has(r.id)) return false; seen.add(r.id); return true; });
+      if (mounted) setVendorBookings(allReqs);
+      if (mounted) setLoadingBookings(false);
+    })();
+    return () => { mounted = false; };
+  }, [vendorId, vendorProfile, authUser]);
+
+  if (!vendorId && !vendorProfile) {
     return (
       <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
@@ -6589,7 +6625,9 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
   const isPast     = (d) => new Date(viewYear, viewMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
   const getDate    = (ds) => cal.dates?.[ds] || null;
-  const isBooked   = (ds) => cal.bookedDates?.includes(ds);
+  const isBooked   = (ds) => cal.bookedDates?.includes(ds) || vendorBookings.some(b => (b.event_date) === ds && b.status === 'accepted');
+  const isPending  = (ds) => vendorBookings.some(b => (b.event_date) === ds && b.status === 'pending');
+  const getBookingsForDate = (ds) => vendorBookings.filter(b => (b.event_date) === ds);
 
   const fmt12 = (t) => {
     if (!t) return '';
@@ -6635,7 +6673,8 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
   };
 
   const availCount  = Object.values(cal.dates||{}).filter(d=>d.status==='available').length;
-  const bookedCount = (cal.bookedDates||[]).length;
+  const bookedCount = new Set([...(cal.bookedDates||[]), ...vendorBookings.filter(b=>b.status==='accepted').map(b=>b.event_date)]).size;
+  const pendingBookingCount = vendorBookings.filter(b=>b.status==='pending').length;
   const blockedCount= Object.values(cal.dates||{}).filter(d=>d.status==='blocked').length;
 
   const generateICal = () => {
@@ -6665,6 +6704,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
   const statusStyle = (ds) => {
     if (isBooked(ds))                        return {bg:'#c8a84b', color:'#1a1410', border:'#c8a84b', label:'BOOKED'};
+    if (isPending(ds))                       return {bg:'#fdf4dc', color:'#7a5a10', border:'#ffd966', label:'PENDING'};
     const entry = getDate(ds);
     if (!entry)                              return {bg:'#f5f0ea', color:'#9a8a7a', border:'#e0d5c5', label:''};
     if (entry.status==='available')          return {bg:'#1a6b3a', color:'#fff',    border:'#1a6b3a', label:'OPEN'};
@@ -6834,6 +6874,7 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
           {[
             {label:'Available',count:availCount,  bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
             {label:'Booked',   count:bookedCount,  bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
+            {label:'Pending',  count:pendingBookingCount, bg:'#fff3cd',color:'#856404',border:'#ffeeba'},
             {label:'Blocked',  count:blockedCount, bg:'#fdecea',color:'#8b1a1a',border:'#f5c6c6'},
           ].map(({label,count,bg,color,border})=>(
             <div key={label} style={{background:bg,border:`1px solid ${border}`,borderRadius:20,padding:'5px 14px',fontSize:13,fontWeight:700,color}}>
@@ -6876,7 +6917,10 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
                     boxShadow:hov&&!past?'0 2px 8px rgba(0,0,0,0.18)':'none', minHeight:46}}>
                   <div>{d}</div>
                   {ss.label && <div style={{fontSize:7,marginTop:1,letterSpacing:0.5}}>{ss.label}</div>}
-                  {entry?.startTime && !isBooked(ds) && (
+                  {(isBooked(ds)||isPending(ds)) && getBookingsForDate(ds).length > 0 && (
+                    <div style={{fontSize:6,marginTop:1}}>{getBookingsForDate(ds)[0].event_name?.slice(0,10)||'Event'}</div>
+                  )}
+                  {entry?.startTime && !isBooked(ds) && !isPending(ds) && (
                     <div style={{fontSize:7,lineHeight:1.2,marginTop:1}}>
                       {fmt12(entry.startTime).replace(' ','')}<br/>{fmt12(entry.endTime).replace(' ','')}
                     </div>
@@ -6892,6 +6936,26 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 
         {/* ── Right panel ── */}
         <div style={{flex:'1 1 260px',display:'flex',flexDirection:'column',gap:14}}>
+
+          {/* Upcoming Bookings from Supabase */}
+          {vendorBookings.length > 0 && (
+            <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
+              <div style={{fontWeight:700,color:'#1a1410',fontSize:14,marginBottom:10}}>My Bookings</div>
+              {loadingBookings ? <div style={{fontSize:12,color:'#a89a8a'}}>Loading...</div> : (
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                  {vendorBookings.filter(b=>b.event_date >= new Date().toISOString().split('T')[0]).sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||'')).slice(0,8).map(b => (
+                    <div key={b.id} style={{padding:'8px 10px',borderRadius:6,fontSize:12,
+                      background:b.status==='accepted'?'#d4f4e0':b.status==='pending'?'#fdf4dc':'#f5f0ea',
+                      border:`1px solid ${b.status==='accepted'?'#b8e8c8':b.status==='pending'?'#ffd966':'#e8ddd0'}`}}>
+                      <div style={{fontWeight:600,color:'#1a1410'}}>{b.event_name||'Event'}</div>
+                      <div style={{color:'#7a6a5a'}}>{b.event_date ? new Date(b.event_date+'T12:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '—'} · {b.status==='accepted'?'Confirmed':b.status==='pending'?'Pending':'—'}</div>
+                      {b.status==='accepted' && b.host_name && <div style={{color:'#1a6b3a',marginTop:2}}>Host: {b.host_name}{b.host_email ? ` · ${b.host_email}` : ''}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Recurring Templates */}
           <div style={{background:'#fff',borderRadius:12,border:'1px solid #e8ddd0',padding:16}}>
@@ -6962,8 +7026,46 @@ function VendorCalendarPage({ vendorId, vendorCalendars, setVendorCalendars }) {
 }
 
 // ─── Host Calendar Page ────────────────────────────────────────────────────────
-function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, clearHostConfirm }) {
-  if (!hostEvent) {
+function HostCalendarPage({ authUser, userEvents, setTab, hostConfirm, clearHostConfirm }) {
+  const [events, setEvents] = useState(userEvents || []);
+  const [bookingRequests, setBookingRequests] = useState([]);
+  const [loadingCal, setLoadingCal] = useState(true);
+
+  // Fetch live data from Supabase
+  useEffect(() => {
+    if (!authUser) { setLoadingCal(false); return; }
+    let mounted = true;
+    (async () => {
+      // Fetch host's events
+      const { data: evts } = await supabase.from('events').select('*')
+        .or(`user_id.eq.${authUser.id},contact_email.ilike.${authUser.email}`)
+        .order('date', { ascending: true });
+      if (mounted && evts) setEvents(evts);
+      // Fetch booking requests for all host events
+      const eventNames = (evts || []).map(e => e.event_name).filter(Boolean);
+      if (eventNames.length > 0) {
+        const { data: reqs } = await supabase.from('booking_requests').select('*')
+          .in('event_name', eventNames).order('created_at', { ascending: false });
+        if (mounted && reqs) setBookingRequests(reqs);
+      }
+      if (mounted) setLoadingCal(false);
+    })();
+    return () => { mounted = false; };
+  }, [authUser]);
+
+  if (!authUser) {
+    return (
+      <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
+        <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
+        <div style={{ fontFamily:'Playfair Display,serif', fontSize:28, marginBottom:12, color:'#1a1410' }}>Your Event Calendar</div>
+        <p style={{ fontSize:16, maxWidth:440, margin:'0 auto', marginBottom:24 }}>Log in to see your event calendar.</p>
+      </div>
+    );
+  }
+  if (loadingCal) {
+    return <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading calendar...</div>;
+  }
+  if (events.length === 0) {
     return (
       <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
@@ -6976,7 +7078,7 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
   const today = new Date();
   const [viewYear,  setViewYear]  = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [dayView,   setDayView]   = useState(null); // null = month view, 'YYYY-MM-DD' = day view
+  const [dayView,   setDayView]   = useState(null);
   const [showIcalInfo, setShowIcalInfo] = useState(false);
 
   const DAYS_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -6999,28 +7101,38 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
 
   const fmtDate = (ds, opts) => ds ? new Date(ds+'T12:00').toLocaleDateString('en-US', opts) : '';
 
-  // Navigate to event month on load
+  // Navigate to first upcoming event month on load
   useEffect(() => {
-    if (hostEvent?.date) {
-      const [y, mo] = hostEvent.date.split('-').map(Number);
+    const upcoming = events.find(e => e.date >= new Date().toISOString().split('T')[0]);
+    const target = upcoming || events[0];
+    if (target?.date) {
+      const [y, mo] = target.date.split('-').map(Number);
       setViewYear(y);
       setViewMonth(mo - 1);
     }
-  }, [hostEvent?.date]);
+  }, []);
+
+  // Build events by date map
+  const eventsByDate = {};
+  events.forEach(e => {
+    if (e.date) {
+      if (!eventsByDate[e.date]) eventsByDate[e.date] = [];
+      eventsByDate[e.date].push(e);
+    }
+  });
 
   // Group booking requests by date
   const requestsByDate = {};
   bookingRequests.forEach(req => {
-    const d = req.eventDate;
+    const d = req.event_date;
     if (d) {
       if (!requestsByDate[d]) requestsByDate[d] = [];
       requestsByDate[d].push(req);
     }
   });
 
-  const eventDate = hostEvent?.date || null;
   const allEventDates = new Set([
-    ...(eventDate ? [eventDate] : []),
+    ...Object.keys(eventsByDate),
     ...Object.keys(requestsByDate),
   ]);
 
@@ -7051,17 +7163,18 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
 
   const generateICal = () => {
     const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//South Jersey Vendor Market//EN','CALSCALE:GREGORIAN','METHOD:PUBLISH'];
-    if (hostEvent?.date) {
-      const d = hostEvent.date.replace(/-/g,'');
+    events.forEach(ev => {
+      if (!ev.date) return;
+      const d = ev.date.replace(/-/g,'');
       lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,
-        `SUMMARY:${hostEvent.eventName || hostEvent.eventType || 'My Event'} - South Jersey Vendor Market`,
-        `UID:event-${d}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
-    }
+        `SUMMARY:${ev.event_name || ev.event_type || 'My Event'} - South Jersey Vendor Market`,
+        `UID:event-${ev.id}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
+    });
     bookingRequests.filter(r => r.status === 'accepted').forEach(req => {
-      const d = (req.eventDate||'').replace(/-/g,'');
+      const d = (req.event_date||'').replace(/-/g,'');
       if (!d) return;
       lines.push('BEGIN:VEVENT',`DTSTART;VALUE=DATE:${d}`,`DTEND;VALUE=DATE:${d}`,
-        `SUMMARY:Booked: ${req.vendorName} (${req.vendorCategory})`,
+        `SUMMARY:Booked: ${req.vendor_name||req.vendorName} (${req.vendor_category||req.vendorCategory})`,
         `UID:booking-${req.id}@sjvendormarket`,'STATUS:CONFIRMED','END:VEVENT');
     });
     lines.push('END:VCALENDAR');
@@ -7102,30 +7215,30 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
           </div>
         </div>
 
-        {/* Event block */}
-        {isEvDay && (
-          <div style={{background:'#1a1410',borderRadius:12,padding:'18px 22px',marginBottom:24}}>
+        {/* Event blocks for this day */}
+        {(eventsByDate[dayView]||[]).map(ev => (
+          <div key={ev.id} style={{background:'#1a1410',borderRadius:12,padding:'18px 22px',marginBottom:16}}>
             <div style={{fontSize:11,letterSpacing:'2px',textTransform:'uppercase',color:'#c8a84b',marginBottom:4}}>Your Event</div>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:22,color:'#e8c97a',marginBottom:6}}>
-              {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
+              {ev.event_name || ev.event_type || 'Your Event'}
             </div>
             <div style={{display:'flex',flexWrap:'wrap',gap:16}}>
-              {hostEvent.eventType && <div style={{fontSize:13,color:'#a89a8a'}}>🎪 {hostEvent.eventType}</div>}
-              {hostEvent.startTime && (
+              {ev.event_type && <div style={{fontSize:13,color:'#a89a8a'}}>🎪 {ev.event_type}</div>}
+              {ev.start_time && (
                 <div style={{fontSize:13,color:'#a89a8a'}}>
-                  🕐 {fmt12(hostEvent.startTime)}{hostEvent.endTime ? ` – ${fmt12(hostEvent.endTime)}` : ''}
+                  🕐 {fmt12(ev.start_time)}{ev.end_time ? ` – ${fmt12(ev.end_time)}` : ''}
                 </div>
               )}
-              {hostEvent.address && <div style={{fontSize:13,color:'#a89a8a'}}>📍 {hostEvent.address}{hostEvent.eventZip ? `, ${hostEvent.eventZip}` : ''}</div>}
-              {hostEvent.expectedAttendance && <div style={{fontSize:13,color:'#a89a8a'}}>👥 {hostEvent.expectedAttendance} expected</div>}
-              {hostEvent.vendorCount && <div style={{fontSize:13,color:'#a89a8a'}}>🏪 {hostEvent.vendorCount} vendor spots</div>}
-              {hostEvent.budget && <div style={{fontSize:13,color:'#a89a8a'}}>💰 {hostEvent.budget} budget</div>}
+              <div style={{fontSize:13,color:'#a89a8a'}}>📍 Zip {ev.zip}</div>
+              {ev.spots && <div style={{fontSize:13,color:'#a89a8a'}}>🏪 {ev.spots} vendor spots{acceptedCount > 0 ? ` (${dayReqs.filter(r=>r.event_name===ev.event_name&&r.status==='accepted').length} filled)` : ''}</div>}
+              {ev.booth_fee && <div style={{fontSize:13,color:'#a89a8a'}}>💰 {ev.booth_fee}</div>}
+              <div style={{fontSize:13,color:'#a89a8a'}}>📋 {ev.status === 'approved' ? 'Live' : ev.status}</div>
             </div>
-            {hostEvent.notes && (
-              <div style={{marginTop:10,fontSize:13,color:'#7a6a5a',fontStyle:'italic',lineHeight:1.6}}>"{hostEvent.notes}"</div>
+            {ev.notes && (
+              <div style={{marginTop:10,fontSize:13,color:'#7a6a5a',fontStyle:'italic',lineHeight:1.6}}>"{ev.notes}"</div>
             )}
           </div>
-        )}
+        ))}
 
         {/* Vendor lineup */}
         <div style={{marginBottom:8,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
@@ -7167,10 +7280,10 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
                   {/* Card header */}
                   <div style={{background:sm.bg,padding:'14px 18px',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
                     <div style={{display:'flex',alignItems:'center',gap:10}}>
-                      <div style={{fontSize:28}}>{req.vendorEmoji || '🏪'}</div>
+                      <div style={{fontSize:28}}>{req.vendor_emoji||req.vendorEmoji || '🏪'}</div>
                       <div>
-                        <div style={{fontWeight:700,color:'#1a1410',fontSize:16}}>{req.vendorName}</div>
-                        <div style={{fontSize:12,color:'#7a6a5a'}}>{req.vendorCategory}</div>
+                        <div style={{fontWeight:700,color:'#1a1410',fontSize:16}}>{req.vendor_name||req.vendorName}</div>
+                        <div style={{fontSize:12,color:'#7a6a5a'}}>{req.vendor_category||req.vendorCategory}</div>
                       </div>
                     </div>
                     <div style={{background:'#fff',color:sm.color,border:`1.5px solid ${sm.border}`,
@@ -7181,32 +7294,32 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
                   </div>
                   {/* Card body */}
                   <div style={{padding:'14px 18px'}}>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:req.vendorMessage?12:0}}>
-                      {req.startTime && (
+                    <div style={{display:'flex',flexWrap:'wrap',gap:12,marginBottom:(req.vendor_message||req.vendorMessage)?12:0}}>
+                      {(req.start_time||req.startTime) && (
                         <div style={{fontSize:13,color:'#4a3a28'}}>
-                          🕐 <span style={{color:'#7a6a5a'}}>{fmt12(req.startTime)}{req.endTime ? ` – ${fmt12(req.endTime)}` : ''}</span>
+                          🕐 <span style={{color:'#7a6a5a'}}>{fmt12(req.start_time||req.startTime)}{(req.end_time||req.endTime) ? ` – ${fmt12(req.end_time||req.endTime)}` : ''}</span>
                         </div>
                       )}
-                      {req.budget && (
+                      {(req.budget) && (
                         <div style={{fontSize:13,color:'#4a3a28'}}>
                           💰 <span style={{color:'#7a6a5a'}}>{req.budget}</span>
                         </div>
                       )}
-                      {req.sentAt && (
+                      {(req.sent_at||req.sentAt) && (
                         <div style={{fontSize:12,color:'#a89a8a'}}>
-                          Requested {new Date(req.sentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+                          Requested {new Date(req.sent_at||req.sentAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
                         </div>
                       )}
-                      {req.respondedAt && (
+                      {(req.responded_at||req.respondedAt) && (
                         <div style={{fontSize:12,color:'#a89a8a'}}>
-                          · Responded {new Date(req.respondedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
+                          · Responded {new Date(req.responded_at||req.respondedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}
                         </div>
                       )}
                     </div>
-                    {req.vendorMessage && (
+                    {(req.vendor_message||req.vendorMessage||req.notes) && (
                       <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,
                         padding:'10px 14px',fontSize:13,color:'#4a3a28',fontStyle:'italic',lineHeight:1.6}}>
-                        "{req.vendorMessage}"
+                        "{req.vendor_message||req.vendorMessage||req.notes}"
                       </div>
                     )}
                   </div>
@@ -7256,15 +7369,9 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
       <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:20}}>
         <div>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:30,color:'#1a1410',lineHeight:1.1}}>My Event Calendar</div>
-          {hostEvent ? (
-            <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>
-              {hostEvent.eventName || hostEvent.eventType || 'Your Event'}
-              {hostEvent.date && ` · ${fmtDate(hostEvent.date,{month:'long',day:'numeric',year:'numeric'})}`}
-              {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}–${fmt12(hostEvent.endTime)}`}
-            </div>
-          ) : (
-            <div style={{fontSize:14,color:'#a89a8a',marginTop:6}}>Post an event to see it on your calendar</div>
-          )}
+          <div style={{fontSize:14,color:'#7a6a5a',marginTop:6}}>
+            {events.length} event{events.length!==1?'s':''} · {acceptedCount} vendor{acceptedCount!==1?'s':''} confirmed
+          </div>
         </div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}}>
           {acceptedCount > 0 && (
@@ -7277,37 +7384,27 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
               {pendingCount} pending
             </div>
           )}
-          {hostEvent ? (
-            <button onClick={downloadICal}
-              style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
-                padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-              ⬇ Export .ics
-            </button>
-          ) : null}
-          {hostEvent ? (
-            <button onClick={()=>setTab('matches')}
-              style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
-                padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-              Browse Vendors →
-            </button>
-          ) : (
-            <button onClick={()=>setTab('host')}
-              style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
-                padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-              + Post Your Event
-            </button>
-          )}
+          <button onClick={downloadICal}
+            style={{background:'#f5f0ea',color:'#4a3a28',border:'1px solid #e0d5c5',borderRadius:8,
+              padding:'8px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            ⬇ Export .ics
+          </button>
+          <button onClick={()=>setTab('matches')}
+            style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,
+              padding:'9px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+            Browse Vendors →
+          </button>
         </div>
       </div>
 
-      {/* No-event prompt banner */}
-      {!hostEvent && (
+      {/* Post another event banner */}
+      {events.length > 0 && (
         <div style={{background:'#fdf9f5',border:'1.5px dashed #e0d5c5',borderRadius:12,
           padding:'18px 24px',marginBottom:20,display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
           <div style={{fontSize:28}}>📅</div>
           <div style={{flex:1,minWidth:200}}>
-            <div style={{fontWeight:700,color:'#1a1410',fontSize:15,marginBottom:2}}>No event posted yet</div>
-            <div style={{fontSize:13,color:'#7a6a5a'}}>Your events and vendor bookings will appear on this calendar once you post an event.</div>
+            <div style={{fontWeight:700,color:'#1a1410',fontSize:15,marginBottom:2}}>Your Events</div>
+            <div style={{fontSize:13,color:'#7a6a5a'}}>All your events and vendor bookings appear on this calendar. Click any date with an event to see details.</div>
           </div>
           <button onClick={()=>setTab('host')}
             style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,
@@ -7318,7 +7415,7 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
       )}
 
       {/* Next-step CTA: event posted but no requests sent yet */}
-      {hostEvent && bookingRequests.length === 0 && (
+      {events.length > 0 && bookingRequests.length === 0 && (
         <div style={{background:'linear-gradient(135deg,#1a1410,#2d2118)',borderRadius:12,padding:'20px 28px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,flexWrap:'wrap'}}>
           <div>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#e8c97a',marginBottom:4}}>Ready to find your vendors?</div>
@@ -7399,14 +7496,14 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
                 </div>
 
                 {/* Event pill */}
-                {isEv && (
-                  <div style={{background:'rgba(0,0,0,0.18)',color:cm.color,borderRadius:4,
+                {isEv && (eventsByDate[ds]||[]).map(ev => (
+                  <div key={ev.id} style={{background:'rgba(0,0,0,0.18)',color:cm.color,borderRadius:4,
                     padding:'2px 6px',fontSize:10,fontWeight:700,marginBottom:4,
                     overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-                    📅 {hostEvent.eventName || hostEvent.eventType || 'Event'}
-                    {hostEvent.startTime && ` · ${fmt12(hostEvent.startTime)}`}
+                    📅 {ev.event_name || ev.event_type || 'Event'}
+                    {ev.start_time && ` · ${fmt12(ev.start_time)}`}
                   </div>
-                )}
+                ))}
 
                 {/* Vendor chips */}
                 <div style={{display:'flex',flexDirection:'column',gap:2}}>
@@ -7421,7 +7518,7 @@ function HostCalendarPage({ hostEvent, bookingRequests, setTab, hostConfirm, cle
                         color:      isAcc  ? '#1a6b3a' : isPend ? '#7a5a10' : '#7a6a5a',
                         border:     `1px solid ${isAcc?'#b8e8c8':isPend?'#ffd966':'#e0d5c5'}`,
                       }}>
-                        {isAcc?'✓':isPend?'·':'–'} {req.vendorName}
+                        {isAcc?'✓':isPend?'·':'–'} {req.vendor_name||req.vendorName}
                       </div>
                     );
                   })}
