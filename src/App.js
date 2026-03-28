@@ -39,15 +39,15 @@ const SUBCATEGORIES = {
 const EVENT_TYPES = [
   "Pop-Up & Vendor Market", "Craft & Art Fair", "Farmers & Flea Market",
   "Holiday Market", "Night Market", "Sip & Shop", "Food Festival",
-  "Community Festival", "Fundraiser"
+  "Community Festival", "Fundraiser", "Networking Event", "Girls Night Out"
 ];
-const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Girls Night Out","Other"];
+const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Other"];
 const EVENT_TYPE_MAP = {
   "Pop-Up Market":"Pop-Up & Vendor Market","Vendor Market":"Pop-Up & Vendor Market",
   "Craft Fair":"Craft & Art Fair","Art Show":"Craft & Art Fair",
   "Flea Market":"Farmers & Flea Market","Farmers Market":"Farmers & Flea Market",
   "Grand Opening":"Community Festival","Block Party":"Community Festival",
-  "Girls Night Out":"Sip & Shop","Other":"Community Festival",
+  "Other":"Community Festival",
 };
 
 const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Other"];
