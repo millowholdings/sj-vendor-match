@@ -158,6 +158,8 @@ function dbVendorToApp(v) {
     serviceRateType:   m.serviceRateType|| "fixed",
     minBookingDuration:m.minBookingDuration || "",
     serviceDescription:m.serviceDescription || "",
+    availabilityNotes: m.availabilityNotes || "",
+    equipmentNotes:    m.equipmentNotes    || "",
     foundingVendor:    v.founding_vendor    || false,
   };
 }
@@ -4031,9 +4033,15 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                 {isExpanded && (
                   <div style={{borderTop:'1px solid #e8ddd0',padding:'16px',background:'#faf8f5'}}>
                     <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'6px 20px',marginBottom:12,fontSize:13}}>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Contact:</span> {v.contactName||'—'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Phone:</span> {v.contactPhone||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Email:</span> {v.contactEmail||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Zip:</span> {v.homeZip}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Radius:</span> {v.radius}mi</div>
-                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Insurance:</span> {v.insurance?'Yes':'No'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Insurance:</span> {v.insurance?'✓ Yes':'No'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Years:</span> {v.yearsActive||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Categories:</span> {(v.allCategories||[v.category]).join(', ')}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Subcategories:</span> {(v.subcategories||[]).join(', ')||'—'}</div>
                     </div>
                     {v.description && <div style={{fontSize:13,color:'#7a6a5a',marginBottom:12,padding:'8px 10px',background:'#fff',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{v.description}</div>}
                     {/* Links */}
@@ -4049,15 +4057,19 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     )}
                     {/* Service provider details */}
                     {v.isServiceProvider && (
-                      <div style={{marginBottom:12}}>
-                        <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:6}}>SERVICE DETAILS</div>
+                      <div style={{marginBottom:12,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px'}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'#c8a850',marginBottom:8}}>SERVICE PROVIDER DETAILS</div>
                         <div style={{fontSize:13,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px'}}>
                           <div><span style={{color:'#a89a8a',fontSize:11}}>Type:</span> {v.serviceType||'—'}</div>
                           <div><span style={{color:'#a89a8a',fontSize:11}}>Rate:</span> {v.serviceRateType==='quote'?'Quote based':v.serviceRateType==='range'?`${v.serviceRateMin} – ${v.serviceRateMax}`:v.serviceRateMin||'—'}</div>
-                          <div><span style={{color:'#a89a8a',fontSize:11}}>Duration:</span> {v.minBookingDuration||'—'}</div>
-                          <div><span style={{color:'#a89a8a',fontSize:11}}>Subcategories:</span> {(v.serviceSubcategories||[]).join(', ')||'—'}</div>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Min Duration:</span> {v.minBookingDuration||'—'}</div>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Booking Lead:</span> {v.bookingLeadTime||'—'}</div>
+                          <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontSize:11}}>Service Categories:</span> {(v.serviceCategories||[]).join(', ')||'—'}</div>
+                          <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontSize:11}}>Subcategories:</span> {(v.serviceSubcategories||[]).join(', ')||'—'}</div>
                         </div>
-                        {v.serviceDescription && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>{v.serviceDescription}</div>}
+                        {v.serviceDescription && <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}><strong>What's included:</strong> {v.serviceDescription}</div>}
+                        {v.availabilityNotes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}><strong>Availability:</strong> {v.availabilityNotes}</div>}
+                        {v.equipmentNotes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}><strong>Equipment:</strong> {v.equipmentNotes}</div>}
                       </div>
                     )}
                     {/* Photos */}
@@ -4071,7 +4083,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                         </div>
                       </div>
                     )}
-                    {v.lookbookUrl && <div style={{marginTop:8}}><a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>📋 View Lookbook/Menu</a></div>}
+                    <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:8}}>
+                      {v.lookbookUrl && <a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b',background:'#e8f4fd',padding:'4px 10px',borderRadius:6,textDecoration:'none'}}>📋 Lookbook/Menu</a>}
+                      {m.coiUrl && <a href={m.coiUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a6b3a',background:'#d4f4e0',padding:'4px 10px',borderRadius:6,textDecoration:'none'}}>📄 Certificate of Insurance</a>}
+                    </div>
                     {/* Admin Notes */}
                     <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
                       <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:4}}>ADMIN NOTE (internal only)</div>
