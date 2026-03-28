@@ -2532,34 +2532,37 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       .then(({ data }) => { if (data) setApplications(data); setLoadingApps(false); });
   }, [userEvents]);
 
-  const handleReview = async (app) => {
-    if (reviewingApp === app.id) { setReviewingApp(null); setReviewVendor(null); return; }
-    setReviewingApp(app.id);
+  const handleReview = (app) => {
+    const appId = String(app.id);
+    // Toggle off if already reviewing this one
+    if (String(reviewingApp) === appId) { setReviewingApp(null); setReviewVendor(null); setLoadingVendor(false); return; }
+    // Open the panel immediately — set state synchronously, then fetch data in background
+    setReviewingApp(appId);
     setReviewVendor(null);
     setLoadingVendor(true);
-    // Update status to reviewing (only if still pending)
-    if (app.status === 'pending') {
-      supabase.from('booking_requests').update({ status: 'reviewing' }).eq('id', app.id).catch(()=>{});
-      setApplications(a => a.map(x => x.id === app.id ? { ...x, status: 'reviewing' } : x));
-    }
-    // Fetch vendor profile by ID first, then fall back to email match
-    let vendorData = null;
-    if (app.vendor_id) {
-      const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
-      vendorData = data;
-    }
-    if (!vendorData && app.host_email) {
-      // host_email in the booking request is actually the vendor's email for applications
-      const { data } = await supabase.from('vendors').select('*').ilike('contact_email', app.host_email).limit(1).single();
-      vendorData = data;
-    }
-    if (!vendorData && app.vendor_name) {
-      // Last resort: match by business name
-      const { data } = await supabase.from('vendors').select('*').ilike('name', app.vendor_name).limit(1).single();
-      vendorData = data;
-    }
-    if (vendorData) setReviewVendor(vendorData);
-    setLoadingVendor(false);
+    // Fetch vendor profile in background — try vendor_id, then email, then name
+    (async () => {
+      try {
+        let vd = null;
+        if (app.vendor_id) {
+          const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
+          vd = data;
+        }
+        if (!vd && app.host_email) {
+          const { data } = await supabase.from('vendors').select('*').ilike('contact_email', app.host_email).limit(1).single();
+          vd = data;
+        }
+        if (!vd && app.vendor_name) {
+          const { data } = await supabase.from('vendors').select('*').ilike('name', app.vendor_name).limit(1).single();
+          vd = data;
+        }
+        setReviewVendor(vd);
+      } catch (err) {
+        console.error('Review fetch error:', err);
+      } finally {
+        setLoadingVendor(false);
+      }
+    })();
   };
 
   const respond = async (reqId, status, reason) => {
@@ -2729,7 +2732,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           {applications.map(a => {
-            const isReviewing = reviewingApp === a.id;
+            const isReviewing = String(reviewingApp) === String(a.id);
             const v = isReviewing ? reviewVendor : null;
             const m = v ? (v.metadata || {}) : {};
             const isService = m.vendorType === 'service' || m.vendorType === 'both' || m.isServiceProvider;
@@ -2743,19 +2746,17 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <div style={{fontSize:12,color:'#a89a8a'}}>{a.vendor_category}</div>
                   {a.notes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4,fontStyle:'italic'}}>"{a.notes}"</div>}
                 </div>
-                <div>
-                  {(a.status === 'pending' || a.status === 'reviewing') ? (
-                    <div style={{display:'flex',gap:6}}>
+                <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                  {(a.status === 'pending' || a.status === 'reviewing') && (
+                    <>
                       <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
                       <button onClick={()=>{setShowDeclinePrompt(a.id);setDeclineReason('');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                      <button onClick={()=>handleReview(a)} style={{background: isReviewing ? '#c8a84b' : '#fdf4dc',color: isReviewing ? '#1a1410' : '#7a5a10',border: isReviewing ? 'none' : '1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Close' : 'Review'}</button>
-                    </div>
-                  ) : (
-                    <div style={{display:'flex',alignItems:'center',gap:8}}>
-                      <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
-                      {a.status==='accepted' && a.vendor_id && <button onClick={()=>handleReview(a)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Hide' : 'View Profile'}</button>}
-                    </div>
+                    </>
                   )}
+                  {(a.status === 'accepted' || a.status === 'declined') && (
+                    <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
+                  )}
+                  <button onClick={()=>handleReview(a)} style={{background: isReviewing ? '#c8a84b' : '#fdf4dc',color: isReviewing ? '#1a1410' : '#7a5a10',border: isReviewing ? 'none' : '1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Close' : 'Review'}</button>
                 </div>
               </div>
 
