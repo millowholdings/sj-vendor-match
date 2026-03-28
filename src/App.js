@@ -1407,13 +1407,21 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
             <button onClick={()=>set('servicesNeeded',form.servicesNeeded.filter((_,i)=>i!==idx))} style={{background:'none',border:'none',color:'#c0392b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif'}}>Remove</button>
           </div>
           <div className="form-grid" style={{gap:10}}>
-            <div className="form-group"><label>Service Type</label>
-              <select value={svc.type} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],type:e.target.value};set('servicesNeeded',n);}}>
-                <option value="">Select service...</option>
-                {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
+            <div className="form-group"><label>Service Category</label>
+              <select value={svc.type} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],type:e.target.value,subType:''};set('servicesNeeded',n);}}>
+                <option value="">Select category...</option>
+                {SERVICE_CATEGORIES.map(t=><option key={t}>{t}</option>)}
               </select>
-              {svc.type==='Other' && <input placeholder="Describe the service you need..." value={svc.otherType||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],otherType:e.target.value};set('servicesNeeded',n);}} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
             </div>
+            {svc.type && SERVICE_SUBCATEGORIES[svc.type] && (
+              <div className="form-group"><label>Specific Service</label>
+                <select value={svc.subType||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],subType:e.target.value};set('servicesNeeded',n);}}>
+                  <option value="">Any / All</option>
+                  {SERVICE_SUBCATEGORIES[svc.type].map(s=><option key={s}>{s}</option>)}
+                </select>
+                {svc.subType==='Other' && <input placeholder="Describe the service you need..." value={svc.otherType||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],otherType:e.target.value};set('servicesNeeded',n);}} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
+              </div>
+            )}
             <div className="form-group"><label>Duration</label>
               <select value={svc.duration} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],duration:e.target.value};set('servicesNeeded',n);}}>
                 {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
@@ -1436,7 +1444,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div className="form-group" style={{marginTop:8}}><label>Specific Requirements</label><input placeholder="Any special needs or requests for this service..." value={svc.notes||''} onChange={e=>{const n=[...form.servicesNeeded];n[idx]={...n[idx],notes:e.target.value};set('servicesNeeded',n);}} /></div>
         </div>
       ))}
-      <button onClick={()=>set('servicesNeeded',[...form.servicesNeeded,{type:'',duration:'2 hours',budgetType:'open',budgetAmount:'',budgetMin:'',budgetMax:'',notes:''}])}
+      <button onClick={()=>set('servicesNeeded',[...form.servicesNeeded,{type:'',subType:'',duration:'2 hours',budgetType:'open',budgetAmount:'',budgetMin:'',budgetMax:'',notes:''}])}
         style={{background:'#fff',border:'2px dashed #e8ddd0',borderRadius:10,padding:'12px 20px',width:'100%',cursor:'pointer',fontSize:14,fontWeight:600,color:'#7a6a5a',fontFamily:'DM Sans,sans-serif',marginBottom:16}}>
         + Add a Service
       </button>
@@ -3559,7 +3567,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                       <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Services Needed ({evt.servicesNeeded.length})</div>
                       {evt.servicesNeeded.map((svc,i)=>(
                         <div key={i} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px',marginBottom:6,fontSize:13}}>
-                          <strong>{svc.type||'Service'}{svc.otherType ? ` — ${svc.otherType}`:''}</strong>
+                          <strong>{svc.type||'Service'}{svc.subType && svc.subType!=='Other' ? ` — ${svc.subType}` : ''}{svc.otherType ? ` — ${svc.otherType}`:''}</strong>
                           <span style={{color:'#7a6a5a'}}> · {svc.duration}{svc.otherDuration ? ` (${svc.otherDuration})`:''}</span>
                           <span style={{color:'#7a6a5a'}}> · Budget: {svc.budgetType==='open'?'Open to quotes':svc.budgetType==='fixed'?(svc.budgetAmount||'TBD'):`${svc.budgetMin||'?'} – ${svc.budgetMax||'?'}`}</span>
                           {svc.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:2,fontStyle:'italic'}}>{svc.notes}</div>}
@@ -4256,7 +4264,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
                           <div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600, marginBottom:6 }}>Services Needed</div>
                           {opp.servicesNeeded.map((svc,i)=>(
                             <div key={i} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px',marginBottom:6,fontSize:13}}>
-                              <strong style={{color:'#1a1410'}}>{svc.type || 'Service'}</strong>
+                              <strong style={{color:'#1a1410'}}>{svc.type || 'Service'}{svc.subType && svc.subType!=='Other' ? ` — ${svc.subType}` : ''}{svc.otherType ? ` — ${svc.otherType}` : ''}</strong>
                               <span style={{color:'#7a6a5a'}}> · {svc.duration}</span>
                               <span style={{color:'#7a6a5a'}}> · Budget: {svc.budgetType==='open' ? 'Open to quotes' : svc.budgetType==='fixed' ? (svc.budgetAmount||'TBD') : (svc.budgetMin||'?')+' – '+(svc.budgetMax||'?')}</span>
                               {svc.notes && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>{svc.notes}</div>}
