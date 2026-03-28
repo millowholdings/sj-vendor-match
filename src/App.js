@@ -1116,7 +1116,7 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true, allowDuplicateSubcategories:true,
   applyByDate:'', eventLink:'',
-  budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
+  budget:'No booth fee', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
   vendorDiscovery:'both', password:''
 };
 
@@ -1355,7 +1355,10 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </select>
           <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Example subcategory: Handmade Earrings — allowing two vendors who both sell the same specific product type</div>
         </div>
-        <div className="form-group"><label>Vendor Booth Fee Offered</label><select value={form.budget} onChange={e=>set('budget',e.target.value)}><option value="">Select...</option><option>Free (vendor keeps all sales)</option><option>$25–$50/vendor</option><option>$50–$100/vendor</option><option>$100–$200/vendor</option><option>$200+/vendor</option></select></div>
+        <div className="form-group"><label>Vendor Booth Fee</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select></div>
+        {form.budget !== 'No booth fee' && (
+          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
+        )}
         <div className="form-group"><label>Is This a Ticketed Event?</label>
           <div style={{display:'flex',gap:10}}>
             <button type="button" onClick={()=>set('isTicketedEvent',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
