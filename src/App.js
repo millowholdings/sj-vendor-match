@@ -1901,30 +1901,28 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     if (editForm.radius !== vp.radius) changes.radius = {old:vp.radius, new:editForm.radius};
     if (editForm.description !== (vp.description||'')) changes.description = {old:'(updated)', new:'(updated)'};
 
-    const significant = Object.keys(changes).some(k => SIGNIFICANT_FIELDS.includes(k));
+    if (Object.keys(changes).length === 0) { setEditing(false); setSaving(false); return; }
     const updatePayload = {
       name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
       home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
       website: editForm.website||null, instagram: editForm.instagram||null,
       metadata: { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null },
+      status: 'pending',
     };
     const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vp.id);
     if (error) { alert('Failed to save: ' + error.message); setSaving(false); return; }
 
-    // Log changes
-    if (Object.keys(changes).length > 0) {
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vp.id, entity_name:editForm.name, changed_by:user.email, changes, significant }).catch(()=>{});
-      if (significant) {
-        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} [SIGNIFICANT]`, message:`${editForm.name} made significant changes:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nReview in admin panel.` }),
-        }).catch(()=>{});
-      }
-    }
+    // Log changes and notify admin
+    supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vp.id, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
+    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} — Needs Re-Approval`, message:`${editForm.name} updated their profile:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nVendor status set to pending. Review in admin panel.` }),
+    }).catch(()=>{});
 
     // Refresh profile
     const { data: updated } = await supabase.from('vendors').select('*').eq('id', vp.id).single();
     if (updated && setVendorProfile) setVendorProfile(updated);
     setEditing(false); setSaving(false);
+    alert('Changes saved! Your profile has been submitted for admin review. You will be notified once approved.');
   };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2166,32 +2164,29 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     if (eventForm.date !== evt.date) changes.date = {old:evt.date, new:eventForm.date};
     if (eventForm.zip !== evt.zip) changes.zip = {old:evt.zip, new:eventForm.zip};
     if (eventForm.spots !== evt.spots) changes.spots = {old:evt.spots, new:eventForm.spots};
-    const significant = Object.keys(changes).some(k => SIG_EVENT_FIELDS.includes(k));
+    if (Object.keys(changes).length === 0) { setEditingEvent(null); setSavingEvent(false); return; }
 
     const updatePayload = {
       event_name:eventForm.event_name, event_type:eventForm.event_type, date:eventForm.date,
       start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
       booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
       deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
+      status: 'pending_review',
     };
-    if (significant && evt.status === 'approved') updatePayload.status = 'pending_review';
 
     const { error } = await supabase.from('events').update(updatePayload).eq('id', evt.id);
     if (error) { alert('Failed to save: ' + error.message); setSavingEvent(false); return; }
 
-    if (Object.keys(changes).length > 0) {
-      supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant }).catch(()=>{});
-      if (significant) {
-        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} [SIGNIFICANT — needs re-review]`, message:`Host ${user.email} changed:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent flagged for re-review.` }),
-        }).catch(()=>{});
-      }
-    }
+    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(()=>{});
+    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} — Needs Re-Approval`, message:`Host ${user.email} updated their event:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent status set to pending review.` }),
+    }).catch(()=>{});
 
     // Refresh events
     const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
     if (data && setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
     setEditingEvent(null); setSavingEvent(false);
+    alert('Changes saved! Your event has been submitted for admin review. You will be notified once approved.');
   };
 
   useEffect(() => {
@@ -2259,7 +2254,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     {eventForm.is_ticketed && <div className="form-group"><label>Ticket Price</label><input value={eventForm.ticket_price} onChange={ev=>eSet('ticket_price',ev.target.value)} /></div>}
                     <div className="form-group full"><label>Notes</label><textarea value={eventForm.notes} onChange={ev=>eSet('notes',ev.target.value)} style={{minHeight:50}} /></div>
                   </div>
-                  {e.status==='approved' && <div style={{fontSize:12,color:'#7a5a10',marginBottom:8,background:'#fdf4dc',padding:'6px 10px',borderRadius:6}}>Changing date, location, or event name will flag this event for admin re-review.</div>}
+                  <div style={{fontSize:12,color:'#7a5a10',marginBottom:8,background:'#fdf4dc',padding:'6px 10px',borderRadius:6}}>All changes require admin approval before going live.</div>
                   <button onClick={()=>saveEvent(e)} disabled={savingEvent} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:savingEvent?0.6:1}}>{savingEvent?'Saving...':'Save Changes'}</button>
                 </div>
               )}
