@@ -1976,11 +1976,14 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const SIGNIFICANT_FIELDS = ['home_zip','radius'];
 
   const saveProfile = async () => {
-    // Diagnostic: fire email immediately to test if Resend works
-    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:'SAVE DEBUG', email:'debug@sjvm.app', subject:'Vendor profile save initiated', message:'Vendor profile save initiated by ' + (vendorProfile?.email || user?.email || 'unknown') })
-    }).catch(()=>{});
     setSaving(true);
+    // Safety net: force-reset saving state after 5 seconds no matter what
+    setTimeout(() => setSaving(false), 5000);
+    // Diagnostic: test if API routes work at all
+    console.log('SAVE DEBUG: saveProfile called, sending diagnostic email...');
+    fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ businessName:'DEBUG SAVE TEST', contactName:'Debug', vendorEmail:'tiffany@southjerseyvendormarket.com', category:'Debug', vendorType:'market', phone:'' })
+    }).then(r => r.json()).then(d => console.log('SAVE DEBUG: diagnostic email response:', d)).catch(e => console.error('SAVE DEBUG: diagnostic email error:', e));
     const vp = vendorProfile;
     const vid = vp.id;
     try {
