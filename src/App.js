@@ -3318,9 +3318,9 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
                 color: req.status==='accepted'?'#1a6b3a':req.status==='declined'?'#8b1a1a':'#7a5a10',
                 border: '1px solid '+(req.status==='accepted'?'#b8e8c8':req.status==='declined'?'#f5c6c6':'#ffd966')
               }}>
-                {req.status==='pending' && '⏳ Invited — Awaiting Response'}
-                {req.status==='accepted' && '✅ Booking Accepted!'}
-                {req.status==='declined' && '❌ Vendor Declined'}
+                {req.status==='pending' && `⏳ Invite Pending for ${req.eventName || hostEvent?.eventName || 'Event'}`}
+                {req.status==='accepted' && `✅ Accepted for ${req.eventName || hostEvent?.eventName || 'Event'}`}
+                {req.status==='declined' && `❌ Declined for ${req.eventName || hostEvent?.eventName || 'Event'}`}
               </div>
             )}
             {openMessage && (
@@ -3439,9 +3439,9 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 color: req.status==='accepted'?'#1a6b3a': req.status==='declined'?'#8b1a1a':'#7a5a10',
                 border: '1px solid ' + (req.status==='accepted'?'#b8e8c8': req.status==='declined'?'#f5c6c6':'#ffd966')
               }}>
-                {req.status==='pending' && '⏳ Invited — Awaiting Response'}
-                {req.status==='accepted' && '✅ Booking Accepted! Check Messages.'}
-                {req.status==='declined' && '❌ Vendor Declined — Try Another Vendor'}
+                {req.status==='pending' && `⏳ Invite Pending for ${req.eventName || hostEvent?.eventName || 'Event'}`}
+                {req.status==='accepted' && `✅ Accepted for ${req.eventName || hostEvent?.eventName || 'Event'}`}
+                {req.status==='declined' && `❌ Declined for ${req.eventName || hostEvent?.eventName || 'Event'}`}
                 {req.status==='cancelled' && '↩ Request Cancelled'}
               </div>
             ) : (
@@ -3528,8 +3528,15 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
         {neededCats.length > 0
           ? `Vendors in ${neededCats.join(', ')} within travel range of ${eventZip}.`
           : `All approved vendors within travel range of ${eventZip}.`}
-        {' '}Send a booking request to any vendor below.
+        {hostConfirm?.isPending
+          ? ' Once your event is approved, you can invite these vendors.'
+          : ' Send a booking request to any vendor below.'}
       </p>
+      {hostConfirm?.isPending && (
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'10px 16px',marginBottom:16,fontSize:13,color:'#7a5a10'}}>
+          Your event is pending admin approval. Once approved, you will be able to see full vendor details and invite vendors to your event.
+        </div>
+      )}
 
       {matched.length === 0
         ? <div className="empty-state"><div className="big">🔍</div><p>No approved vendors match your categories yet — check back as more sign up!</p></div>
@@ -3576,13 +3583,16 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   const inRange  = enriched.filter(v => v.inRange).sort((a,b)=>(a.dist??999)-(b.dist??999)||b.matchScore-a.matchScore);
   const outRange = enriched.filter(v => !v.inRange);
 
-  // Calculate match percentage for each vendor against the current event
+  // Calculate match percentage — how well does this vendor fit this event?
+  // A vendor is 100% match if ALL of their categories are needed by the event.
+  // A vendor is a partial match if some of their categories are needed.
   const neededCats = hostEvent?.vendorCategories || [];
   const calcMatch = (v) => {
     if (neededCats.length === 0) return null;
     const vendorCats = [...(v.allCategories || [v.category]).filter(Boolean), ...(v.serviceCategories || [])];
-    const matched = neededCats.filter(c => vendorCats.includes(c)).length;
-    return Math.round((matched / neededCats.length) * 100);
+    if (vendorCats.length === 0) return 0;
+    const matched = vendorCats.filter(c => neededCats.includes(c)).length;
+    return Math.round((matched / vendorCats.length) * 100);
   };
 
   return (
@@ -4526,11 +4536,7 @@ function VendorApplyModal({ opp, onClose }) {
       status: 'pending', sent_at: new Date().toISOString(),
       response_token: responseToken,
     };
-    let { error } = await supabase.from('booking_requests').insert(payload);
-    if (error && error.code === 'PGRST204') {
-      const { response_token: _rt, ...withoutToken } = payload;
-      ({ error } = await supabase.from('booking_requests').insert(withoutToken));
-    }
+    const { error } = await supabase.from('booking_requests').insert(payload);
     if (error) {
       console.error('Application error:', error);
       alert('Failed to submit application. Please try again.');
@@ -5282,6 +5288,22 @@ function AppInner() {
     } catch {}
   }, [authUser]);
 
+  // Route to dashboard on login (when not a fresh signup)
+  useEffect(() => {
+    if (!authUser) return;
+    if (localStorage.getItem('sjvm_pending_roles')) return; // fresh signup handled above
+    // Only redirect to dashboard if currently on home page
+    if (tab === 'home') {
+      // Wait briefly for profile/events to load, then route
+      const timer = setTimeout(() => {
+        if (vendorProfile && userEvents.length > 0) setTab('vendor-dashboard');
+        else if (vendorProfile) setTab('vendor-dashboard');
+        else if (userEvents.length > 0) setTab('host-dashboard');
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [authUser, vendorProfile, userEvents]);
+
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
     if (!authUser) { setVendorProfile(null); setUserEvents([]); setEventGoerProfile(null); return; }
@@ -5564,10 +5586,6 @@ function AppInner() {
       response_token: responseToken,
     };
     let { error: brErr } = await supabase.from('booking_requests').insert(brPayload);
-    if (brErr && brErr.code === 'PGRST204') {
-      const { response_token: _rt, ...withoutToken } = brPayload;
-      ({ error: brErr } = await supabase.from('booking_requests').insert(withoutToken));
-    }
     if (brErr) console.error('Failed to persist booking request:', brErr);
 
     // Look up vendor email and send notification
