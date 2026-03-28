@@ -2436,6 +2436,11 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [savingEvent, setSavingEvent] = useState(false);
   const [editExistingPhotos, setEditExistingPhotos] = useState([]);
   const [editNewPhotos, setEditNewPhotos] = useState([]);
+  const [reviewingApp, setReviewingApp] = useState(null);
+  const [reviewVendor, setReviewVendor] = useState(null);
+  const [loadingVendor, setLoadingVendor] = useState(false);
+  const [declineReason, setDeclineReason] = useState('');
+  const [showDeclinePrompt, setShowDeclinePrompt] = useState(null);
   const SIG_EVENT_FIELDS = ['date','zip','event_name'];
 
   const startEditEvent = (e) => {
@@ -2512,11 +2517,51 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       .then(({ data }) => { if (data) setApplications(data); setLoadingApps(false); });
   }, [userEvents]);
 
-  const respond = async (reqId, status) => {
+  const handleReview = async (app) => {
+    if (reviewingApp === app.id) { setReviewingApp(null); setReviewVendor(null); return; }
+    setReviewingApp(app.id);
+    setReviewVendor(null);
+    setLoadingVendor(true);
+    // Update status to reviewing
+    await supabase.from('booking_requests').update({ status: 'reviewing' }).eq('id', app.id);
+    setApplications(a => a.map(x => x.id === app.id ? { ...x, status: 'reviewing' } : x));
+    // Fetch vendor profile
+    if (app.vendor_id) {
+      const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
+      if (data) setReviewVendor(data);
+    }
+    setLoadingVendor(false);
+  };
+
+  const respond = async (reqId, status, reason) => {
+    const app = applications.find(a => a.id === reqId);
     const { error } = await supabase.from('booking_requests')
-      .update({ status, responded_at: new Date().toISOString() }).eq('id', reqId);
+      .update({ status, responded_at: new Date().toISOString(), ...(reason ? { vendor_message: reason } : {}) }).eq('id', reqId);
     if (error) { alert('Failed to update. Try again.'); return; }
     setApplications(a => a.map(x => x.id === reqId ? { ...x, status } : x));
+    if (status === 'accepted' || status === 'declined') {
+      setShowDeclinePrompt(null); setDeclineReason('');
+      // Send email notification to vendor
+      if (app && app.vendor_id) {
+        const { data: vendor } = await supabase.from('vendors').select('email,contact_name').eq('id', app.vendor_id).single();
+        if (vendor && vendor.email) {
+          fetch('/api/send-booking-response', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              hostEmail: vendor.email, hostName: vendor.contact_name || app.vendor_name,
+              vendorName: user.email, vendorCategory: app.vendor_category,
+              eventName: app.event_name, eventDate: app.event_date,
+              status, vendorMessage: reason || '',
+            }),
+          }).catch(() => {});
+        }
+      }
+      // If accepted, load vendor profile to reveal contact info
+      if (status === 'accepted' && app && app.vendor_id && !reviewVendor) {
+        const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
+        if (data) { setReviewVendor(data); setReviewingApp(reqId); }
+      }
+    }
   };
 
   return (
@@ -2654,29 +2699,119 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p></div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {applications.map(a => (
-            <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
+          {applications.map(a => {
+            const isReviewing = reviewingApp === a.id;
+            const v = isReviewing ? reviewVendor : null;
+            const m = v ? (v.metadata || {}) : {};
+            const isService = m.vendorType === 'service' || m.vendorType === 'both' || m.isServiceProvider;
+            const isMarket = !m.vendorType || m.vendorType === 'market' || m.vendorType === 'both';
+            return (
+            <div key={a.id} style={{background:'#fff',border: isReviewing ? '2px solid #c8a84b' : '1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
               <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
                   <div style={{fontSize:13,color:'#7a6a5a'}}>For: {a.event_name} · {fmtDate(a.event_date)}</div>
-                  <div style={{fontSize:12,color:'#a89a8a'}}>{a.vendor_category}{a.host_email ? ` · ${a.host_email}` : ''}</div>
+                  <div style={{fontSize:12,color:'#a89a8a'}}>{a.vendor_category}</div>
                   {a.notes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4,fontStyle:'italic'}}>"{a.notes}"</div>}
                 </div>
                 <div>
                   {(a.status === 'pending' || a.status === 'reviewing') ? (
                     <div style={{display:'flex',gap:6}}>
                       <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
-                      <button onClick={()=>respond(a.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                      {a.status === 'pending' && <button onClick={()=>respond(a.id,'reviewing')} style={{background:'#fdf4dc',color:'#7a5a10',border:'1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Review</button>}
+                      <button onClick={()=>{setShowDeclinePrompt(a.id);setDeclineReason('');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                      <button onClick={()=>handleReview(a)} style={{background: isReviewing ? '#c8a84b' : '#fdf4dc',color: isReviewing ? '#1a1410' : '#7a5a10',border: isReviewing ? 'none' : '1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Close' : 'Review'}</button>
                     </div>
                   ) : (
-                    <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
+                      {a.status==='accepted' && a.vendor_id && <button onClick={()=>handleReview(a)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Hide' : 'View Profile'}</button>}
+                    </div>
                   )}
                 </div>
               </div>
+
+              {/* Decline reason prompt */}
+              {showDeclinePrompt === a.id && (
+                <div style={{marginTop:12,padding:12,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:6}}>Reason for declining (optional):</div>
+                  <textarea value={declineReason} onChange={e=>setDeclineReason(e.target.value)} placeholder="e.g. Already have a vendor in this category..." style={{width:'100%',minHeight:60,border:'1px solid #e8ddd0',borderRadius:6,padding:8,fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical'}} maxLength={300} />
+                  <div style={{display:'flex',gap:8,marginTop:8}}>
+                    <button onClick={()=>respond(a.id,'declined',declineReason)} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Confirm Decline</button>
+                    <button onClick={()=>setShowDeclinePrompt(null)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+                  </div>
+                </div>
+              )}
+
+              {/* Vendor profile panel */}
+              {isReviewing && (
+                <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
+                  {loadingVendor ? (
+                    <div style={{color:'#a89a8a',padding:16,textAlign:'center'}}>Loading vendor profile...</div>
+                  ) : !v ? (
+                    <div style={{color:'#a89a8a',padding:16,textAlign:'center',fontSize:13}}>Vendor profile not found. This vendor may have been removed.</div>
+                  ) : (
+                    <div>
+                      {/* Vendor header */}
+                      <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
+                        {m.profilePhoto && <img src={m.profilePhoto} alt={v.business_name} style={{width:60,height:60,objectFit:'cover',borderRadius:8,border:'1px solid #e8ddd0'}} />}
+                        <div>
+                          <div style={{fontWeight:700,fontSize:16,color:'#1a1410'}}>{v.business_name}</div>
+                          <div style={{fontSize:13,color:'#7a6a5a'}}>{v.contact_name}</div>
+                          {isService && <span style={{display:'inline-block',background:'#1a1410',color:'#e8c97a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2}}>Service Provider</span>}
+                          {isMarket && !isService && <span style={{display:'inline-block',background:'#f5f0ea',color:'#7a6a5a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2}}>Market Vendor</span>}
+                          {m.vendorType === 'both' && <span style={{display:'inline-block',background:'#f5f0ea',color:'#7a6a5a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2,marginLeft:4}}>+ Market Vendor</span>}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {m.description && <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,marginBottom:12,padding:'8px 10px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{m.description}</div>}
+
+                      {/* Photos */}
+                      {(m.photos || []).length > 0 && (
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:12,fontWeight:600,color:'#a89a8a',marginBottom:6}}>Photos</div>
+                          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                            {m.photos.map((url,i) => <img key={i} src={url} alt={`${v.business_name} photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Categories & details */}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 20px',fontSize:13,marginBottom:12}}>
+                        {isMarket && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Category:</span> {v.category}</div>}
+                        {isMarket && (v.subcategories||[]).length > 0 && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Specialties:</span> {v.subcategories.join(', ')}</div>}
+                        {isService && m.serviceCategories && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Services:</span> {(Array.isArray(m.serviceCategories) ? m.serviceCategories : [m.serviceCategories]).join(', ')}</div>}
+                        {isService && m.serviceSubcategories && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Service Types:</span> {(Array.isArray(m.serviceSubcategories) ? m.serviceSubcategories : [m.serviceSubcategories]).join(', ')}</div>}
+                        <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Location:</span> Zip {v.home_zip} ({v.radius || 20}mi radius)</div>
+                        {(v.tags||[]).length > 0 && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Tags:</span> {v.tags.join(', ')}</div>}
+                        {m.priceRange && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Pricing:</span> {m.priceRange}</div>}
+                        {m.website && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Website:</span> <a href={m.website} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>{m.website}</a></div>}
+                        {m.instagram && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Instagram:</span> <a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>@{m.instagram.replace('@','')}</a></div>}
+                        {m.facebook && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Facebook:</span> <a href={m.facebook} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>{m.facebook}</a></div>}
+                      </div>
+
+                      {/* Contact info — only shown if accepted */}
+                      {a.status === 'accepted' && (
+                        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:12,marginBottom:12}}>
+                          <div style={{fontSize:13,fontWeight:700,color:'#1a6b3a',marginBottom:6}}>Contact Information</div>
+                          <div style={{fontSize:13,color:'#1a1410'}}>{v.contact_name} · <a href={`mailto:${v.email}`} style={{color:'#1a4a6b'}}>{v.email}</a>{v.phone ? ` · ${v.phone}` : ''}</div>
+                        </div>
+                      )}
+
+                      {/* Action buttons while reviewing (not yet accepted/declined) */}
+                      {(a.status === 'pending' || a.status === 'reviewing') && (
+                        <div style={{display:'flex',gap:8,marginTop:8}}>
+                          <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept Vendor</button>
+                          <button onClick={()=>{setShowDeclinePrompt(a.id);setDeclineReason('');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline Vendor</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
