@@ -1198,7 +1198,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
         <div className="form-group"><label>Apply By Date</label><input type="date" value={form.applyByDate} max={form.date || undefined} onChange={e=>set('applyByDate',e.target.value)} /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Deadline for vendors to apply</div></div>
-        <div className="form-group full"><label>Event Website or Facebook Page <span style={{color:'#c0392b'}}>*</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Official event page — used to verify your event</div></div>
+        <div className="form-group full"><label>Event Website or Facebook Page <span style={{fontSize:11,color:'#a89a8a',fontWeight:400}}>(optional)</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Add a link to your event page if you have one</div></div>
         <div className="form-group full">
           <label>Recurring Event?</label>
           <select value={form.isRecurring?'yes':'no'} onChange={e=>set('isRecurring',e.target.value==='yes')}>
@@ -5786,8 +5786,8 @@ function AppInner() {
       alert('Please enter a valid 10-digit phone number, or leave it blank.');
       return;
     }
-    if (!form.eventLink || !/^https?:\/\/.+/.test(form.eventLink)) {
-      alert('Please provide a valid event website or Facebook page URL.');
+    if (form.eventLink && !/^https?:\/\/.+/.test(form.eventLink)) {
+      alert('Please provide a valid URL (starting with http:// or https://) or leave the field blank.');
       return;
     }
     if (!form.date) {
