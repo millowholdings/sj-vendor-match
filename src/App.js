@@ -1849,7 +1849,9 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
 
   const handleReset = async () => {
     if (!email) { setError('Enter your email first.'); return; }
-    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email);
+    const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: 'https://southjerseyvendormarket.com',
+    });
     if (resetErr) { setError(resetErr.message); return; }
     setResetSent(true);
   };
