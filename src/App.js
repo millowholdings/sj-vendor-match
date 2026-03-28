@@ -1976,6 +1976,10 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const SIGNIFICANT_FIELDS = ['home_zip','radius'];
 
   const saveProfile = async () => {
+    // Diagnostic: fire email immediately to test if Resend works
+    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name:'SAVE DEBUG', email:'debug@sjvm.app', subject:'Vendor profile save initiated', message:'Vendor profile save initiated by ' + (vendorProfile?.email || user?.email || 'unknown') })
+    }).catch(()=>{});
     setSaving(true);
     const vp = vendorProfile;
     const vid = vp.id;
