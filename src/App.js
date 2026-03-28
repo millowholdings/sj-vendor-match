@@ -149,6 +149,9 @@ function dbVendorToApp(v) {
     bookingLeadTime:   m.bookingLeadTime|| "",
     eventFrequency:    m.eventFrequency || "",
     isServiceProvider: m.isServiceProvider || false,
+    vendorType:        m.vendorType     || null,
+    serviceCategories: m.serviceCategories || [],
+    serviceSubcategories: m.serviceSubcategories || [],
     serviceType:       m.serviceType    || "",
     serviceRateMin:    m.serviceRateMin || "",
     serviceRateMax:    m.serviceRateMax || "",
@@ -2851,10 +2854,13 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
         <div className="vendor-card-body">
           <div className="vendor-name" style={{color:'#a89a8a',fontStyle:'italic'}}>🔒 Vendor Name Hidden</div>
           <div className="vendor-category">
-            {(v.allCategories || [v.category]).length > 1
-              ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
-              : v.category}
+            {v.isServiceProvider && v.serviceCategories?.length > 0
+              ? v.serviceCategories.join(', ')
+              : (v.allCategories || [v.category]).length > 1
+                ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
+                : v.category}
           </div>
+          {v.isServiceProvider && <div style={{fontSize:11,color:'#c8a850',marginBottom:4}}>Service Provider</div>}
           <div className="vendor-tags">
             {v.insurance && <span className="vendor-tag" style={{ background:'#d4f4e0', color:'#1a6b3a', borderColor:'#b8e8c8' }}>✓ Insured</span>}
           </div>
@@ -2899,10 +2905,13 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
       <div className="vendor-card-body">
         <div className="vendor-name">{v.name}</div>
         <div className="vendor-category">
-          {(v.allCategories || [v.category]).length > 1
-            ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
-            : v.category}
+          {v.isServiceProvider && v.serviceCategories?.length > 0
+            ? v.serviceCategories.join(', ')
+            : (v.allCategories || [v.category]).length > 1
+              ? `${v.category} +${(v.allCategories || [v.category]).length - 1} more`
+              : v.category}
         </div>
+        {v.isServiceProvider && <div style={{fontSize:11,color:'#c8a850',marginBottom:4}}>Service Provider{v.serviceType ? ` · ${v.serviceType}` : ''}</div>}
         <div className="vendor-tags">
           {v.insurance && <span className="vendor-tag" style={{ background:'#d4f4e0', color:'#1a6b3a', borderColor:'#b8e8c8' }}>✓ Insured</span>}
         </div>
@@ -3032,12 +3041,25 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
+  const [filterVendorType, setFilterVendorType] = useState('');
+  const [filterService, setFilterService] = useState('');
   const [hostZip, setHostZip] = useState(hostEvent?.eventZip || '');
   const [contacted, setContacted] = useState([]);
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
 
   const enriched = vendors
-    .filter(v => !filterCategory  || (v.allCategories || [v.category]).includes(filterCategory))
+    .filter(v => {
+      if (!filterVendorType) return true;
+      if (filterVendorType === 'market') return !v.isServiceProvider || v.vendorType?.market;
+      if (filterVendorType === 'service') return v.isServiceProvider || v.vendorType?.service;
+      return true;
+    })
+    .filter(v => {
+      if (!filterCategory) return true;
+      const allCats = [...(v.allCategories || [v.category]), ...(v.serviceCategories || [])];
+      return allCats.includes(filterCategory);
+    })
+    .filter(v => !filterService || (v.serviceSubcategories||[]).includes(filterService) || v.serviceType === filterService)
     .filter(v => !filterInsurance || (filterInsurance==='yes' ? v.insurance : !v.insurance))
     .map(v => {
       const dist    = hasZip ? distanceMiles(v.homeZip, hostZip) : null;
@@ -3060,12 +3082,31 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
           {!hostEvent && !hasZip && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>Enter zip to filter by distance</div>}
         </div>
         <div className="match-filter-group">
-          <label>Category</label>
-          <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)}>
-            <option value="">All Categories</option>
-            {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+          <label>Vendor Type</label>
+          <select value={filterVendorType} onChange={e=>{setFilterVendorType(e.target.value);if(e.target.value==='market'){setFilterService('');}if(e.target.value==='service'){setFilterCategory('');}}}>
+            <option value="">All Vendors</option>
+            <option value="market">Market Vendors</option>
+            <option value="service">Service Providers</option>
           </select>
         </div>
+        {filterVendorType !== 'service' && (
+          <div className="match-filter-group">
+            <label>Product Category</label>
+            <select value={filterCategory} onChange={e=>setFilterCategory(e.target.value)}>
+              <option value="">All Categories</option>
+              {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+            </select>
+          </div>
+        )}
+        {filterVendorType !== 'market' && (
+          <div className="match-filter-group">
+            <label>Service Type</label>
+            <select value={filterService} onChange={e=>setFilterService(e.target.value)}>
+              <option value="">All Services</option>
+              {SERVICE_CATEGORIES.flatMap(cat=>(SERVICE_SUBCATEGORIES[cat]||[]).filter(s=>s!=='Other')).map(s=><option key={s}>{s}</option>)}
+            </select>
+          </div>
+        )}
         <div className="match-filter-group">
           <label>Insurance</label>
           <select value={filterInsurance} onChange={e=>setFilterInsurance(e.target.value)}>
