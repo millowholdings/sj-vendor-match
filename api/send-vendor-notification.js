@@ -18,7 +18,7 @@ module.exports = async function handler(req, res) {
   }
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'hello@send.southjerseyvendormarket.com';
+  const fromAddr = 'hello@southjerseyvendormarket.com';
   const adminEmail = 'tiffany@southjerseyvendormarket.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
