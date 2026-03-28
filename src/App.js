@@ -2007,71 +2007,113 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       if (url) lookbookUrl = url;
     }
 
-    // Detect profile field changes (not file changes)
-    const changes = {};
-    if (editForm.name !== vp.name) changes.name = {old:vp.name, new:editForm.name};
-    if (editForm.contact_name !== vp.contact_name) changes.contact_name = {old:vp.contact_name, new:editForm.contact_name};
-    if (editForm.contact_phone !== (vp.contact_phone||'')) changes.contact_phone = {old:vp.contact_phone, new:editForm.contact_phone};
-    if (editForm.home_zip !== vp.home_zip) changes.home_zip = {old:vp.home_zip, new:editForm.home_zip};
-    if (editForm.radius !== vp.radius) changes.radius = {old:vp.radius, new:editForm.radius};
-    if (editForm.description !== (vp.description||'')) changes.description = {old:'(updated)', new:'(updated)'};
-
-    // Detect additional changes
-    if (editForm.website !== (vp.website||'')) changes.website = {old:vp.website||'—', new:editForm.website||'—'};
-    if (editForm.instagram !== (vp.instagram||'')) changes.instagram = {old:'(updated)', new:'(updated)'};
-    if (editForm.insurance !== vp.insurance) changes.insurance = {old:vp.insurance?'Yes':'No', new:editForm.insurance?'Yes':'No'};
-
-    const hasProfileChanges = Object.keys(changes).length > 0;
-    const hasFileChanges = editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length || newCoi || newLookbook;
-    const hasServiceChanges = editForm.serviceType !== (m.serviceType||'') || editForm.serviceRateMin !== (m.serviceRateMin||'') || editForm.serviceDescription !== (m.serviceDescription||'');
-
-    if (!hasProfileChanges && !hasFileChanges && !hasServiceChanges) { setEditing(false); setSaving(false); return; }
-
-    if (hasFileChanges) changes.files = {old:'(updated)', new:'photos/documents changed'};
-    if (hasServiceChanges) changes.service = {old:'(updated)', new:'service details changed'};
-
-    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl,
-      isServiceProvider:editForm.isServiceProvider, serviceCategories:editForm.serviceCategories, serviceSubcategories:editForm.serviceSubcategories,
-      serviceType:editForm.serviceType||null, serviceRateType:editForm.serviceRateType, serviceRateMin:editForm.serviceRateMin||null, serviceRateMax:editForm.serviceRateMax||null,
-      minBookingDuration:editForm.minBookingDuration||null, serviceDescription:editForm.serviceDescription||null,
-      availabilityNotes:editForm.availabilityNotes||null, equipmentNotes:editForm.equipmentNotes||null,
-      bookingLeadTime:editForm.bookingLeadTime||m.bookingLeadTime||null,
+    // Build complete metadata with ALL fields
+    const newMeta = {
+      ...m,
+      facebook: editForm.facebook||null, tiktok: editForm.tiktok||null, youtube: editForm.youtube||null,
+      otherSocial: editForm.otherSocial||null, yearsActive: editForm.yearsActive||null,
+      photoUrls, coiUrl, lookbookUrl,
+      // Service provider fields
+      isServiceProvider: editForm.isServiceProvider,
+      vendorType: editForm.isServiceProvider ? { market: !!vp.category, service: true } : m.vendorType,
+      serviceCategories: editForm.serviceCategories||[],
+      serviceSubcategories: editForm.serviceSubcategories||[],
+      serviceType: editForm.serviceType||null,
+      serviceRateType: editForm.serviceRateType||'fixed',
+      serviceRateMin: editForm.serviceRateMin||null,
+      serviceRateMax: editForm.serviceRateMax||null,
+      minBookingDuration: editForm.minBookingDuration||null,
+      serviceDescription: editForm.serviceDescription||null,
+      availabilityNotes: editForm.availabilityNotes||null,
+      equipmentNotes: editForm.equipmentNotes||null,
+      bookingLeadTime: editForm.bookingLeadTime||m.bookingLeadTime||null,
     };
+
     const updatePayload = {
-      name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
-      home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
-      website: editForm.website||null, instagram: editForm.instagram||null, insurance: editForm.insurance,
+      name: editForm.name,
+      contact_name: editForm.contact_name,
+      contact_phone: editForm.contact_phone||null,
+      home_zip: editForm.home_zip,
+      radius: editForm.radius,
+      description: editForm.description,
+      website: editForm.website||null,
+      instagram: editForm.instagram||null,
+      insurance: editForm.insurance,
       metadata: newMeta,
       status: 'pending',
     };
 
-    const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vid);
+    console.log('Saving vendor profile:', { vid, updatePayload });
+
+    const { data: saveResult, error } = await supabase.from('vendors').update(updatePayload).eq('id', vid).select();
     if (error) {
       console.error('Vendor save error:', error);
-      alert('Failed to save changes: ' + error.message);
+      alert('Failed to save changes: ' + error.message + '\n\nPlease try again or contact support@southjerseyvendormarket.com');
+      setSaving(false);
+      return;
+    }
+    console.log('Vendor save result:', saveResult);
+
+    if (!saveResult || saveResult.length === 0) {
+      console.error('Vendor save returned no data — record may not exist for id:', vid);
+      alert('Save failed — could not find your vendor record. Please contact support@southjerseyvendormarket.com');
       setSaving(false);
       return;
     }
 
-    // Log and notify admin
-    const changedSections = Object.keys(changes).join(', ');
-    supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
-    fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        businessName: editForm.name,
-        contactName: editForm.contact_name,
-        vendorEmail: editForm.contact_email,
-        phone: editForm.contact_phone,
-        category: editForm.isServiceProvider ? (editForm.serviceCategories||[]).join(', ') : vp.category,
-        vendorType: editForm.isServiceProvider ? 'service' : 'market',
-      }),
-    }).catch(()=>{});
+    // Log changes
+    const changedFields = [];
+    if (editForm.name !== vp.name) changedFields.push('business name');
+    if (editForm.description !== (vp.description||'')) changedFields.push('description');
+    if (editForm.home_zip !== vp.home_zip) changedFields.push('zip code');
+    if (editForm.radius !== vp.radius) changedFields.push('travel radius');
+    if (editForm.website !== (vp.website||'')) changedFields.push('website');
+    if (editForm.insurance !== vp.insurance) changedFields.push('insurance');
+    if (editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length) changedFields.push('photos');
+    if (newCoi) changedFields.push('certificate of insurance');
+    if (newLookbook) changedFields.push('lookbook/menu');
+    if (editForm.serviceType !== (m.serviceType||'')) changedFields.push('service type');
+    if (editForm.serviceRateMin !== (m.serviceRateMin||'')) changedFields.push('rate');
+    if (editForm.serviceDescription !== (m.serviceDescription||'')) changedFields.push('service description');
+    if (editForm.availabilityNotes !== (m.availabilityNotes||'')) changedFields.push('availability');
+    if (editForm.equipmentNotes !== (m.equipmentNotes||'')) changedFields.push('equipment');
+    if (JSON.stringify(editForm.serviceCategories) !== JSON.stringify(m.serviceCategories||[])) changedFields.push('service categories');
+
+    const summary = changedFields.length > 0 ? changedFields.join(', ') : 'profile updated';
+
+    supabase.from('change_log').insert({
+      entity_type: 'vendor', entity_id: vid, entity_name: editForm.name,
+      changed_by: user.email, changes: { summary, fields: changedFields }, significant: true,
+    }).catch(e => console.error('Change log error:', e));
+
+    // Notify admin
+    try {
+      const notifResp = await fetch('/api/send-vendor-notification', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          businessName: editForm.name + ' (PROFILE UPDATE)',
+          contactName: editForm.contact_name,
+          vendorEmail: editForm.contact_email,
+          phone: editForm.contact_phone,
+          category: editForm.isServiceProvider ? (editForm.serviceCategories||[]).join(', ') : vp.category,
+          vendorType: editForm.isServiceProvider ? 'service' : 'market',
+        }),
+      });
+      const notifResult = await notifResp.json();
+      console.log('Admin notification result:', notifResult);
+      if (!notifResp.ok) console.error('Admin notification failed:', notifResult);
+    } catch (notifErr) {
+      console.error('Admin notification error:', notifErr);
+    }
 
     // Refresh profile from DB
     const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
-    if (updated && setVendorProfile) setVendorProfile(updated);
+    if (updated && setVendorProfile) {
+      setVendorProfile(updated);
+      console.log('Profile refreshed from DB:', updated.id, updated.status);
+    }
     setEditing(false); setSaving(false);
-    alert('Your changes have been submitted for review and will be live within 24 hours.');
+    alert('Your changes have been submitted for review and will be live within 24 hours.\n\nUpdated: ' + summary);
   };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
