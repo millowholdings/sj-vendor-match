@@ -1880,6 +1880,10 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
   const [subscribing, setSubscribing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editPhotos, setEditPhotos] = useState([]);       // new File objects to add
+  const [existingPhotos, setExistingPhotos] = useState([]); // existing URLs
+  const [newCoi, setNewCoi] = useState(null);
+  const [newLookbook, setNewLookbook] = useState(null);
   const m = vendorProfile?.metadata || {};
   const [editForm, setEditForm] = useState({
     name: vendorProfile?.name||'', contact_name: vendorProfile?.contact_name||'', contact_email: vendorProfile?.contact_email||'',
@@ -1892,8 +1896,40 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
   const saveProfile = async () => {
     setSaving(true);
-    const changes = {};
     const vp = vendorProfile;
+    const vid = vp.id;
+    const bucket = 'vendor-files';
+    const safeName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+    const uploadFile = async (file, path) => {
+      const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) { console.error('Upload error:', upErr); return null; }
+      return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+    };
+
+    // Upload new photos
+    let photoUrls = [...existingPhotos];
+    if (editPhotos.length > 0) {
+      const startIdx = existingPhotos.length;
+      const newUrls = await Promise.all(editPhotos.map((f, i) => uploadFile(f, `${vid}/photos/${startIdx+i}-${safeName(f.name)}`)));
+      photoUrls = [...photoUrls, ...newUrls.filter(Boolean)];
+    }
+
+    // Upload new COI
+    let coiUrl = m.coiUrl || null;
+    if (newCoi) {
+      const url = await uploadFile(newCoi, `${vid}/coi/${safeName(newCoi.name)}`);
+      if (url) coiUrl = url;
+    }
+
+    // Upload new lookbook
+    let lookbookUrl = m.lookbookUrl || null;
+    if (newLookbook) {
+      const url = await uploadFile(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`);
+      if (url) lookbookUrl = url;
+    }
+
+    // Detect profile field changes (not file changes)
+    const changes = {};
     if (editForm.name !== vp.name) changes.name = {old:vp.name, new:editForm.name};
     if (editForm.contact_name !== vp.contact_name) changes.contact_name = {old:vp.contact_name, new:editForm.contact_name};
     if (editForm.contact_phone !== (vp.contact_phone||'')) changes.contact_phone = {old:vp.contact_phone, new:editForm.contact_phone};
@@ -1901,28 +1937,36 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     if (editForm.radius !== vp.radius) changes.radius = {old:vp.radius, new:editForm.radius};
     if (editForm.description !== (vp.description||'')) changes.description = {old:'(updated)', new:'(updated)'};
 
-    if (Object.keys(changes).length === 0) { setEditing(false); setSaving(false); return; }
+    const hasProfileChanges = Object.keys(changes).length > 0;
+    const hasFileChanges = editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length || newCoi || newLookbook;
+
+    if (!hasProfileChanges && !hasFileChanges) { setEditing(false); setSaving(false); return; }
+
+    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, photoUrls, coiUrl, lookbookUrl };
     const updatePayload = {
       name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
       home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
       website: editForm.website||null, instagram: editForm.instagram||null,
-      metadata: { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null },
-      status: 'pending',
+      metadata: newMeta,
     };
-    const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vp.id);
+    // Only require re-approval for profile field changes, not file-only changes
+    if (hasProfileChanges) updatePayload.status = 'pending';
+
+    const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vid);
     if (error) { alert('Failed to save: ' + error.message); setSaving(false); return; }
 
-    // Log changes and notify admin
-    supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vp.id, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
-    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} — Needs Re-Approval`, message:`${editForm.name} updated their profile:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nVendor status set to pending. Review in admin panel.` }),
-    }).catch(()=>{});
+    if (hasProfileChanges) {
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
+      fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} — Needs Re-Approval`, message:`${editForm.name} updated their profile:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nVendor status set to pending. Review in admin panel.` }),
+      }).catch(()=>{});
+    }
 
     // Refresh profile
-    const { data: updated } = await supabase.from('vendors').select('*').eq('id', vp.id).single();
+    const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
     if (updated && setVendorProfile) setVendorProfile(updated);
     setEditing(false); setSaving(false);
-    alert('Changes saved! Your profile has been submitted for admin review. You will be notified once approved.');
+    alert(hasProfileChanges ? 'Changes saved! Your profile has been submitted for admin review.' : 'Photos and documents updated successfully!');
   };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -2017,7 +2061,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
-          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||''});setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
+          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||''});setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
         </div>
         {editing ? (
           <>
@@ -2035,6 +2079,56 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
               <div className="form-group"><label>YouTube</label><input value={editForm.youtube} onChange={e=>ef('youtube',e.target.value)} /></div>
               <div className="form-group"><label>Other Link</label><input value={editForm.otherSocial} onChange={e=>ef('otherSocial',e.target.value)} /></div>
             </div>
+            {/* Photos */}
+            <div style={{marginTop:16,marginBottom:14}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                <label style={{fontSize:14,fontWeight:600}}>Business Photos</label>
+                <span style={{fontSize:12,color:'#a89a8a',fontWeight:600}}>{existingPhotos.length + editPhotos.length} of 6</span>
+              </div>
+              {(existingPhotos.length > 0 || editPhotos.length > 0) && (
+                <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+                  {existingPhotos.map((url,i)=>(
+                    <div key={'ex'+i} style={{position:'relative',width:80,height:80}}>
+                      <img src={url} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
+                      <button onClick={()=>setExistingPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
+                    </div>
+                  ))}
+                  {editPhotos.map((f,i)=>(
+                    <div key={'new'+i} style={{position:'relative',width:80,height:80}}>
+                      <img src={URL.createObjectURL(f)} alt={`New ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'2px solid #c8a850'}} />
+                      <button onClick={()=>setEditPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {existingPhotos.length + editPhotos.length < 6 && (
+                <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
+                  + Add Photos ({6 - existingPhotos.length - editPhotos.length} remaining)
+                  <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEditPhotos(p=>[...p,...files].slice(0,6-existingPhotos.length));e.target.value='';}} />
+                </label>
+              )}
+            </div>
+            {/* COI */}
+            <div style={{marginBottom:10}}>
+              <label style={{fontSize:13,fontWeight:600,display:'block',marginBottom:4}}>Certificate of Insurance</label>
+              {m.coiUrl && !newCoi && <div style={{fontSize:12,marginBottom:4}}><a href={m.coiUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a6b3a'}}>📄 Current COI uploaded</a></div>}
+              {newCoi && <div style={{fontSize:12,color:'#c8a850',marginBottom:4}}>New file: {newCoi.name}</div>}
+              <label style={{display:'inline-block',background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,cursor:'pointer',color:'#7a6a5a'}}>
+                {m.coiUrl ? 'Replace COI' : 'Upload COI'}
+                <input type="file" accept=".pdf,image/*" style={{display:'none'}} onChange={e=>{if(e.target.files[0])setNewCoi(e.target.files[0]);}} />
+              </label>
+            </div>
+            {/* Lookbook */}
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:13,fontWeight:600,display:'block',marginBottom:4}}>Price Menu / Lookbook</label>
+              {m.lookbookUrl && !newLookbook && <div style={{fontSize:12,marginBottom:4}}><a href={m.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>📋 Current lookbook uploaded</a></div>}
+              {newLookbook && <div style={{fontSize:12,color:'#c8a850',marginBottom:4}}>New file: {newLookbook.name}</div>}
+              <label style={{display:'inline-block',background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,cursor:'pointer',color:'#7a6a5a'}}>
+                {m.lookbookUrl ? 'Replace Lookbook' : 'Upload Lookbook'}
+                <input type="file" accept=".pdf,image/*" style={{display:'none'}} onChange={e=>{if(e.target.files[0])setNewLookbook(e.target.files[0]);}} />
+              </label>
+            </div>
+            <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12,background:'#fdf9f5',padding:'8px 12px',borderRadius:6}}>Photo and document updates save immediately without requiring re-approval. Other profile changes require admin review.</div>
             <button onClick={saveProfile} disabled={saving} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:saving?0.6:1}}>{saving?'Saving...':'Save Changes'}</button>
           </>
         ) : (
