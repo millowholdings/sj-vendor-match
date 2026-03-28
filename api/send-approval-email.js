@@ -13,7 +13,7 @@ module.exports = async function handler(req, res) {
   if (!to) return res.status(400).json({ error: 'Missing email' });
 
   const resend = new Resend(resendKey);
-  const fromAddr = process.env.RESEND_FROM_EMAIL || 'hello@southjerseyvendormarket.com';
+  const fromAddr = 'hello@southjerseyvendormarket.com';
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
   const isVendor = type === 'vendor';
