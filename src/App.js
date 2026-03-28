@@ -2016,9 +2016,6 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     if (editForm.radius !== vp.radius) changes.radius = {old:vp.radius, new:editForm.radius};
     if (editForm.description !== (vp.description||'')) changes.description = {old:'(updated)', new:'(updated)'};
 
-    const hasProfileChanges = Object.keys(changes).length > 0;
-    const hasFileChanges = editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length || newCoi || newLookbook;
-
     // Detect additional changes
     if (editForm.website !== (vp.website||'')) changes.website = {old:vp.website||'—', new:editForm.website||'—'};
     if (editForm.instagram !== (vp.instagram||'')) changes.instagram = {old:'(updated)', new:'(updated)'};
