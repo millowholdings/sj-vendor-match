@@ -188,6 +188,7 @@ function dbEventToApp(e) {
     adminNotes:       e.admin_notes       || "",
     rejectionReason:  e.rejection_reason  || "",
     servicesNeeded:   (() => { try { return typeof e.services_needed === 'string' ? JSON.parse(e.services_needed) : (e.services_needed || []); } catch { return []; } })(),
+    eventPhotos:      e.event_photos || [],
   };
 }
 
@@ -1089,6 +1090,7 @@ const DEFAULT_HOST_FORM = {
 function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
+  const [eventPhotos, setEventPhotos] = useState([]);
   const [hasDraft] = useState(() => !!localStorage.getItem(HOST_DRAFT_KEY));
   const [otherSubcategories, setOtherSubcategories] = useState(() => {
     try { return JSON.parse(localStorage.getItem(HOST_DRAFT_SUBS_KEY) || '{}'); }
@@ -1457,13 +1459,39 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <label>Additional Notes</label>
         <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Anything else vendors or our team should know..."} value={form.notes} onChange={e=>set('notes',e.target.value)} />
       </div>
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
+      <div style={{marginBottom:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <span style={{fontSize:13,fontWeight:600}}>Photos</span>
+          <span style={{fontSize:12,color:eventPhotos.length>=6?'#1a6b3a':'#a89a8a',fontWeight:600}}>{eventPhotos.length} of 6</span>
+        </div>
+        {eventPhotos.length > 0 && (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {eventPhotos.map((f,i)=>(
+              <div key={i} style={{position:'relative',width:80,height:80}}>
+                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
+                <button onClick={()=>setEventPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {eventPhotos.length < 6 && (
+          <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
+            + Add Photos ({6 - eventPhotos.length} remaining)
+            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
+          </label>
+        )}
+      </div>
+
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
           <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
         </label>
         {showTos && <TosModal onClose={()=>setShowTos(false)} />}
-        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
+        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form, { eventPhotos }); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
       </div>
     </div>
   );
@@ -2243,10 +2271,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState({});
   const [savingEvent, setSavingEvent] = useState(false);
+  const [editExistingPhotos, setEditExistingPhotos] = useState([]);
+  const [editNewPhotos, setEditNewPhotos] = useState([]);
   const SIG_EVENT_FIELDS = ['date','zip','event_name'];
 
   const startEditEvent = (e) => {
     setEventForm({ event_name:e.event_name, event_type:e.event_type, date:e.date, start_time:e.start_time||'', end_time:e.end_time||'', zip:e.zip, booth_fee:e.booth_fee||'', spots:e.spots||0, notes:e.notes||'', deadline:e.deadline||'', ticket_price:e.ticket_price||'', is_ticketed:e.is_ticketed||false });
+    setEditExistingPhotos(e.event_photos||[]);
+    setEditNewPhotos([]);
     setEditingEvent(e.id);
   };
   const eSet = (k,v) => setEventForm(f=>({...f,[k]:v}));
@@ -2258,13 +2290,31 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     if (eventForm.date !== evt.date) changes.date = {old:evt.date, new:eventForm.date};
     if (eventForm.zip !== evt.zip) changes.zip = {old:evt.zip, new:eventForm.zip};
     if (eventForm.spots !== evt.spots) changes.spots = {old:evt.spots, new:eventForm.spots};
+    const photosChanged = editNewPhotos.length > 0 || editExistingPhotos.length !== (evt.event_photos||[]).length;
+    if (photosChanged) changes.photos = {old:`${(evt.event_photos||[]).length} photos`, new:`${editExistingPhotos.length + editNewPhotos.length} photos`};
+
     if (Object.keys(changes).length === 0) { setEditingEvent(null); setSavingEvent(false); return; }
+
+    // Upload new photos
+    let allPhotoUrls = [...editExistingPhotos];
+    if (editNewPhotos.length > 0) {
+      const bucket = 'vendor-files';
+      const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const newUrls = await Promise.all(editNewPhotos.map(async (f, i) => {
+        const path = `events/${evt.id}/photos/${editExistingPhotos.length+i}-${safeName(f.name)}`;
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
+        if (upErr) return null;
+        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      }));
+      allPhotoUrls = [...allPhotoUrls, ...newUrls.filter(Boolean)];
+    }
 
     const updatePayload = {
       event_name:eventForm.event_name, event_type:eventForm.event_type, date:eventForm.date,
       start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
       booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
       deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
+      event_photos: allPhotoUrls,
       status: 'pending_review',
     };
 
@@ -2347,6 +2397,35 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     <div className="form-group"><label>Ticketed</label><select value={eventForm.is_ticketed?'yes':'no'} onChange={ev=>eSet('is_ticketed',ev.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
                     {eventForm.is_ticketed && <div className="form-group"><label>Ticket Price</label><input value={eventForm.ticket_price} onChange={ev=>eSet('ticket_price',ev.target.value)} /></div>}
                     <div className="form-group full"><label>Notes</label><textarea value={eventForm.notes} onChange={ev=>eSet('notes',ev.target.value)} style={{minHeight:50}} /></div>
+                  </div>
+                  {/* Event photos */}
+                  <div style={{marginBottom:12}}>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                      <label style={{fontSize:13,fontWeight:600}}>Event Photos</label>
+                      <span style={{fontSize:11,color:'#a89a8a'}}>{editExistingPhotos.length + editNewPhotos.length} of 6</span>
+                    </div>
+                    {(editExistingPhotos.length > 0 || editNewPhotos.length > 0) && (
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}}>
+                        {editExistingPhotos.map((url,i)=>(
+                          <div key={'ex'+i} style={{position:'relative',width:70,height:70}}>
+                            <img src={url} alt={`Photo ${i+1}`} style={{width:70,height:70,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
+                            <button onClick={()=>setEditExistingPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:9,cursor:'pointer',lineHeight:'16px',textAlign:'center',padding:0}}>x</button>
+                          </div>
+                        ))}
+                        {editNewPhotos.map((f,i)=>(
+                          <div key={'new'+i} style={{position:'relative',width:70,height:70}}>
+                            <img src={URL.createObjectURL(f)} alt={`New ${i+1}`} style={{width:70,height:70,objectFit:'cover',borderRadius:6,border:'2px solid #c8a850'}} />
+                            <button onClick={()=>setEditNewPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-4,right:-4,width:16,height:16,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:9,cursor:'pointer',lineHeight:'16px',textAlign:'center',padding:0}}>x</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {editExistingPhotos.length + editNewPhotos.length < 6 && (
+                      <label style={{display:'block',background:'#fdf9f5',border:'1px dashed #e8ddd0',borderRadius:6,padding:'8px',textAlign:'center',cursor:'pointer',fontSize:12,color:'#7a6a5a'}}>
+                        + Add Photos
+                        <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={ev=>{const files=Array.from(ev.target.files);setEditNewPhotos(p=>[...p,...files].slice(0,6-editExistingPhotos.length));ev.target.value='';}} />
+                      </label>
+                    )}
                   </div>
                   <div style={{fontSize:12,color:'#7a5a10',marginBottom:8,background:'#fdf4dc',padding:'6px 10px',borderRadius:6}}>All changes require admin approval before going live.</div>
                   <button onClick={()=>saveEvent(e)} disabled={savingEvent} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:savingEvent?0.6:1}}>{savingEvent?'Saving...':'Save Changes'}</button>
@@ -3432,6 +3511,17 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                           {svc.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:2,fontStyle:'italic'}}>{svc.notes}</div>}
                         </div>
                       ))}
+                    </div>
+                  )}
+                  {/* Event photos */}
+                  {evt.eventPhotos && evt.eventPhotos.length > 0 && (
+                    <div style={{marginBottom:16}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Event Photos ({evt.eventPhotos.length})</div>
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {evt.eventPhotos.map((url,i)=>(
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Event photo ${i+1}`} style={{width:120,height:120,objectFit:'cover',borderRadius:8,border:'1px solid #e0d5c5'}} /></a>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {/* Event Link — prominent for verification */}
@@ -4980,7 +5070,7 @@ function AppInner() {
     window.scrollTo({top:0, behavior:"smooth"});
   };
 
-  const handleHostSubmit = async form => {
+  const handleHostSubmit = async (form, files = {}) => {
     if (!form.contactName || !form.email || !form.eventType) {
       alert('Please fill in Contact Name, Email, and Event Type.');
       return;
@@ -5097,6 +5187,22 @@ function AppInner() {
           }),
         });
       } catch (e) { console.error('Concierge email failed:', e); }
+    }
+    // Upload event photos
+    if (newEvent && files.eventPhotos && files.eventPhotos.length > 0) {
+      const bucket = 'vendor-files';
+      const eid = newEvent.id;
+      const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const photoUrls = await Promise.all(files.eventPhotos.slice(0,6).map(async (f, i) => {
+        const path = `events/${eid}/photos/${i}-${safeName(f.name)}`;
+        const { error } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
+        if (error) { console.error('Event photo upload error:', error); return null; }
+        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      }));
+      const validUrls = photoUrls.filter(Boolean);
+      if (validUrls.length > 0) {
+        await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid);
+      }
     }
     // Send host confirmation email
     try {
