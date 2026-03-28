@@ -5871,7 +5871,7 @@ function AppInner() {
     let { data: newEvent, error: eventErr } = await supabase.from('events').insert(eventPayload).select().single();
     // Retry without newer columns if they don't exist yet
     if (eventErr && (eventErr.code === '42703' || eventErr.code === 'PGRST204')) {
-      const { vendor_discovery: _vd, status: _st, event_link: _el, ...fallback } = eventPayload;
+      const { vendor_discovery: _vd, event_link: _el, ...fallback } = eventPayload;
       ({ data: newEvent, error: eventErr } = await supabase.from('events').insert(fallback).select().single());
     }
     if (eventErr) {
@@ -5918,9 +5918,9 @@ function AppInner() {
         body: JSON.stringify({ hostEmail: form.email, hostName: form.contactName, eventName: form.eventName || form.eventType, eventDate: form.date, eventType: form.eventType, isConcierge: form.fullServiceBooking }),
       });
     } catch (e) { console.error('Host confirmation email failed:', e); }
-    // Notify admin of new event submission
-    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`New Event Submitted: ${form.eventName||form.eventType}${form.fullServiceBooking?' [CONCIERGE]':''}`, message:`Host: ${form.contactName} (${form.email})\nEvent: ${form.eventName||form.eventType}\nType: ${form.eventType}\nDate: ${form.date}\nZip: ${form.eventZip}\n${form.fullServiceBooking?'CONCIERGE REQUEST — requires follow-up\n':''}Review in admin panel.` }),
+    // Notify admin of new event submission (styled email with gold button)
+    fetch('/api/send-event-admin-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ eventName: form.eventName||form.eventType, hostName: form.contactName, hostEmail: form.email, eventDate: form.date, eventType: form.eventType, eventZip: form.eventZip, isConcierge: form.fullServiceBooking }),
     }).catch(()=>{});
 
     // Pending events don't appear in public feed — they go through admin approval
