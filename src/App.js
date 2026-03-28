@@ -3672,6 +3672,27 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const [rejectReasons, setRejectReasons] = useState({});
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [expandedVendor, setExpandedVendor] = useState(null);
+  const [adminSearch, setAdminSearch] = useState('');
+  const [adminNoteText, setAdminNoteText] = useState({});
+
+  const saveAdminNote = async (entityType, entityId, entityName) => {
+    const note = adminNoteText[`${entityType}_${entityId}`] || '';
+    if (!note.trim()) return;
+    await supabase.from('change_log').insert({ entity_type:entityType, entity_id:entityId, entity_name:entityName, changed_by:'admin', changes:{admin_note:note}, significant:false });
+    if (entityType==='vendor') await supabase.from('vendors').update({ metadata: { ...(vendors.find(v=>v.id===entityId)||pendingVendors.find(v=>v.id===entityId))?.metadata, admin_notes: note } }).eq('id', entityId);
+    if (entityType==='event') await supabase.from('events').update({ admin_notes: note }).eq('id', entityId);
+    setAdminNoteText(n=>({...n,[`${entityType}_${entityId}`]:''}));
+    alert('Note saved.');
+  };
+
+  // Search filter
+  const searchLower = adminSearch.toLowerCase();
+  const filteredVendors = vendors.filter(v => !searchLower || v.name?.toLowerCase().includes(searchLower) || v.contactEmail?.toLowerCase().includes(searchLower));
+  const filteredPendingVendors = pendingVendors.filter(v => !searchLower || v.name?.toLowerCase().includes(searchLower) || v.contact_email?.toLowerCase().includes(searchLower));
+  const filteredEvents = allEvents.filter(e => !searchLower || e.eventName?.toLowerCase().includes(searchLower) || e.contactEmail?.toLowerCase().includes(searchLower) || e.contactName?.toLowerCase().includes(searchLower));
+  const filteredEventGoers = eventGoers.filter(g => !searchLower || g.name?.toLowerCase().includes(searchLower) || g.email?.toLowerCase().includes(searchLower));
+  const filteredPendingEvents = pendingEvents.filter(e => !searchLower || e.eventName?.toLowerCase().includes(searchLower) || e.contactEmail?.toLowerCase().includes(searchLower) || e.contactName?.toLowerCase().includes(searchLower));
+  const filteredOpps = opps.filter(e => !searchLower || e.eventName?.toLowerCase().includes(searchLower) || e.contactEmail?.toLowerCase().includes(searchLower));
 
   const approveEvent = async (evt) => {
     const notes = eventNotes[evt.id] || '';
@@ -3738,12 +3759,19 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Guests</div></div>
       </div>
 
+      {/* Search bar */}
+      <div style={{marginBottom:24}}>
+        <input value={adminSearch} onChange={e=>setAdminSearch(e.target.value)} placeholder="Search vendors, events, or users by name or email..."
+          style={{width:'100%',padding:'12px 16px',border:'2px solid #e8ddd0',borderRadius:10,fontSize:14,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fff'}} />
+        {adminSearch && <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>Showing results for "{adminSearch}" — {filteredVendors.length + filteredPendingVendors.length} vendors, {filteredEvents.filter(e=>e.status!=='rejected').length} events, {filteredEventGoers.length} guests</div>}
+      </div>
+
       {/* ── Pending Event Review ─────────────────────────────── */}
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🔍 Events Pending Review ({pendingEvents.length})</h3>
       {pendingEvents.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No events awaiting review.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:16}}>
-          {pendingEvents.map(evt=>(
+          {filteredPendingEvents.map(evt=>(
             <div key={evt.id} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:12,overflow:'hidden'}}>
               <div style={{background:'#fdf9f0',padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8,cursor:'pointer'}} onClick={()=>setExpandedEvent(expandedEvent===evt.id?null:evt.id)}>
                 <div>
@@ -3839,7 +3867,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       {pendingVendors.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:16}}>
-            {pendingVendors.map(v=>(
+            {filteredPendingVendors.map(v=>(
               <PendingVendorCard key={v.id} v={v}
                 onApprove={async()=>{
                   const{error}=await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
@@ -3922,7 +3950,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         : <table className="admin-table">
             <thead><tr><th>Event</th><th>Type</th><th>Zip</th><th>Date</th><th>Source</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
-              {opps.map(o=>(
+              {filteredOpps.map(o=>(
                 <tr key={o.id} style={o.source==='Concierge Request'?{background:'#fdf9f0'}:{}}>
                   <td><strong>{o.eventName}</strong>{o.eventLink && <a href={o.eventLink} target="_blank" rel="noopener noreferrer" style={{marginLeft:6,fontSize:11,color:'#1a4a6b'}}>🔗</a>}</td><td>{o.eventType}</td><td>{o.zip}</td>
                   <td>{fmtDate(o.date)}</td><td>{o.source}</td>
@@ -3939,7 +3967,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       {vendors.length===0
         ? <div className="empty-state"><div className="big">🛍️</div><p>No approved vendors yet.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {vendors.map(v=>{
+            {filteredVendors.map(v=>{
               const vm = v.photoUrls ? v : v; // already mapped
               const photos = v.photoUrls || [];
               const isExpanded = expandedVendor === v.id;
@@ -4002,6 +4030,14 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                       </div>
                     )}
                     {v.lookbookUrl && <div style={{marginTop:8}}><a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>📋 View Lookbook/Menu</a></div>}
+                    {/* Admin Notes */}
+                    <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:4}}>ADMIN NOTE (internal only)</div>
+                      <div style={{display:'flex',gap:8}}>
+                        <input value={adminNoteText[`vendor_${v.id}`]||''} onChange={e=>setAdminNoteText(n=>({...n,[`vendor_${v.id}`]:e.target.value}))} placeholder="Add a note about this vendor..." style={{flex:1,border:'1px solid #e0d5c5',borderRadius:6,padding:'6px 10px',fontSize:12,fontFamily:'DM Sans,sans-serif'}} />
+                        <button onClick={()=>saveAdminNote('vendor',v.id,v.name)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'6px 14px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Save Note</button>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
@@ -4017,7 +4053,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         : <table className="admin-table">
             <thead><tr><th>Name</th><th>Email</th><th>Zip</th><th>Radius</th><th>Event Types</th><th>Frequency</th><th>Signed Up</th><th>Actions</th></tr></thead>
             <tbody>
-              {eventGoers.map(eg=>(
+              {filteredEventGoers.map(eg=>(
                 <tr key={eg.id}>
                   <td><strong>{eg.name}</strong></td>
                   <td style={{fontSize:12}}>{eg.email}</td>
