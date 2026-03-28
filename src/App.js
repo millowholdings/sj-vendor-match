@@ -3588,6 +3588,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const [eventNotes, setEventNotes] = useState({});
   const [rejectReasons, setRejectReasons] = useState({});
   const [expandedEvent, setExpandedEvent] = useState(null);
+  const [expandedVendor, setExpandedVendor] = useState(null);
 
   const approveEvent = async (evt) => {
     const notes = eventNotes[evt.id] || '';
@@ -3854,33 +3855,76 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Approved Vendors ({vendors.length})</h3>
       {vendors.length===0
         ? <div className="empty-state"><div className="big">🛍️</div><p>No approved vendors yet.</p></div>
-        : <table className="admin-table">
-            <thead><tr><th>Business</th><th>Category</th><th>Zip</th><th>Contact</th><th>Founding</th><th>Actions</th></tr></thead>
-            <tbody>
-              {vendors.map(v=>(
-                <tr key={v.id}>
-                  <td><strong>{v.name}</strong>{v.foundingVendor && <span style={{marginLeft:6,background:'#c8a850',color:'#1a1410',padding:'1px 6px',borderRadius:8,fontSize:9,fontWeight:700}}>FOUNDING</span>}</td>
-                  <td>{v.category}</td>
-                  <td>{v.homeZip}</td>
-                  <td style={{fontSize:12}}>{v.contactEmail}</td>
-                  <td>
-                    <button onClick={async()=>{
-                      const newVal = !v.foundingVendor;
-                      const{error}=await supabase.from('vendors').update({founding_vendor:newVal}).eq('id',v.id);
-                      if(error){alert('Failed to update');return;}
-                      setVendors(prev=>prev.map(x=>x.id===v.id?{...x,foundingVendor:newVal}:x));
-                    }} style={{
-                      background:v.foundingVendor?'#c8a850':'#fff',
-                      color:v.foundingVendor?'#1a1410':'#7a6a5a',
-                      border:`1px solid ${v.foundingVendor?'#c8a850':'#e8ddd0'}`,
-                      borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600
-                    }}>{v.foundingVendor?'✓ Founding':'Mark Founding'}</button>
-                  </td>
-                  <td><button onClick={()=>setRemoveDialog({type:'vendor',id:v.id,name:v.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        : <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {vendors.map(v=>{
+              const vm = v.photoUrls ? v : v; // already mapped
+              const photos = v.photoUrls || [];
+              const isExpanded = expandedVendor === v.id;
+              return (
+              <div key={v.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,overflow:'hidden'}}>
+                <div style={{padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10,flex:1,minWidth:200}}>
+                    <div>
+                      <div style={{fontWeight:700,fontSize:14}}>{v.name}{v.foundingVendor && <span style={{marginLeft:6,background:'#c8a850',color:'#1a1410',padding:'1px 6px',borderRadius:8,fontSize:9,fontWeight:700}}>FOUNDING</span>}{v.isServiceProvider && <span style={{marginLeft:6,background:'#1a1410',color:'#e8c97a',padding:'1px 6px',borderRadius:8,fontSize:9,fontWeight:700}}>SERVICE</span>}</div>
+                      <div style={{fontSize:12,color:'#7a6a5a'}}>{v.isServiceProvider ? (v.serviceCategories||[]).join(', ') : v.category} · {v.homeZip} · {v.contactEmail}</div>
+                    </div>
+                  </div>
+                  <div style={{display:'flex',gap:6}}>
+                    <button onClick={()=>setExpandedVendor(isExpanded?null:v.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>{isExpanded?'▾ Close':'▸ View'}</button>
+                    <button onClick={async()=>{const nv=!v.foundingVendor;const{error}=await supabase.from('vendors').update({founding_vendor:nv}).eq('id',v.id);if(error){alert('Failed');return;}setVendors(p=>p.map(x=>x.id===v.id?{...x,foundingVendor:nv}:x));}} style={{background:v.foundingVendor?'#c8a850':'#fff',color:v.foundingVendor?'#1a1410':'#7a6a5a',border:`1px solid ${v.foundingVendor?'#c8a850':'#e8ddd0'}`,borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>{v.foundingVendor?'✓ Founding':'Mark Founding'}</button>
+                    <button onClick={()=>setRemoveDialog({type:'vendor',id:v.id,name:v.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button>
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div style={{borderTop:'1px solid #e8ddd0',padding:'16px',background:'#faf8f5'}}>
+                    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'6px 20px',marginBottom:12,fontSize:13}}>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Phone:</span> {v.contactPhone||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Radius:</span> {v.radius}mi</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Insurance:</span> {v.insurance?'Yes':'No'}</div>
+                    </div>
+                    {v.description && <div style={{fontSize:13,color:'#7a6a5a',marginBottom:12,padding:'8px 10px',background:'#fff',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{v.description}</div>}
+                    {/* Links */}
+                    {[{l:'🌐 Website',u:v.website},{l:'📸 Instagram',u:v.instagram},{l:'👤 Facebook',u:v.facebook},{l:'🎵 TikTok',u:v.tiktok},{l:'▶️ YouTube',u:v.youtube},{l:'🔗 Other',u:v.otherSocial}].filter(x=>x.u).length > 0 && (
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:6}}>LINKS</div>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                          {[{l:'🌐 Website',u:v.website},{l:'📸 Instagram',u:v.instagram},{l:'👤 Facebook',u:v.facebook},{l:'🎵 TikTok',u:v.tiktok},{l:'▶️ YouTube',u:v.youtube},{l:'🔗 Other',u:v.otherSocial}].filter(x=>x.u).map(x=>(
+                            <a key={x.l} href={x.u.startsWith('http')?x.u:'https://'+x.u} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',background:'#e8f4fd',padding:'4px 10px',borderRadius:6}}>{x.l}</a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Service provider details */}
+                    {v.isServiceProvider && (
+                      <div style={{marginBottom:12}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:6}}>SERVICE DETAILS</div>
+                        <div style={{fontSize:13,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px'}}>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Type:</span> {v.serviceType||'—'}</div>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Rate:</span> {v.serviceRateType==='quote'?'Quote based':v.serviceRateType==='range'?`${v.serviceRateMin} – ${v.serviceRateMax}`:v.serviceRateMin||'—'}</div>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Duration:</span> {v.minBookingDuration||'—'}</div>
+                          <div><span style={{color:'#a89a8a',fontSize:11}}>Subcategories:</span> {(v.serviceSubcategories||[]).join(', ')||'—'}</div>
+                        </div>
+                        {v.serviceDescription && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>{v.serviceDescription}</div>}
+                      </div>
+                    )}
+                    {/* Photos */}
+                    {photos.length > 0 && (
+                      <div>
+                        <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',marginBottom:6}}>PHOTOS ({photos.length})</div>
+                        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                          {photos.map((url,i)=>(
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Photo ${i+1}`} style={{width:100,height:100,objectFit:'cover',borderRadius:6,border:'1px solid #e0d5c5'}} /></a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {v.lookbookUrl && <div style={{marginTop:8}}><a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>📋 View Lookbook/Menu</a></div>}
+                  </div>
+                )}
+              </div>
+              );
+            })}
+          </div>
       }
 
       {/* ── Event Guests ────────────────────────────────────── */}
