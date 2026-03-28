@@ -1977,16 +1977,13 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
   const saveProfile = async () => {
     setSaving(true);
-    // Safety net: force-reset saving state after 5 seconds no matter what
-    setTimeout(() => setSaving(false), 5000);
-    // Diagnostic: test if API routes work at all
-    console.log('SAVE DEBUG: saveProfile called, sending diagnostic email...');
-    fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ businessName:'DEBUG SAVE TEST', contactName:'Debug', vendorEmail:'tiffany@southjerseyvendormarket.com', category:'Debug', vendorType:'market', phone:'' })
-    }).then(r => r.json()).then(d => console.log('SAVE DEBUG: diagnostic email response:', d)).catch(e => console.error('SAVE DEBUG: diagnostic email error:', e));
-    const vp = vendorProfile;
-    const vid = vp.id;
+    const emailDomain = (vendorProfile?.contact_email || user?.email || '').split('@')[1] || 'unknown';
+    console.log('SAVE: started, vendor email domain:', emailDomain);
     try {
+      const vp = vendorProfile;
+      if (!vp || !vp.id) { alert('Error: Vendor profile not loaded. Please refresh and try again.'); return; }
+      const vid = vp.id;
+
       // Upload files
       let photoUrls = [...existingPhotos];
       let coiUrl = m.coiUrl || null;
@@ -1996,17 +1993,19 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       const upload = async (file, path) => {
         try {
           const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
-          if (error) return null;
+          if (error) { console.error('SAVE: upload error:', error); return null; }
           return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-        } catch { return null; }
+        } catch (ue) { console.error('SAVE: upload exception:', ue); return null; }
       };
       if (editPhotos.length > 0) {
+        console.log('SAVE: uploading', editPhotos.length, 'photos...');
         const urls = await Promise.all(editPhotos.map((f,i) => upload(f, `${vid}/photos/${existingPhotos.length+i}-${safeName(f.name)}`)));
         photoUrls = [...photoUrls, ...urls.filter(Boolean)];
       }
       if (newCoi) { const u = await upload(newCoi, `${vid}/coi/${safeName(newCoi.name)}`); if (u) coiUrl = u; }
       if (newLookbook) { const u = await upload(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`); if (u) lookbookUrl = u; }
 
+      console.log('SAVE: saving to Supabase...');
       // Save to Supabase
       const { error } = await supabase.from('vendors').update({
         name:editForm.name, contact_name:editForm.contact_name, contact_phone:editForm.contact_phone||null,
@@ -2026,26 +2025,27 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         status: 'pending',
       }).eq('id', vid);
 
-      if (error) { alert('Failed to save: ' + error.message); return; }
+      if (error) { console.error('SAVE: Supabase error:', error, 'domain:', emailDomain); alert('Failed to save: ' + error.message); return; }
+      console.log('SAVE: Supabase update succeeded');
 
-      // Notify admin (non-blocking, with logging)
+      // Notify admin — send TO admin only, do NOT pass vendor's email as recipient
       fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:editForm.contact_email, category:vp.category||editForm.serviceCategories?.[0]||'—', vendorType:editForm.isServiceProvider?'service':'market' }),
-      }).then(r=>r.json()).then(d=>console.log('Admin email sent:', d)).catch(e=>console.error('Admin email failed:', e));
+        body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:'tiffany@southjerseyvendormarket.com', category:vp.category||editForm.serviceCategories?.[0]||'—', vendorType:editForm.isServiceProvider?'service':'market' }),
+      }).then(r=>r.json()).then(d=>console.log('SAVE: admin email response:', d)).catch(e=>console.error('SAVE: admin email error:', e));
 
       // Log change (non-blocking)
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).then(()=>{}).catch(e=>console.error('Change log error:', e));
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated', emailDomain}, significant:true }).catch(()=>{});
 
-      // Refresh profile
-      try {
-        const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
-        if (updated && setVendorProfile) setVendorProfile(updated);
-      } catch (refreshErr) { console.error('Profile refresh error:', refreshErr); }
+      // Refresh profile (non-blocking — don't let this block the UI)
+      supabase.from('vendors').select('*').eq('id', vid).single()
+        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); })
+        .catch(() => {});
 
+      console.log('SAVE: complete, domain:', emailDomain);
       setEditing(false);
       alert('Your changes have been submitted for review and will be live within 24 hours.');
     } catch (err) {
-      console.error('Save profile error:', err);
+      console.error('SAVE: exception:', err, 'domain:', emailDomain);
       alert('Something went wrong: ' + (err.message||'Unknown error') + '\n\nPlease try again.');
     } finally {
       setSaving(false);
@@ -4248,9 +4248,9 @@ function VendorApplyModal({ opp, onClose }) {
           .then(({ data }) => {
             if (data) fillFrom(data);
             else {
-              // Fallback to email match
+              // Fallback to email match (case-insensitive)
               supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
-                .eq('contact_email', session.user.email).limit(1).single()
+                .ilike('contact_email', session.user.email).limit(1).single()
                 .then(({ data: d2 }) => fillFrom(d2));
             }
           });
@@ -5048,8 +5048,8 @@ function AppInner() {
     // Find vendor linked to this user
     supabase.from('vendors').select('*').eq('user_id', authUser.id).limit(1).single()
       .then(({ data }) => { if (data) setVendorProfile(data); });
-    // Also check by email if not linked yet
-    supabase.from('vendors').select('*').eq('contact_email', authUser.email).limit(1).single()
+    // Also check by email if not linked yet (case-insensitive for iCloud/etc)
+    supabase.from('vendors').select('*').ilike('contact_email', authUser.email).limit(1).single()
       .then(({ data }) => {
         if (data && !data.user_id) {
           // Link existing vendor to this auth user
@@ -5062,8 +5062,8 @@ function AppInner() {
     // Find events linked to this user
     supabase.from('events').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
       .then(({ data }) => { if (data) setUserEvents(data); });
-    // Also link by email
-    supabase.from('events').select('*').eq('contact_email', authUser.email).order('date', { ascending: false })
+    // Also link by email (case-insensitive for iCloud/etc)
+    supabase.from('events').select('*').ilike('contact_email', authUser.email).order('date', { ascending: false })
       .then(({ data }) => {
         if (data && data.length > 0) {
           const unlinked = data.filter(e => !e.user_id);
@@ -5428,7 +5428,7 @@ function AppInner() {
       userId = signUpData.user?.id || null;
     }
     // Check for duplicate vendor email
-    const { data: existing } = await supabase.from('vendors').select('id').eq('contact_email', form.email).limit(1);
+    const { data: existing } = await supabase.from('vendors').select('id').ilike('contact_email', form.email).limit(1);
     if (existing && existing.length > 0) {
       if (!window.confirm('A vendor profile with this email already exists. Submit another profile anyway?')) return;
     }
