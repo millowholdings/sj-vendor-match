@@ -2603,7 +2603,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -2775,9 +2775,10 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
                   <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
                 </div>
-                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                   <button onClick={()=>setViewingEvent(viewingEvent===e.id?null:e.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{viewingEvent===e.id?'Hide':'View'}</button>
                   <button onClick={()=>{setViewingEvent(null);editingEvent===e.id?setEditingEvent(null):startEditEvent(e);}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editingEvent===e.id?'Cancel':'Edit'}</button>
+                  {e.status==='approved' && <button onClick={()=>{if(setHostEventFromDashboard)setHostEventFromDashboard(e);setTab('matches');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Find Vendors</button>}
                   <span style={{
                     padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',
                     background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
@@ -3307,7 +3308,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
             {hostEvent && sendBookingRequest && !req && (
               <button onClick={()=>{sendBookingRequest(v, hostEvent); onClose();}}
                 style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                📋 Invite to My Event
+                📋 Invite to {hostEvent?.eventName || 'My Event'}
               </button>
             )}
             {req && (
@@ -3342,7 +3343,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct }) {
   const [showProfile, setShowProfile] = useState(false);
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
   const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
@@ -3399,12 +3400,12 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
           <img src={v.photoUrls[0]} alt={v.name} style={{width:'100%',height:'100%',objectFit:'cover'}} />
           <div style={{position:'absolute',inset:0,background:'linear-gradient(to bottom,transparent 40%,rgba(26,20,16,0.5) 100%)'}} />
           <div style={{position:'absolute',top:10,left:10,fontSize:24}}>{v.emoji}</div>
-          <div className="match-score" style={{position:'absolute',top:10,right:10}}>{v.matchScore}% match</div>
+          <div className="match-score" style={{position:'absolute',top:10,right:10}}>{matchPct !== null && matchPct !== undefined ? `${matchPct}%` : `${v.matchScore}%`} match</div>
         </div>
       ) : (
         <div className="vendor-card-top">
           {v.emoji}
-          <div className="match-score">{v.matchScore}% match</div>
+          <div className="match-score">{matchPct !== null && matchPct !== undefined ? `${matchPct}%` : `${v.matchScore}%`} match</div>
         </div>
       )}
       <div className="vendor-card-body">
@@ -3445,7 +3446,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
               </div>
             ) : (
               <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
-                📋 Invite to My Event
+                📋 Invite to {hostEvent?.eventName || 'My Event'}
               </button>
             )
           )}
@@ -3575,10 +3576,28 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   const inRange  = enriched.filter(v => v.inRange).sort((a,b)=>(a.dist??999)-(b.dist??999)||b.matchScore-a.matchScore);
   const outRange = enriched.filter(v => !v.inRange);
 
+  // Calculate match percentage for each vendor against the current event
+  const neededCats = hostEvent?.vendorCategories || [];
+  const calcMatch = (v) => {
+    if (neededCats.length === 0) return null;
+    const vendorCats = [...(v.allCategories || [v.category]).filter(Boolean), ...(v.serviceCategories || [])];
+    const matched = neededCats.filter(c => vendorCats.includes(c)).length;
+    return Math.round((matched / neededCats.length) * 100);
+  };
+
   return (
     <div className="section" style={{ maxWidth:1060 }}>
-      <div className="section-title">Vendor Directory</div>
-      <p className="section-sub">Browse all active South Jersey vendors. Enter your event zip code to see who can travel to you.</p>
+      <div className="section-title">{hostEvent ? `Vendors for ${hostEvent.eventName || 'Your Event'}` : 'Vendor Directory'}</div>
+      <p className="section-sub">{hostEvent ? `Find and invite vendors to ${hostEvent.eventName || 'your event'} on ${hostEvent.date || ''}` : 'Browse all active South Jersey vendors. Enter your event zip code to see who can travel to you.'}</p>
+      {hostEvent && (
+        <div style={{background:'#1a1410',borderRadius:10,padding:'12px 18px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+          <div style={{display:'flex',alignItems:'center',gap:12}}>
+            <div style={{fontSize:13,color:'#e8c97a',fontWeight:700}}>{hostEvent.eventName || hostEvent.eventType}</div>
+            <div style={{fontSize:12,color:'#a89a8a'}}>{hostEvent.date} · {hostEvent.eventType} · Zip {hostEvent.eventZip}</div>
+          </div>
+          {neededCats.length > 0 && <div style={{fontSize:11,color:'#a89a8a'}}>Looking for: {neededCats.join(', ')}</div>}
+        </div>
+      )}
       <div className="match-filters">
         <div className="match-filter-group" style={{ maxWidth:200 }}>
           <label>{hostEvent ? 'Event Zip Code' : 'My Zip Code'}</label>
@@ -3627,7 +3646,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} />)}</div>
       }
 
       {hasZip && outRange.length>0 && (
@@ -6207,7 +6226,7 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
