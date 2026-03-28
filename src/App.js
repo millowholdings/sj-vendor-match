@@ -1781,9 +1781,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [confirmSent, setConfirmSent] = useState(false);
   const [roles, setRoles] = useState({ vendor: defaultRole==='vendor', host: defaultRole==='host', eventGoer: defaultRole==='eventGoer' });
-  const [signupRoles, setSignupRoles] = useState(null);
 
   const toggleRole = (role) => setRoles(r => ({ ...r, [role]: !r[role] }));
 
@@ -1795,10 +1793,8 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
     if (mode === 'signup') {
       const { error: signUpErr } = await supabase.auth.signUp({ email, password });
       if (signUpErr) { setError(signUpErr.message); setLoading(false); return; }
-      setSignupRoles({...roles});
-      setConfirmSent(true);
-      setLoading(false);
-      return;
+      // Save roles for post-login routing
+      localStorage.setItem('sjvm_pending_roles', JSON.stringify(roles));
     } else {
       const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
       if (signInErr) { setError(signInErr.message); setLoading(false); return; }
@@ -1806,6 +1802,12 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
     setLoading(false);
     if (onAuth) onAuth();
     onClose();
+    // Route based on roles after signup
+    if (mode === 'signup' && setTab) {
+      if (roles.vendor) setTab('vendor');
+      else if (roles.host) setTab('host');
+      else if (roles.eventGoer && setShowEventGoerSignup) setShowEventGoerSignup(true);
+    }
   };
 
   const handleReset = async () => {
@@ -1845,26 +1847,6 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
               <div style={{fontSize:15,fontWeight:600,color:'#1a6b3a',marginBottom:8}}>Check your email</div>
               <div style={{fontSize:13,color:'#7a6a5a'}}>We sent a password reset link to {email}</div>
               <button onClick={onClose} style={{marginTop:16,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
-            </div>
-          ) : confirmSent ? (
-            <div style={{textAlign:'center',padding:'16px 0'}}>
-              <div style={{fontSize:32,marginBottom:8}}>📧</div>
-              <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a',marginBottom:8}}>Check your email to confirm</div>
-              <div style={{fontSize:14,color:'#7a6a5a',marginBottom:8}}>We sent a confirmation link to <strong>{email}</strong></div>
-              <div style={{fontSize:13,color:'#a89a8a',marginBottom:16,lineHeight:1.5}}>Click the link in the email to activate your account, then come back and log in.</div>
-              {signupRoles && (
-                <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',marginBottom:16,textAlign:'left',fontSize:13,color:'#7a6a5a',lineHeight:1.6}}>
-                  <div style={{fontWeight:700,color:'#1a1410',marginBottom:6}}>After you confirm, here's what's next:</div>
-                  {signupRoles.vendor && <div>• Complete your vendor profile to start getting matched with events</div>}
-                  {signupRoles.eventGoer && <div>• Set up your event preferences so we can send you personalized market alerts</div>}
-                  {signupRoles.host && <div>• Your host dashboard will be ready — post your first event whenever you're ready</div>}
-                </div>
-              )}
-              <button onClick={()=>{
-                // Save roles for post-login routing
-                if (signupRoles) localStorage.setItem('sjvm_pending_roles', JSON.stringify(signupRoles));
-                onClose();
-              }} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Got it</button>
             </div>
           ) : (
             <>
