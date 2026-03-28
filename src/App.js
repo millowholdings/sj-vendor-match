@@ -2537,14 +2537,28 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     setReviewingApp(app.id);
     setReviewVendor(null);
     setLoadingVendor(true);
-    // Update status to reviewing
-    await supabase.from('booking_requests').update({ status: 'reviewing' }).eq('id', app.id);
-    setApplications(a => a.map(x => x.id === app.id ? { ...x, status: 'reviewing' } : x));
-    // Fetch vendor profile
+    // Update status to reviewing (only if still pending)
+    if (app.status === 'pending') {
+      supabase.from('booking_requests').update({ status: 'reviewing' }).eq('id', app.id).catch(()=>{});
+      setApplications(a => a.map(x => x.id === app.id ? { ...x, status: 'reviewing' } : x));
+    }
+    // Fetch vendor profile by ID first, then fall back to email match
+    let vendorData = null;
     if (app.vendor_id) {
       const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
-      if (data) setReviewVendor(data);
+      vendorData = data;
     }
+    if (!vendorData && app.host_email) {
+      // host_email in the booking request is actually the vendor's email for applications
+      const { data } = await supabase.from('vendors').select('*').ilike('contact_email', app.host_email).limit(1).single();
+      vendorData = data;
+    }
+    if (!vendorData && app.vendor_name) {
+      // Last resort: match by business name
+      const { data } = await supabase.from('vendors').select('*').ilike('name', app.vendor_name).limit(1).single();
+      vendorData = data;
+    }
+    if (vendorData) setReviewVendor(vendorData);
     setLoadingVendor(false);
   };
 
@@ -2558,12 +2572,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       setShowDeclinePrompt(null); setDeclineReason('');
       // Send email notification to vendor
       if (app && app.vendor_id) {
-        const { data: vendor } = await supabase.from('vendors').select('email,contact_name').eq('id', app.vendor_id).single();
-        if (vendor && vendor.email) {
+        const { data: vendor } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', app.vendor_id).single();
+        if (vendor && vendor.contact_email) {
           fetch('/api/send-booking-response', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              hostEmail: vendor.email, hostName: vendor.contact_name || app.vendor_name,
+              hostEmail: vendor.contact_email, hostName: vendor.contact_name || app.vendor_name,
               vendorName: user.email, vendorCategory: app.vendor_category,
               eventName: app.event_name, eventDate: app.event_date,
               status, vendorMessage: reason || '',
@@ -2761,63 +2775,99 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
               {isReviewing && (
                 <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
                   {loadingVendor ? (
-                    <div style={{color:'#a89a8a',padding:16,textAlign:'center'}}>Loading vendor profile...</div>
+                    <div style={{color:'#a89a8a',padding:20,textAlign:'center',fontSize:13}}>Loading vendor profile...</div>
                   ) : !v ? (
-                    <div style={{color:'#a89a8a',padding:16,textAlign:'center',fontSize:13}}>Vendor profile not found. This vendor may have been removed.</div>
+                    <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:16,textAlign:'center'}}>
+                      <div style={{fontSize:13,color:'#7a6a5a',marginBottom:8}}>Full vendor profile not available.</div>
+                      {a.notes && <div style={{fontSize:13,color:'#1a1410',padding:'8px 10px',background:'#fff',borderRadius:6,borderLeft:'3px solid #e8c97a',textAlign:'left',marginBottom:8}}>{a.notes}</div>}
+                      <div style={{fontSize:12,color:'#a89a8a'}}>Vendor: {a.vendor_name} · Category: {a.vendor_category || '—'}{a.host_email ? ` · Email: ${a.host_email}` : ''}</div>
+                    </div>
                   ) : (
                     <div>
                       {/* Vendor header */}
                       <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:12}}>
-                        {m.profilePhoto && <img src={m.profilePhoto} alt={v.business_name} style={{width:60,height:60,objectFit:'cover',borderRadius:8,border:'1px solid #e8ddd0'}} />}
+                        {(m.photoUrls||[])[0] && <img src={m.photoUrls[0]} alt={v.name} style={{width:60,height:60,objectFit:'cover',borderRadius:8,border:'1px solid #e8ddd0'}} />}
                         <div>
-                          <div style={{fontWeight:700,fontSize:16,color:'#1a1410'}}>{v.business_name}</div>
+                          <div style={{fontWeight:700,fontSize:16,color:'#1a1410'}}>{v.name}</div>
                           <div style={{fontSize:13,color:'#7a6a5a'}}>{v.contact_name}</div>
-                          {isService && <span style={{display:'inline-block',background:'#1a1410',color:'#e8c97a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2}}>Service Provider</span>}
-                          {isMarket && !isService && <span style={{display:'inline-block',background:'#f5f0ea',color:'#7a6a5a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2}}>Market Vendor</span>}
-                          {m.vendorType === 'both' && <span style={{display:'inline-block',background:'#f5f0ea',color:'#7a6a5a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700,marginTop:2,marginLeft:4}}>+ Market Vendor</span>}
+                          <div style={{display:'flex',gap:4,flexWrap:'wrap',marginTop:2}}>
+                            {isService && <span style={{display:'inline-block',background:'#1a1410',color:'#e8c97a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700}}>Service Provider</span>}
+                            {isMarket && <span style={{display:'inline-block',background:'#f5f0ea',color:'#7a6a5a',padding:'2px 8px',borderRadius:4,fontSize:10,fontWeight:700}}>Market Vendor</span>}
+                          </div>
                         </div>
                       </div>
 
+                      {/* Application message */}
+                      {a.notes && (
+                        <div style={{fontSize:13,color:'#1a1410',lineHeight:1.6,marginBottom:12,padding:'8px 10px',background:'#fdf4dc',borderRadius:6,borderLeft:'3px solid #ffd966'}}>
+                          <div style={{fontSize:11,fontWeight:600,color:'#7a5a10',marginBottom:4}}>Vendor's Message:</div>
+                          {a.notes}
+                        </div>
+                      )}
+
                       {/* Description */}
-                      {m.description && <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,marginBottom:12,padding:'8px 10px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{m.description}</div>}
+                      {(v.description || m.description) && <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,marginBottom:12,padding:'8px 10px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{v.description || m.description}</div>}
 
                       {/* Photos */}
-                      {(m.photos || []).length > 0 && (
+                      {(m.photoUrls || []).length > 0 && (
                         <div style={{marginBottom:12}}>
                           <div style={{fontSize:12,fontWeight:600,color:'#a89a8a',marginBottom:6}}>Photos</div>
                           <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                            {m.photos.map((url,i) => <img key={i} src={url} alt={`${v.business_name} photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />)}
+                            {m.photoUrls.map((url,i) => <img key={i} src={url} alt={`${v.name} photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />)}
                           </div>
                         </div>
                       )}
 
                       {/* Categories & details */}
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 20px',fontSize:13,marginBottom:12}}>
-                        {isMarket && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Category:</span> {v.category}</div>}
+                        {isMarket && v.category && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Category:</span> {v.category}</div>}
                         {isMarket && (v.subcategories||[]).length > 0 && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Specialties:</span> {v.subcategories.join(', ')}</div>}
                         {isService && m.serviceCategories && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Services:</span> {(Array.isArray(m.serviceCategories) ? m.serviceCategories : [m.serviceCategories]).join(', ')}</div>}
                         {isService && m.serviceSubcategories && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Service Types:</span> {(Array.isArray(m.serviceSubcategories) ? m.serviceSubcategories : [m.serviceSubcategories]).join(', ')}</div>}
                         <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Location:</span> Zip {v.home_zip} ({v.radius || 20}mi radius)</div>
                         {(v.tags||[]).length > 0 && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Tags:</span> {v.tags.join(', ')}</div>}
                         {m.priceRange && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Pricing:</span> {m.priceRange}</div>}
-                        {m.website && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Website:</span> <a href={m.website} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>{m.website}</a></div>}
-                        {m.instagram && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Instagram:</span> <a href={`https://instagram.com/${m.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>@{m.instagram.replace('@','')}</a></div>}
-                        {m.facebook && <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Facebook:</span> <a href={m.facebook} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b',fontSize:12}}>{m.facebook}</a></div>}
                       </div>
+
+                      {/* Service provider details */}
+                      {isService && (m.serviceRateMin || m.serviceDescription || m.equipmentNotes || m.availabilityNotes || m.minBookingDuration) && (
+                        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:8,padding:12,marginBottom:12}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Service Details</div>
+                          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 16px',fontSize:12}}>
+                            {(m.serviceRateMin || m.serviceRateMax) && <div><span style={{color:'#a89a8a',fontWeight:600}}>Rate:</span> {m.serviceRateType==='hourly'?'Hourly':'Fixed'} ${m.serviceRateMin||'—'}{m.serviceRateMax ? '–$'+m.serviceRateMax : ''}</div>}
+                            {m.minBookingDuration && <div><span style={{color:'#a89a8a',fontWeight:600}}>Min Duration:</span> {m.minBookingDuration}</div>}
+                            {m.bookingLeadTime && <div><span style={{color:'#a89a8a',fontWeight:600}}>Lead Time:</span> {m.bookingLeadTime}</div>}
+                          </div>
+                          {m.serviceDescription && <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{m.serviceDescription}</div>}
+                          {m.equipmentNotes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}><strong>Equipment:</strong> {m.equipmentNotes}</div>}
+                          {m.availabilityNotes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}><strong>Availability:</strong> {m.availabilityNotes}</div>}
+                        </div>
+                      )}
+
+                      {/* Social links & website */}
+                      {(v.website || m.website || v.instagram || m.instagram || m.facebook || m.tiktok) && (
+                        <div style={{display:'flex',gap:12,flexWrap:'wrap',fontSize:12,marginBottom:12}}>
+                          {(v.website||m.website) && <a href={v.website||m.website} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>Website</a>}
+                          {(v.instagram||m.instagram) && <a href={`https://instagram.com/${(v.instagram||m.instagram).replace('@','')}`} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>Instagram</a>}
+                          {m.facebook && <a href={m.facebook} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>Facebook</a>}
+                          {m.tiktok && <a href={`https://tiktok.com/@${m.tiktok.replace('@','')}`} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>TikTok</a>}
+                        </div>
+                      )}
 
                       {/* Contact info — only shown if accepted */}
                       {a.status === 'accepted' && (
                         <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:12,marginBottom:12}}>
                           <div style={{fontSize:13,fontWeight:700,color:'#1a6b3a',marginBottom:6}}>Contact Information</div>
-                          <div style={{fontSize:13,color:'#1a1410'}}>{v.contact_name} · <a href={`mailto:${v.email}`} style={{color:'#1a4a6b'}}>{v.email}</a>{v.phone ? ` · ${v.phone}` : ''}</div>
+                          <div style={{fontSize:13,color:'#1a1410'}}>{v.contact_name} · <a href={`mailto:${v.contact_email}`} style={{color:'#1a4a6b'}}>{v.contact_email}</a>{v.contact_phone ? ` · ${v.contact_phone}` : ''}</div>
                         </div>
                       )}
 
-                      {/* Action buttons while reviewing (not yet accepted/declined) */}
+                      {/* Action buttons while reviewing */}
                       {(a.status === 'pending' || a.status === 'reviewing') && (
                         <div style={{display:'flex',gap:8,marginTop:8}}>
                           <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept Vendor</button>
                           <button onClick={()=>{setShowDeclinePrompt(a.id);setDeclineReason('');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:8,padding:'10px 24px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline Vendor</button>
+                          <button onClick={()=>{setReviewingApp(null);setReviewVendor(null);}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
                         </div>
                       )}
                     </div>
@@ -4228,7 +4278,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
 // ─── Opportunities Page ───────────────────────────────────────────────────────
 // ─── Vendor Application Modal ─────────────────────────────────────────────────
 function VendorApplyModal({ opp, onClose }) {
-  const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'' });
+  const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'', vendorId:null });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
@@ -4245,19 +4295,20 @@ function VendorApplyModal({ opp, onClose }) {
         email: f.email || data.contact_email || '',
         phone: f.phone || data.contact_phone || '',
         category: f.category || data.category || '',
+        vendorId: data.id || null,
       }));
       setAutoFilled(true);
     };
     // Try auth user first
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+        supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
           .eq('user_id', session.user.id).limit(1).single()
           .then(({ data }) => {
             if (data) fillFrom(data);
             else {
               // Fallback to email match (case-insensitive)
-              supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+              supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
                 .ilike('contact_email', session.user.email).limit(1).single()
                 .then(({ data: d2 }) => fillFrom(d2));
             }
@@ -4266,7 +4317,7 @@ function VendorApplyModal({ opp, onClose }) {
         // Fallback to localStorage vendor ID
         const vid = localStorage.getItem('sjvm_calendar_vendor_id');
         if (vid) {
-          supabase.from('vendors').select('name,contact_name,contact_email,contact_phone,category')
+          supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
             .eq('id', vid).single().then(({ data }) => fillFrom(data));
         }
       }
@@ -4280,7 +4331,7 @@ function VendorApplyModal({ opp, onClose }) {
     const responseToken = crypto.randomUUID();
     const payload = {
       id: Date.now(), session_id: 'vendor-application',
-      vendor_id: null, vendor_name: form.vendorName,
+      vendor_id: form.vendorId || null, vendor_name: form.vendorName,
       vendor_emoji: '', vendor_category: form.category || '',
       host_name: opp.contactName, host_email: opp.contactEmail,
       event_name: opp.eventName, event_type: opp.eventType,
