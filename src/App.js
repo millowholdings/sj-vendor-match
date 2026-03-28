@@ -2019,7 +2019,19 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     const hasProfileChanges = Object.keys(changes).length > 0;
     const hasFileChanges = editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length || newCoi || newLookbook;
 
-    if (!hasProfileChanges && !hasFileChanges) { setEditing(false); setSaving(false); return; }
+    // Detect additional changes
+    if (editForm.website !== (vp.website||'')) changes.website = {old:vp.website||'—', new:editForm.website||'—'};
+    if (editForm.instagram !== (vp.instagram||'')) changes.instagram = {old:'(updated)', new:'(updated)'};
+    if (editForm.insurance !== vp.insurance) changes.insurance = {old:vp.insurance?'Yes':'No', new:editForm.insurance?'Yes':'No'};
+
+    const hasProfileChanges = Object.keys(changes).length > 0;
+    const hasFileChanges = editPhotos.length > 0 || existingPhotos.length !== (m.photoUrls||[]).length || newCoi || newLookbook;
+    const hasServiceChanges = editForm.serviceType !== (m.serviceType||'') || editForm.serviceRateMin !== (m.serviceRateMin||'') || editForm.serviceDescription !== (m.serviceDescription||'');
+
+    if (!hasProfileChanges && !hasFileChanges && !hasServiceChanges) { setEditing(false); setSaving(false); return; }
+
+    if (hasFileChanges) changes.files = {old:'(updated)', new:'photos/documents changed'};
+    if (hasServiceChanges) changes.service = {old:'(updated)', new:'service details changed'};
 
     const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl,
       isServiceProvider:editForm.isServiceProvider, serviceCategories:editForm.serviceCategories, serviceSubcategories:editForm.serviceSubcategories,
@@ -2033,25 +2045,36 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
       website: editForm.website||null, instagram: editForm.instagram||null, insurance: editForm.insurance,
       metadata: newMeta,
+      status: 'pending',
     };
-    // Only require re-approval for profile field changes, not file-only changes
-    if (hasProfileChanges) updatePayload.status = 'pending';
 
     const { error } = await supabase.from('vendors').update(updatePayload).eq('id', vid);
-    if (error) { alert('Failed to save: ' + error.message); setSaving(false); return; }
-
-    if (hasProfileChanges) {
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
-      fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Vendor Profile Updated: ${editForm.name} — Needs Re-Approval`, message:`${editForm.name} updated their profile:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nVendor status set to pending. Review in admin panel.` }),
-      }).catch(()=>{});
+    if (error) {
+      console.error('Vendor save error:', error);
+      alert('Failed to save changes: ' + error.message);
+      setSaving(false);
+      return;
     }
 
-    // Refresh profile
+    // Log and notify admin
+    const changedSections = Object.keys(changes).join(', ');
+    supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes, significant:true }).catch(()=>{});
+    fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        businessName: editForm.name,
+        contactName: editForm.contact_name,
+        vendorEmail: editForm.contact_email,
+        phone: editForm.contact_phone,
+        category: editForm.isServiceProvider ? (editForm.serviceCategories||[]).join(', ') : vp.category,
+        vendorType: editForm.isServiceProvider ? 'service' : 'market',
+      }),
+    }).catch(()=>{});
+
+    // Refresh profile from DB
     const { data: updated } = await supabase.from('vendors').select('*').eq('id', vid).single();
     if (updated && setVendorProfile) setVendorProfile(updated);
     setEditing(false); setSaving(false);
-    alert(hasProfileChanges ? 'Changes saved! Your profile has been submitted for admin review.' : 'Photos and documents updated successfully!');
+    alert('Your changes have been submitted for review and will be live within 24 hours.');
   };
   const [subMessage, setSubMessage] = useState(() => {
     const params = new URLSearchParams(window.location.search);
