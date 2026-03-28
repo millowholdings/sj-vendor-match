@@ -180,6 +180,8 @@ function dbEventToApp(e) {
     source:           e.source            || "Host Submitted",
     photoUrl:         e.photo_url         || "",
     vendorDiscovery:  e.vendor_discovery  || "both",
+    allowDuplicateCategories: e.allow_duplicate_categories !== false,
+    allowDuplicateSubcategories: e.allow_duplicate_subcategories !== false,
     status:           e.status            || "approved",
     eventLink:        e.event_link        || "",
     isTicketed:       e.is_ticketed       || false,
@@ -1081,7 +1083,7 @@ const DEFAULT_HOST_FORM = {
   isRecurring:false, recurrenceFrequency:'weekly', recurrenceDay:'Saturday', recurrenceWeekInterval:1, recurrenceMonthType:'dayofweek', recurrenceMonthWeek:'1st', recurrenceMonthDay:'Saturday', recurrenceEndType:'never', recurrenceEndDate:'', recurrenceCount:4, recurrenceNotes:'',
   expectedAttendance:'', indoorOutdoor:'outdoor',
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
-  electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true,
+  electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true, allowDuplicateSubcategories:true,
   applyByDate:'', eventLink:'',
   budget:'', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
   vendorDiscovery:'both', password:''
@@ -1306,7 +1308,22 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
         <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
         <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
-        <div className="form-group"><label>Allow Multiple Vendors in Same Category?</label><select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>set('allowDuplicateCategories',e.target.value==='yes')}><option value="yes">Yes — multiple vendors per category OK</option><option value="no">No — one vendor per category only</option></select></div>
+        <div className="form-group">
+          <label>Allow multiple vendors in the same category?</label>
+          <select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>set('allowDuplicateCategories',e.target.value==='yes')}>
+            <option value="yes">Yes — multiple vendors per category OK</option>
+            <option value="no">No — one vendor per category only</option>
+          </select>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Example category: Jewelry & Accessories — allowing two jewelry vendors at the same event</div>
+        </div>
+        <div className="form-group">
+          <label>Allow multiple vendors in the same subcategory?</label>
+          <select value={form.allowDuplicateSubcategories?'yes':'no'} onChange={e=>set('allowDuplicateSubcategories',e.target.value==='yes')}>
+            <option value="yes">Yes — multiple vendors with the same specialty OK</option>
+            <option value="no">No — one vendor per specialty only</option>
+          </select>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Example subcategory: Handmade Earrings — allowing two vendors who both sell the same specific product type</div>
+        </div>
         <div className="form-group"><label>Vendor Booth Fee Offered</label><select value={form.budget} onChange={e=>set('budget',e.target.value)}><option value="">Select...</option><option>Free (vendor keeps all sales)</option><option>$25–$50/vendor</option><option>$50–$100/vendor</option><option>$100–$200/vendor</option><option>$200+/vendor</option></select></div>
         <div className="form-group"><label>Is This a Ticketed Event?</label>
           <div style={{display:'flex',gap:10}}>
@@ -3497,6 +3514,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Ticketed:</span> {evt.isTicketed ? `Yes — ${evt.ticketPrice||'Price TBD'}` : 'No — Free admission'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Contact Email:</span> {evt.contactEmail || '—'}</div>
                     <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Categories Needed:</span> {(evt.categoriesNeeded||[]).join(', ') || '—'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Same Category:</span> {evt.allowDuplicateCategories ? '✓ Multiple vendors OK' : '✗ One per category'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Same Subcategory:</span> {evt.allowDuplicateSubcategories ? '✓ Multiple OK' : '✗ One per specialty'}</div>
                     {evt.notes && <div style={{gridColumn:'1/-1',background:'#fdf9f5',borderRadius:6,padding:'8px 12px',borderLeft:'3px solid #e8c97a'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Host Notes:</span><div style={{fontSize:13,color:'#1a1410',marginTop:4}}>{evt.notes}</div></div>}
                   </div>
                   {/* Services Needed */}
@@ -5158,6 +5177,7 @@ function AppInner() {
       ticket_price: form.isTicketedEvent ? (form.ticketPrice || null) : null,
       services_needed: form.servicesNeeded.length > 0 ? JSON.stringify(form.servicesNeeded) : null,
       allow_duplicate_categories: form.allowDuplicateCategories,
+      allow_duplicate_subcategories: form.allowDuplicateSubcategories,
       vendor_discovery: form.vendorDiscovery || 'both',
       ...(hostUserId ? { user_id: hostUserId } : {}),
     };

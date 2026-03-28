@@ -127,6 +127,9 @@ alter table events add column if not exists is_ticketed      boolean not null de
 alter table events add column if not exists ticket_price     text;
 create index if not exists events_status_idx on events (status);
 
+-- ─── Events: duplicate subcategory preference ──────────────────────────────
+alter table events add column if not exists allow_duplicate_subcategories boolean not null default true;
+
 -- ─── Events: photos ─────────────────────────────────────────────────────────
 alter table events add column if not exists event_photos text[] default '{}';
 
