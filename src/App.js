@@ -1934,6 +1934,7 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
     contact_phone: vendorProfile?.contact_phone||'', home_zip: vendorProfile?.home_zip||'', radius: vendorProfile?.radius||20,
     description: vendorProfile?.description||'', website: vendorProfile?.website||'', instagram: vendorProfile?.instagram||'',
     facebook: m.facebook||'', tiktok: m.tiktok||'', youtube: m.youtube||'', otherSocial: m.otherSocial||'',
+    yearsActive: m.yearsActive||'', insurance: vendorProfile?.insurance||false,
   });
   const ef = (k,v) => setEditForm(f=>({...f,[k]:v}));
   const SIGNIFICANT_FIELDS = ['home_zip','radius'];
@@ -1986,11 +1987,11 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
     if (!hasProfileChanges && !hasFileChanges) { setEditing(false); setSaving(false); return; }
 
-    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, photoUrls, coiUrl, lookbookUrl };
+    const newMeta = { ...m, facebook:editForm.facebook||null, tiktok:editForm.tiktok||null, youtube:editForm.youtube||null, otherSocial:editForm.otherSocial||null, yearsActive:editForm.yearsActive||null, photoUrls, coiUrl, lookbookUrl };
     const updatePayload = {
       name: editForm.name, contact_name: editForm.contact_name, contact_phone: editForm.contact_phone||null,
       home_zip: editForm.home_zip, radius: editForm.radius, description: editForm.description,
-      website: editForm.website||null, instagram: editForm.instagram||null,
+      website: editForm.website||null, instagram: editForm.instagram||null, insurance: editForm.insurance,
       metadata: newMeta,
     };
     // Only require re-approval for profile field changes, not file-only changes
@@ -2105,17 +2106,27 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
-          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||''});setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
+          <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm({name:vendorProfile?.name||'',contact_name:vendorProfile?.contact_name||'',contact_email:vendorProfile?.contact_email||'',contact_phone:vendorProfile?.contact_phone||'',home_zip:vendorProfile?.home_zip||'',radius:vendorProfile?.radius||20,description:vendorProfile?.description||'',website:vendorProfile?.website||'',instagram:vendorProfile?.instagram||'',facebook:m.facebook||'',tiktok:m.tiktok||'',youtube:m.youtube||'',otherSocial:m.otherSocial||'',yearsActive:m.yearsActive||'',insurance:vendorProfile?.insurance||false});setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
         </div>
         {editing ? (
           <>
             <div className="form-grid" style={{gap:10,marginBottom:14}}>
               <div className="form-group"><label>Business Name</label><input value={editForm.name} onChange={e=>ef('name',e.target.value)} /></div>
               <div className="form-group"><label>Contact Name</label><input value={editForm.contact_name} onChange={e=>ef('contact_name',e.target.value)} /></div>
+              <div className="form-group"><label>Email</label><input type="email" value={editForm.contact_email} disabled style={{opacity:0.6}} /><div style={{fontSize:10,color:'#a89a8a'}}>Email cannot be changed</div></div>
               <div className="form-group"><label>Phone</label><input value={editForm.contact_phone} onChange={e=>ef('contact_phone',e.target.value)} /></div>
               <div className="form-group"><label>Zip Code</label><input value={editForm.home_zip} onChange={e=>ef('home_zip',e.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
               <div className="form-group"><label>Travel Radius</label><select value={editForm.radius} onChange={e=>ef('radius',+e.target.value)}>{[5,10,15,20,30,50].map(r=><option key={r} value={r}>{r} miles</option>)}</select></div>
-              <div className="form-group full"><label>Description</label><textarea value={editForm.description} onChange={e=>ef('description',e.target.value)} style={{minHeight:60}} /></div>
+              <div className="form-group"><label>Years in Business</label><select value={editForm.yearsActive} onChange={e=>ef('yearsActive',e.target.value)}><option value="">Select...</option><option value="<1">Less than 1 year</option><option value="1-2">1-2 years</option><option value="3-5">3-5 years</option><option value="6-10">6-10 years</option><option value="10+">10+ years</option></select></div>
+              <div className="form-group"><label>Insurance</label><select value={editForm.insurance?'yes':'no'} onChange={e=>ef('insurance',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes — I have a COI</option></select></div>
+              <div className="form-group full">
+                <label>Business Description</label>
+                <textarea value={editForm.description} onChange={e=>{if(e.target.value.length<=500)ef('description',e.target.value);}} style={{minHeight:80}} maxLength={500} />
+                <div style={{fontSize:11,color:editForm.description.length>450?'#c0392b':'#a89a8a',textAlign:'right',marginTop:2}}>{editForm.description.length}/500</div>
+              </div>
+            </div>
+            <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:8,marginTop:8}}>Links & Social</div>
+            <div className="form-grid" style={{gap:10,marginBottom:14}}>
               <div className="form-group"><label>Website</label><input value={editForm.website} onChange={e=>ef('website',e.target.value)} /></div>
               <div className="form-group"><label>Instagram</label><input value={editForm.instagram} onChange={e=>ef('instagram',e.target.value)} /></div>
               <div className="form-group"><label>Facebook</label><input value={editForm.facebook} onChange={e=>ef('facebook',e.target.value)} /></div>
@@ -2292,7 +2303,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const SIG_EVENT_FIELDS = ['date','zip','event_name'];
 
   const startEditEvent = (e) => {
-    setEventForm({ event_name:e.event_name, event_type:e.event_type, date:e.date, start_time:e.start_time||'', end_time:e.end_time||'', zip:e.zip, booth_fee:e.booth_fee||'', spots:e.spots||0, notes:e.notes||'', deadline:e.deadline||'', ticket_price:e.ticket_price||'', is_ticketed:e.is_ticketed||false });
+    setEventForm({
+      event_name:e.event_name, event_type:e.event_type, date:e.date, start_time:e.start_time||'', end_time:e.end_time||'',
+      zip:e.zip, booth_fee:e.booth_fee||'', spots:e.spots||0, notes:e.notes||'', deadline:e.deadline||'',
+      ticket_price:e.ticket_price||'', is_ticketed:e.is_ticketed||false, event_link:e.event_link||'',
+      allow_duplicate_categories:e.allow_duplicate_categories!==false, allow_duplicate_subcategories:e.allow_duplicate_subcategories!==false,
+    });
     setEditExistingPhotos(e.event_photos||[]);
     setEditNewPhotos([]);
     setEditingEvent(e.id);
@@ -2330,6 +2346,9 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
       booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
       deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
+      event_link:eventForm.event_link||null,
+      allow_duplicate_categories:eventForm.allow_duplicate_categories,
+      allow_duplicate_subcategories:eventForm.allow_duplicate_subcategories,
       event_photos: allPhotoUrls,
       status: 'pending_review',
     };
@@ -2404,15 +2423,22 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     <div className="form-group"><label>Event Name</label><input value={eventForm.event_name} onChange={ev=>eSet('event_name',ev.target.value)} /></div>
                     <div className="form-group"><label>Event Type</label><select value={eventForm.event_type} onChange={ev=>eSet('event_type',ev.target.value)}>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
                     <div className="form-group"><label>Date</label><input type="date" value={eventForm.date} onChange={ev=>eSet('date',ev.target.value)} /></div>
-                    <div className="form-group"><label>Zip</label><input value={eventForm.zip} onChange={ev=>eSet('zip',ev.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
+                    <div className="form-group"><label>Zip Code</label><input value={eventForm.zip} onChange={ev=>eSet('zip',ev.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
                     <div className="form-group"><label>Start Time</label><input type="time" value={eventForm.start_time} onChange={ev=>eSet('start_time',ev.target.value)} /></div>
                     <div className="form-group"><label>End Time</label><input type="time" value={eventForm.end_time} onChange={ev=>eSet('end_time',ev.target.value)} /></div>
-                    <div className="form-group"><label>Booth Fee</label><input value={eventForm.booth_fee} onChange={ev=>eSet('booth_fee',ev.target.value)} /></div>
-                    <div className="form-group"><label>Spots</label><input type="number" value={eventForm.spots} onChange={ev=>eSet('spots',+ev.target.value)} /></div>
-                    <div className="form-group"><label>Apply By</label><input type="date" value={eventForm.deadline} onChange={ev=>eSet('deadline',ev.target.value)} /></div>
-                    <div className="form-group"><label>Ticketed</label><select value={eventForm.is_ticketed?'yes':'no'} onChange={ev=>eSet('is_ticketed',ev.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
-                    {eventForm.is_ticketed && <div className="form-group"><label>Ticket Price</label><input value={eventForm.ticket_price} onChange={ev=>eSet('ticket_price',ev.target.value)} /></div>}
-                    <div className="form-group full"><label>Notes</label><textarea value={eventForm.notes} onChange={ev=>eSet('notes',ev.target.value)} style={{minHeight:50}} /></div>
+                    <div className="form-group"><label>Booth Fee</label><input value={eventForm.booth_fee} onChange={ev=>eSet('booth_fee',ev.target.value)} placeholder="e.g. $50/vendor" /></div>
+                    <div className="form-group"><label>Vendor Spots</label><input type="number" value={eventForm.spots} onChange={ev=>eSet('spots',+ev.target.value)} /></div>
+                    <div className="form-group"><label>Apply By Date</label><input type="date" value={eventForm.deadline} onChange={ev=>eSet('deadline',ev.target.value)} /></div>
+                    <div className="form-group"><label>Event Website / Facebook Link</label><input value={eventForm.event_link} onChange={ev=>eSet('event_link',ev.target.value)} placeholder="https://..." /></div>
+                    <div className="form-group"><label>Ticketed Event</label><select value={eventForm.is_ticketed?'yes':'no'} onChange={ev=>eSet('is_ticketed',ev.target.value==='yes')}><option value="no">No — Free admission</option><option value="yes">Yes — Ticketed</option></select></div>
+                    {eventForm.is_ticketed && <div className="form-group"><label>Ticket Price</label><input value={eventForm.ticket_price} onChange={ev=>eSet('ticket_price',ev.target.value)} placeholder="e.g. $10" /></div>}
+                    <div className="form-group"><label>Duplicate Vendors (Category)</label><select value={eventForm.allow_duplicate_categories?'yes':'no'} onChange={ev=>eSet('allow_duplicate_categories',ev.target.value==='yes')}><option value="yes">Allow multiple per category</option><option value="no">One per category only</option></select></div>
+                    <div className="form-group"><label>Duplicate Vendors (Subcategory)</label><select value={eventForm.allow_duplicate_subcategories?'yes':'no'} onChange={ev=>eSet('allow_duplicate_subcategories',ev.target.value==='yes')}><option value="yes">Allow multiple per specialty</option><option value="no">One per specialty only</option></select></div>
+                    <div className="form-group full">
+                      <label>Event Description / Notes</label>
+                      <textarea value={eventForm.notes} onChange={ev=>{if(ev.target.value.length<=500)eSet('notes',ev.target.value);}} style={{minHeight:70}} maxLength={500} />
+                      <div style={{fontSize:11,color:(eventForm.notes||'').length>450?'#c0392b':'#a89a8a',textAlign:'right',marginTop:2}}>{(eventForm.notes||'').length}/500</div>
+                    </div>
                   </div>
                   {/* Event photos */}
                   <div style={{marginBottom:12}}>
