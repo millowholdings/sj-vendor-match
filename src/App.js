@@ -7098,32 +7098,40 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     // Determine recipient: if I'm the vendor, send to host (extract from convoId); if I'm the host, send to vendor
     const convoIdParts = activeConvoId.split('_');
     const isVendor = !!vendorProfile;
-    const recipientId = isVendor ? (convoIdParts[0] || 'unknown') : (conv.vendorId || 'unknown');
+    const recipientId = isVendor ? (convoIdParts[0] || uid) : (conv.vendorId || 'unknown');
     const ts = new Date().toISOString();
+    // Update UI immediately (before DB save so user sees it instantly)
+    const myFrom = 'host'; // current user's messages always render right-aligned as 'host'
+    setConversations(convos => convos.map(c => {
+      if (c.id !== activeConvoId) return c;
+      return { ...c, messages: [...c.messages, { id: Date.now(), from: myFrom, senderName, text: text || '', ts, ...(attachments && attachments.length > 0 ? { attachments } : {}) }] };
+    }));
     // Save to Supabase
-    supabase.from('messages').insert({
+    const { error: msgErr } = await supabase.from('messages').insert({
       conversation_id: activeConvoId,
-      sender_id: uid, sender_type: vendorProfile ? 'vendor' : 'host',
-      recipient_id: recipientId, recipient_type: vendorProfile ? 'host' : 'vendor',
+      sender_id: uid, sender_type: isVendor ? 'vendor' : 'host',
+      recipient_id: recipientId, recipient_type: isVendor ? 'host' : 'vendor',
       event_name: conv.eventName || '',
       message_text: text || '(file attachment)',
       attachments: attachments && attachments.length > 0 ? attachments : null,
       is_read: false,
-    }).catch(e => console.error('Message save error:', e));
-    // Update UI immediately
-    setConversations(convos => convos.map(c => {
-      if (c.id !== activeConvoId) return c;
-      return { ...c, messages: [...c.messages, { id: Date.now(), from: 'host', senderName, text: text || '', ts, ...(attachments && attachments.length > 0 ? { attachments } : {}) }] };
-    }));
-    // Send email notification to vendor
-    if (recipientId !== 'unknown') {
-      const { data: vendor } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', recipientId).single();
-      if (vendor?.contact_email) {
-        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ name: senderName || 'A host', email: uid, subject: `New message about ${conv.eventName || 'your booking'}`, message: `You have a new message from ${senderName || 'a host'} about ${conv.eventName || 'a booking'}. Log in to your vendor dashboard to view and reply.` }),
-        }).catch(e=>console.error('API call failed:',e));
+    });
+    if (msgErr) {
+      console.error('Message save error:', msgErr);
+      // Retry without attachments column if schema issue
+      if (msgErr.code === '42703') {
+        await supabase.from('messages').insert({
+          conversation_id: activeConvoId,
+          sender_id: uid, sender_type: isVendor ? 'vendor' : 'host',
+          recipient_id: recipientId, recipient_type: isVendor ? 'host' : 'vendor',
+          event_name: conv.eventName || '',
+          message_text: text || '(file attachment)',
+          is_read: false,
+        }).catch(e => console.error('Message retry error:', e));
       }
     }
+    // Reload messages from DB to stay in sync
+    if (loadMessages) setTimeout(loadMessages, 500);
   };
 
   const sendMessage = () => {
