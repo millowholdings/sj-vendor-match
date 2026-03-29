@@ -7095,7 +7095,10 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     const uid = authUser?.id || 'anon';
     const conv = conversations.find(c => c.id === activeConvoId);
     if (!conv) return;
-    const recipientId = conv.vendorId || 'unknown';
+    // Determine recipient: if I'm the vendor, send to host (extract from convoId); if I'm the host, send to vendor
+    const convoIdParts = activeConvoId.split('_');
+    const isVendor = !!vendorProfile;
+    const recipientId = isVendor ? (convoIdParts[0] || 'unknown') : (conv.vendorId || 'unknown');
     const ts = new Date().toISOString();
     // Save to Supabase
     supabase.from('messages').insert({
@@ -7281,16 +7284,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                 <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410' }}>{activeConvo.vendorName}</div>
                 <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
               </div>
-            </div>
-            <div style={{ display:'flex', gap:8 }}>
-              {['active','pending','booked'].map(s => (
-                <button key={s} onClick={() => setConversations(cs => cs.map(c => c.id===activeConvoId ? {...c,status:s} : c))}
-                  style={{ background: activeConvo.status===s ? '#e8c97a' : '#f5f0ea', border:'1px solid #e0d5c5',
-                    borderRadius:20, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer',
-                    fontFamily:'DM Sans,sans-serif', color: activeConvo.status===s ? '#1a1410' : '#7a6a5a', textTransform:'capitalize' }}>
-                  {s}
-                </button>
-              ))}
             </div>
           </div>
 
