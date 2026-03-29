@@ -6387,18 +6387,17 @@ function AppInner() {
   // Realtime subscription for instant message delivery
   useEffect(() => {
     if (!authUser) return;
-    const channel = supabase.channel('messages-realtime')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.new && (payload.new.recipient_id === authUser.id || payload.new.sender_id === authUser.id)) {
-            loadMessages();
-          }
-        }
+    let debounceTimer = null;
+    const debouncedLoad = () => { clearTimeout(debounceTimer); debounceTimer = setTimeout(loadMessages, 300); };
+    const channel = supabase.channel(`messages-${authUser.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages',
+        filter: `recipient_id=eq.${authUser.id}` },
+        () => debouncedLoad()
       )
       .subscribe();
     // Fallback polling every 60 seconds in case realtime disconnects
     const interval = setInterval(loadMessages, 60000);
-    return () => { supabase.removeChannel(channel); clearInterval(interval); };
+    return () => { clearTimeout(debounceTimer); supabase.removeChannel(channel); clearInterval(interval); };
   }, [authUser, loadMessages]);
 
   // Migrate localStorage messages to Supabase on first load
@@ -7413,8 +7412,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
         }).catch(e => console.error('Message retry error:', e));
       }
     }
-    // Reload messages from DB to stay in sync
-    if (loadMessages) setTimeout(loadMessages, 500);
   };
 
   const sendMessage = () => {
