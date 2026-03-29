@@ -1432,36 +1432,8 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 
       {/* ── STEP 2: Vendors & Services ── */}
       {formStep === 2 && (<>
-      <h3 className="form-section-title"><span className="dot" />Full Service Booking</h3>
-      <div
-        onClick={()=>set('fullServiceBooking',!form.fullServiceBooking)}
-        style={{
-          background: form.fullServiceBooking ? '#1a1410' : '#fff',
-          border: `2px solid ${form.fullServiceBooking ? '#e8c97a' : '#e8ddd0'}`,
-          borderRadius:12, padding:'20px 24px', cursor:'pointer', transition:'all 0.2s', marginBottom:16
-        }}>
-        <label style={{display:'flex',alignItems:'flex-start',gap:12,cursor:'pointer',margin:0}}>
-          <input type="checkbox" checked={form.fullServiceBooking} onChange={e=>set('fullServiceBooking',e.target.checked)}
-            style={{width:20,height:20,marginTop:2,flexShrink:0,accentColor:'#e8c97a'}} />
-          <div>
-            <div style={{fontWeight:700,fontSize:16,color:form.fullServiceBooking?'#e8c97a':'#1a1410',marginBottom:4}}>
-              Let us handle everything
-            </div>
-            <div style={{fontSize:13,color:form.fullServiceBooking?'#c8b898':'#7a6a5a',lineHeight:1.5}}>
-              Our team will select, contact, confirm, and coordinate all vendors for your event. You sit back and relax — we'll handle the rest. A flat concierge fee applies.
-            </div>
-          </div>
-        </label>
-      </div>
-      {form.fullServiceBooking && (
-        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
-          <strong>How it works:</strong> After you submit, our team will review your event details, hand-pick the best vendors, and handle all outreach and confirmations on your behalf. We'll reach out within 24 hours to discuss your event and our concierge fee.
-        </div>
-      )}
-
-      <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />What Type of Vendors Do You Need?</h3>
-      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>{form.fullServiceBooking ? 'Let us know your preferences — our team will handle the rest.' : 'Select all that apply for your event.'}</p>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply for your event.</p>
       <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap'}}>
         <div onClick={()=>set('needsMarketVendors',!form.needsMarketVendors)}
           style={{flex:'1 1 220px',padding:'14px 18px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.needsMarketVendors?'#c8a850':'#e8ddd0'}`,background:form.needsMarketVendors?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
@@ -1637,7 +1609,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       <h3 className="form-section-title"><span className="dot" />Notes</h3>
       <div className="form-group" style={{ marginTop:4 }}>
         <label>Notes for Vendors</label>
-        <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Load-in times, setup details, booth requirements, what vendors should know..."} value={form.vendorNotes} onChange={e=>set('vendorNotes',e.target.value)} />
+        <textarea placeholder="Load-in times, setup details, booth requirements, what vendors should know..." value={form.vendorNotes} onChange={e=>set('vendorNotes',e.target.value)} />
       </div>
       {form.shareWithEventGoers && (
         <div className="form-group" style={{ marginTop:12 }}>
@@ -1697,7 +1669,6 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Categories:</span> {form.vendorCategories.length > 0 ? form.vendorCategories.join(', ') : '—'}</div>
           {form.servicesNeeded.length > 0 && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Services:</span> {form.servicesNeeded.map(s=>s.type||'TBD').join(', ')}</div>}
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Discovery:</span> {form.vendorDiscovery==='both'?'Browse + Apply':form.vendorDiscovery==='browse'?'Browse & Invite':form.vendorDiscovery==='apply'?'Vendor Applications':'—'}</div>
-          {form.fullServiceBooking && <div><span style={{color:'#e8c97a',fontWeight:700}}>Full Service Booking</span> — our team handles everything</div>}
           {form.isRecurring && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Recurring:</span> {form.recurrenceFrequency==='daily'?'Daily':form.recurrenceFrequency==='weekly'?`Every ${form.recurrenceDay}`:form.recurrenceFrequency==='biweekly'?`Every other ${form.recurrenceDay}`:form.recurrenceFrequency==='monthly'?'Monthly':form.recurrenceFrequency==='custom'?`Every ${form.recurrenceWeekInterval} weeks`:''}{form.recurrenceEndType==='never'?' · Ongoing':form.recurrenceEndType==='after'?` · ${form.recurrenceCount} times`:''}</div>}
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Visible to Guests:</span> {form.shareWithEventGoers ? 'Yes' : 'No — vendors only'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {eventPhotos.length} uploaded</div>
@@ -3052,7 +3023,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     background: e.status==='approved' ? '#d4f4e0' : e.status==='rejected' ? '#fdecea' : e.status==='concierge_active' ? '#d4f4e0' : '#fdf4dc',
                     color: e.status==='approved' ? '#1a6b3a' : e.status==='rejected' ? '#8b1a1a' : e.status==='concierge_active' ? '#1a6b3a' : '#7a5a10',
                   }}>
-                    {e.status==='approved' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='concierge_pending' ? 'Awaiting Payment' : e.status==='concierge_active' ? 'Concierge Active' : e.status==='pending_review' ? 'Pending Review' : 'Live'}
+                    {e.status==='approved' || e.status==='concierge_active' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='pending_review' || e.status==='concierge_pending' ? 'Pending Review' : 'Live'}
                   </span>
                 </div>
               </div>
@@ -3780,11 +3751,6 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
         <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
           <strong>⏳ Pending Review:</strong> Your event will be reviewed by our team before it goes live. You'll be notified once it's approved.
         </div>
-        {hostEvent?.fullServiceBooking && (
-          <div style={{background:'#1a1410',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#e8c97a',lineHeight:1.5}}>
-            <strong>Concierge Request received!</strong> Our team will review your event and reach out within 24 hours to schedule a free consultation and discuss pricing for your event.
-          </div>
-        )}
         <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           <button onClick={()=>setTab('my-calendar')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:8,padding:'9px 18px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
             📅 View My Event Calendar
@@ -3999,19 +3965,6 @@ function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthM
           <div className="pricing-type" style={{ marginTop:8 }}>Host</div><div className="pricing-name">Self-Service</div>
           <div className="pricing-price">$0</div><div className="pricing-period">forever free</div>
           <ul className="pricing-features"><li>Unlimited event postings</li><li>Full vendor directory access</li><li>Vendor names, photos & profiles</li><li>Send unlimited booking requests</li><li>Contact info revealed on acceptance</li><li>In-app messaging</li></ul>
-        </div>
-        <div className="pricing-card featured" style={{display:'flex',flexDirection:'column',justifyContent:'space-between'}}>
-          <div>
-            <div className="pricing-badge">FULL SERVICE</div>
-            <div className="pricing-type">Host</div><div className="pricing-name">Concierge</div>
-            <div style={{fontSize:16,color:'#1a1410',lineHeight:1.6,marginTop:12,marginBottom:16}}>
-              Have an event and want us to handle everything? Let's talk. Schedule a free concierge consultation and we'll customize a plan around your event size and needs.
-            </div>
-          </div>
-          <button onClick={()=>setShowContactModal(true)} style={{width:'100%',background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-            Request a Consultation
-          </button>
-          <div style={{fontSize:11,color:'#a89a8a',marginTop:8,textAlign:'center'}}>All service fees subject to applicable sales tax.</div>
         </div>
       </div>
     </>
@@ -4473,8 +4426,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       pending_review:    { bg:'#fdf4dc', color:'#7a5a10', label:'Pending Review' },
       approved:          { bg:'#d4f4e0', color:'#1a6b3a', label:'Live' },
       rejected:          { bg:'#fdecea', color:'#8b1a1a', label:'Rejected' },
-      concierge_pending: { bg:'#fdf4dc', color:'#7a5a10', label:'Concierge — Awaiting Payment' },
-      concierge_active:  { bg:'#d4f4e0', color:'#1a6b3a', label:'Concierge Active' },
+      concierge_pending: { bg:'#fdf4dc', color:'#7a5a10', label:'Pending Review' },
+      concierge_active:  { bg:'#d4f4e0', color:'#1a6b3a', label:'Live' },
     };
     const s = styles[status] || styles.approved;
     return <span style={{background:s.bg,color:s.color,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{s.label}</span>;
@@ -4498,7 +4451,6 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       <div className="admin-grid">
         <div className="admin-stat" style={{border:pendingVendors.length>0?'2px solid #ffd966':undefined}}><div className="admin-stat-num" style={{color:pendingVendors.length>0?'#c8a84b':undefined}}>{pendingVendors.length}</div><div className="admin-stat-label">Vendors Pending</div></div>
         <div className="admin-stat" style={{border:pendingEvents.length>0?'2px solid #ffd966':undefined}}><div className="admin-stat-num" style={{color:pendingEvents.length>0?'#c8a84b':undefined}}>{pendingEvents.length}</div><div className="admin-stat-label">Events Pending</div></div>
-        <div className="admin-stat"><div className="admin-stat-num" style={{color:'#c8a84b'}}>{conciergeEvents.length}</div><div className="admin-stat-label">Concierge</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Events</div></div>
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Guests</div></div>
@@ -4651,31 +4603,6 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
           </div>
       }
 
-      {/* ── Concierge Requests ───────────────────────────────── */}
-      {conciergeEvents.length > 0 && (
-        <>
-          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🤝 Concierge Requests ({conciergeEvents.length})</h3>
-          <div style={{display:'flex',flexDirection:'column',gap:12}}>
-            {conciergeEvents.map(evt=>(
-              <div key={evt.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15}}>{evt.eventName}</div>
-                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(evt.date)} · {evt.contactName} · {evt.contactEmail}</div>
-                  {evt.eventLink && <a href={evt.eventLink} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>🔗 Event Link</a>}
-                </div>
-                <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  {eventStatusPill(evt.status)}
-                  {evt.status === 'concierge_pending' && (
-                    <button onClick={()=>markConciergeActive(evt)} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                      Mark Payment Confirmed
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
-      )}
 
       <AdminPostForm onPost={async opp => {
         const { data, error } = await supabase.from('events').insert({
@@ -6513,8 +6440,8 @@ function AppInner() {
       event_goer_notes: form.eventGoerNotes || null,
       share_with_event_goers: form.shareWithEventGoers !== false,
       deadline: form.applyByDate || null,
-      source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
-      status: form.fullServiceBooking ? 'concierge_pending' : 'pending_review',
+      source: 'Host Submitted',
+      status: 'pending_review',
       event_link: form.eventLink || null,
       is_ticketed: form.isTicketedEvent || false,
       ticket_price: form.isTicketedEvent ? (form.ticketPrice || null) : null,
@@ -6536,21 +6463,6 @@ function AppInner() {
       return;
     }
     // Send concierge email with payment link
-    if (form.fullServiceBooking && newEvent) {
-      try {
-        await fetch('/api/send-concierge-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            hostEmail: form.email,
-            hostName: form.contactName,
-            eventName: form.eventName || form.eventType,
-            eventDate: form.date,
-            eventId: newEvent.id,
-          }),
-        });
-      } catch (e) { console.error('Concierge email failed:', e); }
-    }
     // Upload event photos
     if (newEvent && files.eventPhotos && files.eventPhotos.length > 0) {
       const bucket = 'vendor-files';
@@ -6571,12 +6483,12 @@ function AppInner() {
     try {
       await fetch('/api/send-host-confirmation', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hostEmail: form.email, hostName: form.contactName, eventName: form.eventName || form.eventType, eventDate: form.date, eventType: form.eventType, isConcierge: form.fullServiceBooking }),
+        body: JSON.stringify({ hostEmail: form.email, hostName: form.contactName, eventName: form.eventName || form.eventType, eventDate: form.date, eventType: form.eventType }),
       });
     } catch (e) { console.error('Host confirmation email failed:', e); }
     // Notify admin of new event submission (styled email with gold button)
     fetch('/api/send-event-admin-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ eventName: form.eventName||form.eventType, hostName: form.contactName, hostEmail: form.email, eventDate: form.date, eventType: form.eventType, eventZip: form.eventZip, isConcierge: form.fullServiceBooking }),
+      body: JSON.stringify({ eventName: form.eventName||form.eventType, hostName: form.contactName, hostEmail: form.email, eventDate: form.date, eventType: form.eventType, eventZip: form.eventZip }),
     }).catch(()=>{});
 
     // Pending events don't appear in public feed — they go through admin approval
@@ -6585,7 +6497,7 @@ function AppInner() {
       setUserEvents(prev => [dbEventToApp(newEvent), ...prev]);
     }
     setHostEvent(form);
-    setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType, isPending: true, isConcierge: form.fullServiceBooking });
+    setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType, isPending: true });
     setHostSuccess(true);
     window.scrollTo({top:0, behavior:'smooth'});
   };
