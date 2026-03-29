@@ -6833,22 +6833,31 @@ function AppInner() {
       const bucket = 'vendor-files';
       const eid = newEvent.id;
       const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-      const photoUrls = await Promise.all(files.eventPhotos.slice(0,6).map(async (f, i) => {
+      const photoUrls = [];
+      for (let i = 0; i < Math.min(files.eventPhotos.length, 6); i++) {
+        const f = files.eventPhotos[i];
         const path = `events/${eid}/photos/${i}-${safeName(f.name)}`;
-        const { error } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
-        if (error) { console.error('Event photo upload error:', error); return null; }
-        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-      }));
-      const validUrls = photoUrls.filter(Boolean);
-      if (validUrls.length > 0) {
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
+        if (upErr) {
+          console.error('Event photo upload error:', upErr);
+          // Try alternate bucket name
+          const { error: upErr2 } = await supabase.storage.from('event-photos').upload(path, f, { upsert: true, contentType: f.type });
+          if (upErr2) { console.error('Alternate bucket also failed:', upErr2); continue; }
+          photoUrls.push(supabase.storage.from('event-photos').getPublicUrl(path).data.publicUrl);
+        } else {
+          photoUrls.push(supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl);
+        }
+      }
+      if (photoUrls.length > 0) {
         // Save first photo to photo_url (column that definitely exists)
-        await supabase.from('events').update({ photo_url: validUrls[0] }).eq('id', eid).catch(e=>console.error('photo_url update error:',e));
+        const { error: puErr } = await supabase.from('events').update({ photo_url: photoUrls[0] }).eq('id', eid);
+        if (puErr) console.error('photo_url update failed:', puErr.message);
         // Try saving all photos to event_photos array column
-        const { error: epErr } = await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid);
-        if (epErr) console.error('event_photos column may not exist:', epErr.message);
-        // Update local state with photo URLs
-        newEvent.photo_url = validUrls[0];
-        newEvent.event_photos = validUrls;
+        const { error: epErr } = await supabase.from('events').update({ event_photos: photoUrls }).eq('id', eid);
+        if (epErr) console.error('event_photos update failed:', epErr.message);
+        // Update local state
+        newEvent.photo_url = photoUrls[0];
+        newEvent.event_photos = photoUrls;
       }
     }
     // Send host confirmation email
