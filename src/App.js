@@ -2272,7 +2272,7 @@ function UnifiedDashboardCalendar({ authUser, vendorProfile, userEvents, setTab 
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile, conversations, setConversations, setActiveConvoId, unreadCount }) {
+function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile, conversations, setConversations, setActiveConvoId, unreadCount, opps }) {
   const [requests, setRequests] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
@@ -2520,6 +2520,40 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
           <span style={{fontSize:18,color:'#e8c97a'}}>→</span>
         </button>
       )}
+
+      {/* ── New Matching Events ── */}
+      {isApproved && opps && opps.length > 0 && (() => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const vendorCats = [...(vendorProfile?.subcategories||[]), vendorProfile?.category, ...(vendorProfile?.metadata?.serviceCategories||[]), ...(vendorProfile?.metadata?.allCategories||[])].filter(Boolean);
+        const vendorZip = vendorProfile?.home_zip;
+        const vendorRadius = vendorProfile?.radius || 20;
+        const appliedEventNames = new Set([...myApplications, ...requests].map(a => a.event_name));
+        const matching = opps
+          .filter(o => o.date >= todayStr)
+          .filter(o => !appliedEventNames.has(o.eventName))
+          .filter(o => vendorCats.length === 0 || o.categoriesNeeded.length === 0 || o.categoriesNeeded.some(c => vendorCats.includes(c)))
+          .filter(o => { if (!vendorZip || !isKnownZip(vendorZip)) return true; const d = distanceMiles(vendorZip, o.zip); return d === null || d <= vendorRadius; })
+          .slice(0, 5);
+        if (matching.length === 0) return null;
+        return (
+          <div style={{background:'#fff',border:'2px solid #c8a850',borderRadius:10,padding:'16px 20px',marginBottom:20}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:4}}>New Events Matching Your Profile</div>
+            <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12}}>These events are looking for vendors like you</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {matching.map(o => (
+                <div key={o.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px',flexWrap:'wrap',gap:8}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{o.eventName}</div>
+                    <div style={{fontSize:12,color:'#7a6a5a'}}>{o.eventType} · {fmtDate(o.date)} · {getCityFromZip(o.zip) || 'Zip '+o.zip}</div>
+                  </div>
+                  <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>View & Apply</button>
+                </div>
+              ))}
+            </div>
+            {matching.length >= 5 && <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{marginTop:8,background:'none',border:'none',color:'#c8a850',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textDecoration:'underline'}}>See all matching events →</button>}
+          </div>
+        );
+      })()}
 
       {/* Profile switcher for multi-listing vendors */}
       {allVendorProfiles && allVendorProfiles.length > 1 && (
@@ -7234,7 +7268,7 @@ function AppInner() {
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} opps={opps} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setAllEvents={setAllEvents} setOpps={setOpps} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
