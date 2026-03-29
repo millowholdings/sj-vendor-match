@@ -1197,6 +1197,10 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [eventPhotos, setEventPhotos] = useState([]);
+  const [formStep, setFormStep] = useState(1);
+  const HOST_STEPS = [{n:1,label:'Event Details'},{n:2,label:'Vendors & Services'},{n:3,label:'Venue & Logistics'},{n:4,label:'Review & Submit'}];
+  const nextStep = () => setFormStep(s => Math.min(s+1, 4));
+  const prevStep = () => setFormStep(s => Math.max(s-1, 1));
   const [hasDraft] = useState(() => !!localStorage.getItem(HOST_DRAFT_KEY));
   const [otherSubcategories, setOtherSubcategories] = useState(() => {
     try { return JSON.parse(localStorage.getItem(HOST_DRAFT_SUBS_KEY) || '{}'); }
@@ -1219,12 +1223,29 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
   return (
     <div className="form-card">
+      {/* Step progress bar */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:0,marginBottom:24}}>
+        {HOST_STEPS.map((s,i) => (
+          <div key={s.n} style={{display:'flex',alignItems:'center'}}>
+            <div onClick={()=>setFormStep(s.n)} style={{display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',minWidth:70}}>
+              <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,
+                background:formStep===s.n?'#c8a84b':formStep>s.n?'#1a6b3a':'#e8ddd0',
+                color:formStep===s.n?'#1a1410':formStep>s.n?'#fff':'#a89a8a'}}>{formStep>s.n?'✓':s.n}</div>
+              <div style={{fontSize:10,color:formStep===s.n?'#1a1410':'#a89a8a',fontWeight:formStep===s.n?700:400,marginTop:4}}>{s.label}</div>
+            </div>
+            {i<HOST_STEPS.length-1 && <div style={{width:40,height:2,background:formStep>s.n?'#1a6b3a':'#e8ddd0',margin:'0 4px 16px'}}/>}
+          </div>
+        ))}
+      </div>
       {hasDraft && (
         <div style={{ background:'#fdf4dc', border:'1px solid #ffd966', borderRadius:8, padding:'12px 16px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
           <div style={{ fontSize:14, color:'#7a5a10' }}>📋 <strong>Draft restored</strong> — your previously entered information has been loaded.</div>
           <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
         </div>
       )}
+
+      {/* ── STEP 1: Event Details ── */}
+      {formStep === 1 && (<>
       {!authUser && (
         <>
           <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
@@ -1248,9 +1269,9 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div><div style={{fontWeight:700,fontSize:14,color:'#1a6b3a'}}>Logged in as {authUser.email}</div><div style={{fontSize:12,color:'#2d7a50'}}>Your event will be linked to this account.</div></div>
         </div>
       )}
-      <h2 className="form-section-title"><span className="dot" />Host an Event</h2>
+      <h2 className="form-section-title"><span className="dot" />Event Details</h2>
       <p style={{ color:'#7a6a5a', marginBottom:32, fontSize:15 }}>
-        Tell us about your event and we'll match you with the perfect South Jersey vendors — based on your event zip code and the categories you need.
+        Tell us about your event and we'll match you with the perfect South Jersey vendors.
       </p>
       <div className="form-grid">
         <div className="form-group"><label>Organization / Business Name</label><input placeholder="Your org or event name" value={form.orgName} onChange={e=>set('orgName',e.target.value)} /></div>
@@ -1406,46 +1427,71 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
             </div>
           </div>
         )}
-        <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
-        <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
-        <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
-        <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
-        <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
-        <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
-        <div className="form-group">
-          <label>Allow multiple vendors in the same category?</label>
-          <select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>set('allowDuplicateCategories',e.target.value==='yes')}>
-            <option value="yes">Yes — multiple vendors per category OK</option>
-            <option value="no">No — one vendor per category only</option>
-          </select>
-          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Example category: Jewelry & Accessories — allowing two jewelry vendors at the same event</div>
-        </div>
-        <div className="form-group">
-          <label>Allow multiple vendors in the same subcategory?</label>
-          <select value={form.allowDuplicateSubcategories?'yes':'no'} onChange={e=>set('allowDuplicateSubcategories',e.target.value==='yes')}>
-            <option value="yes">Yes — multiple vendors with the same specialty OK</option>
-            <option value="no">No — one vendor per specialty only</option>
-          </select>
-          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Example subcategory: Handmade Earrings — allowing two vendors who both sell the same specific product type</div>
-        </div>
-        <div className="form-group"><label>Vendor Booth Fee</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select></div>
-        {form.budget !== 'No booth fee' && (
-          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
-        )}
-        <div className="form-group"><label>Is This a Ticketed Event?</label>
-          <div style={{display:'flex',gap:10}}>
-            <button type="button" onClick={()=>set('isTicketedEvent',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
-            <button type="button" onClick={()=>{set('isTicketedEvent',false);set('ticketPrice','');}} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
-          </div>
-        </div>
-        {form.isTicketedEvent && (
-          <div className="form-group"><label>Ticket Price</label><input type="text" value={form.ticketPrice} onChange={e=>set('ticketPrice',e.target.value)} placeholder="e.g. $5, $10-$15, Free for kids" /></div>
-        )}
       </div>
 
       <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
+      <div style={{marginBottom:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <span style={{fontSize:13,fontWeight:600}}>Photos</span>
+          <span style={{fontSize:12,color:eventPhotos.length>=6?'#1a6b3a':'#a89a8a',fontWeight:600}}>{eventPhotos.length} of 6</span>
+        </div>
+        {eventPhotos.length > 0 && (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {eventPhotos.map((f,i)=>(
+              <div key={i} style={{position:'relative',width:80,height:80}}>
+                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
+                <button onClick={()=>setEventPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {eventPhotos.length < 6 && (
+          <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
+            + Add Photos ({6 - eventPhotos.length} remaining)
+            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
+          </label>
+        )}
+      </div>
+
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Vendors & Services →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 2: Vendors & Services ── */}
+      {formStep === 2 && (<>
+      <h3 className="form-section-title"><span className="dot" />Full Service Booking</h3>
+      <div
+        onClick={()=>set('fullServiceBooking',!form.fullServiceBooking)}
+        style={{
+          background: form.fullServiceBooking ? '#1a1410' : '#fff',
+          border: `2px solid ${form.fullServiceBooking ? '#e8c97a' : '#e8ddd0'}`,
+          borderRadius:12, padding:'20px 24px', cursor:'pointer', transition:'all 0.2s', marginBottom:16
+        }}>
+        <label style={{display:'flex',alignItems:'flex-start',gap:12,cursor:'pointer',margin:0}}>
+          <input type="checkbox" checked={form.fullServiceBooking} onChange={e=>set('fullServiceBooking',e.target.checked)}
+            style={{width:20,height:20,marginTop:2,flexShrink:0,accentColor:'#e8c97a'}} />
+          <div>
+            <div style={{fontWeight:700,fontSize:16,color:form.fullServiceBooking?'#e8c97a':'#1a1410',marginBottom:4}}>
+              Let us handle everything
+            </div>
+            <div style={{fontSize:13,color:form.fullServiceBooking?'#c8b898':'#7a6a5a',lineHeight:1.5}}>
+              Our team will select, contact, confirm, and coordinate all vendors for your event. You sit back and relax — we'll handle the rest. A flat concierge fee applies.
+            </div>
+          </div>
+        </label>
+      </div>
+      {form.fullServiceBooking && (
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
+          <strong>How it works:</strong> After you submit, our team will review your event details, hand-pick the best vendors, and handle all outreach and confirmations on your behalf. We'll reach out within 24 hours to discuss your event and our concierge fee.
+        </div>
+      )}
+
+      <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />What Type of Vendors Do You Need?</h3>
-      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply for your event.</p>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>{form.fullServiceBooking ? 'Let us know your preferences — our team will handle the rest.' : 'Select all that apply for your event.'}</p>
       <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap'}}>
         <div onClick={()=>set('needsMarketVendors',!form.needsMarketVendors)}
           style={{flex:'1 1 220px',padding:'14px 18px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.needsMarketVendors?'#c8a850':'#e8ddd0'}`,background:form.needsMarketVendors?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
@@ -1532,6 +1578,45 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </>
       )}
 
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Venue & Logistics →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 3: Venue & Logistics ── */}
+      {formStep === 3 && (<>
+      <h2 className="form-section-title"><span className="dot" />Venue & Logistics</h2>
+      <div className="form-grid">
+        <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
+        <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
+        <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
+        <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
+        <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
+        <div className="form-group">
+          <label>Allow Multiple Vendors with Similar Products?</label>
+          <select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>{set('allowDuplicateCategories',e.target.value==='yes');set('allowDuplicateSubcategories',e.target.value==='yes');}}>
+            <option value="yes">Yes — similar vendors are OK</option>
+            <option value="no">No — I want variety only</option>
+          </select>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>e.g. allowing two jewelry vendors or two candle makers at the same event</div>
+        </div>
+        <div className="form-group"><label>Do You Charge Vendors a Booth Fee?</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select></div>
+        {form.budget !== 'No booth fee' && (
+          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
+        )}
+        <div className="form-group"><label>Is This a Ticketed Event?</label>
+          <div style={{display:'flex',gap:10}}>
+            <button type="button" onClick={()=>set('isTicketedEvent',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
+            <button type="button" onClick={()=>{set('isTicketedEvent',false);set('ticketPrice','');}} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
+          </div>
+        </div>
+        {form.isTicketedEvent && (
+          <div className="form-group"><label>Ticket Price</label><input type="text" value={form.ticketPrice} onChange={e=>set('ticketPrice',e.target.value)} placeholder="e.g. $5, $10-$15, Free for kids" /></div>
+        )}
+      </div>
+
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />How Would You Like to Find Vendors?</h3>
       <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
@@ -1560,61 +1645,40 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         ))}
       </div>
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Full Service Booking</h3>
-      <div
-        onClick={()=>set('fullServiceBooking',!form.fullServiceBooking)}
-        style={{
-          background: form.fullServiceBooking ? '#1a1410' : '#fff',
-          border: `2px solid ${form.fullServiceBooking ? '#e8c97a' : '#e8ddd0'}`,
-          borderRadius:12, padding:'20px 24px', cursor:'pointer', transition:'all 0.2s', marginBottom:16
-        }}>
-        <label style={{display:'flex',alignItems:'flex-start',gap:12,cursor:'pointer',margin:0}}>
-          <input type="checkbox" checked={form.fullServiceBooking} onChange={e=>set('fullServiceBooking',e.target.checked)}
-            style={{width:20,height:20,marginTop:2,flexShrink:0,accentColor:'#e8c97a'}} />
-          <div>
-            <div style={{fontWeight:700,fontSize:16,color:form.fullServiceBooking?'#e8c97a':'#1a1410',marginBottom:4}}>
-              Let us handle everything
-            </div>
-            <div style={{fontSize:13,color:form.fullServiceBooking?'#c8b898':'#7a6a5a',lineHeight:1.5}}>
-              Our team will select, contact, confirm, and coordinate all vendors for your event. You sit back and relax — we'll handle the rest. A flat concierge fee applies.
-            </div>
-          </div>
-        </label>
-      </div>
-      {form.fullServiceBooking && (
-        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'12px 16px',marginBottom:16,fontSize:13,color:'#7a5a10',lineHeight:1.5}}>
-          <strong>How it works:</strong> After you submit, our team will review your event details, hand-pick the best vendors, and handle all outreach and confirmations on your behalf. We'll reach out within 24 hours to discuss your event and our concierge fee.
-        </div>
-      )}
       <div className="form-group" style={{ marginTop:4 }}>
         <label>Additional Notes</label>
         <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Anything else vendors or our team should know..."} value={form.notes} onChange={e=>set('notes',e.target.value)} />
       </div>
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
-      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
-      <div style={{marginBottom:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-          <span style={{fontSize:13,fontWeight:600}}>Photos</span>
-          <span style={{fontSize:12,color:eventPhotos.length>=6?'#1a6b3a':'#a89a8a',fontWeight:600}}>{eventPhotos.length} of 6</span>
+
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Review & Submit →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 4: Review & Submit ── */}
+      {formStep === 4 && (<>
+      <h3 className="form-section-title"><span className="dot" />Review & Submit</h3>
+      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:16,marginBottom:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 16px',fontSize:13}}>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Event:</span> {form.eventName || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Type:</span> {form.eventType || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Contact:</span> {form.contactName || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Email:</span> {form.email || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Date:</span> {form.date ? fmtDate(form.date) : '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Location:</span> Zip {form.eventZip || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Time:</span> {form.startTime ? fmtTime(form.startTime) : '—'}{form.endTime ? ' – '+fmtTime(form.endTime) : ''}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Attendance:</span> {form.expectedAttendance || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Vendor Spots:</span> {form.vendorCount}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Booth Fee:</span> {form.budget || 'No booth fee'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Vendors:</span> {[form.needsMarketVendors&&'Market',form.needsServiceProviders&&'Service'].filter(Boolean).join(' + ') || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Categories:</span> {form.vendorCategories.length > 0 ? form.vendorCategories.join(', ') : '—'}</div>
+          {form.servicesNeeded.length > 0 && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Services:</span> {form.servicesNeeded.map(s=>s.type||'TBD').join(', ')}</div>}
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Discovery:</span> {form.vendorDiscovery==='both'?'Browse + Apply':form.vendorDiscovery==='browse'?'Browse & Invite':form.vendorDiscovery==='apply'?'Vendor Applications':'—'}</div>
+          {form.fullServiceBooking && <div><span style={{color:'#e8c97a',fontWeight:700}}>Full Service Booking</span> — our team handles everything</div>}
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {eventPhotos.length} uploaded</div>
         </div>
-        {eventPhotos.length > 0 && (
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
-            {eventPhotos.map((f,i)=>(
-              <div key={i} style={{position:'relative',width:80,height:80}}>
-                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
-                <button onClick={()=>setEventPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
-              </div>
-            ))}
-          </div>
-        )}
-        {eventPhotos.length < 6 && (
-          <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
-            + Add Photos ({6 - eventPhotos.length} remaining)
-            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
-          </label>
-        )}
+        <button onClick={()=>setFormStep(1)} style={{marginTop:10,background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Edit any section</button>
       </div>
 
       <div className="form-submit">
@@ -1624,7 +1688,9 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </label>
         {showTos && <TosModal onClose={()=>setShowTos(false)} />}
         <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form, { eventPhotos }); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
+        <button onClick={prevStep} style={{marginTop:10,background:'none',border:'1px solid #e0d5c5',color:'#7a6a5a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back to Logistics</button>
       </div>
+      </>)}
     </div>
   );
 }
