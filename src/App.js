@@ -3021,47 +3021,29 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const saveEvent = async (evt) => {
     setSavingEvent(true);
     try {
-      // Upload new photos first so we have URLs for the update
+      // Convert new photos to base64 and store directly in DB
       let photoUrl = editExistingPhotos.length > 0 ? editExistingPhotos[0] : (evt.photo_url || null);
-      for (const f of editNewPhotos) {
-        const path = `events/${evt.id}/photos/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)}`;
-        const { error: upErr } = await supabase.storage.from('vendor-files').upload(path, f, { upsert: true, contentType: f.type });
-        if (upErr) {
-          console.error('Photo upload to vendor-files failed:', upErr.message);
-          // If bucket doesn't exist or policy blocks, store as base64 data URL
-          try {
-            const reader = new FileReader();
-            const dataUrl = await new Promise((resolve) => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(f); });
-            photoUrl = dataUrl;
-          } catch (e) { console.error('Base64 fallback failed:', e); }
-        } else {
-          photoUrl = supabase.storage.from('vendor-files').getPublicUrl(path).data.publicUrl;
-        }
+      if (editNewPhotos.length > 0) {
+        const f = editNewPhotos[editNewPhotos.length - 1]; // use last selected photo
+        const reader = new FileReader();
+        photoUrl = await new Promise((resolve) => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(f); });
       }
 
-      // Update event — start with all fields, strip on failure
+      // Update event with all core fields
       const payload = {
         event_name: eventForm.event_name, event_type: eventForm.event_type,
         date: eventForm.date, start_time: eventForm.start_time || null, end_time: eventForm.end_time || null,
         zip: eventForm.zip, booth_fee: eventForm.booth_fee || null, spots: eventForm.spots || null,
         notes: eventForm.notes || null, deadline: eventForm.deadline || null,
         photo_url: photoUrl, status: 'pending_review',
-        ticket_price: eventForm.ticket_price || null, is_ticketed: eventForm.is_ticketed || false,
-        event_link: eventForm.event_link || null,
       };
 
       let { error } = await supabase.from('events').update(payload).eq('id', evt.id);
       if (error) {
-        // Strip optional columns and retry
-        const { event_link: _el, ticket_price: _tp, is_ticketed: _it, ...retry1 } = payload;
-        ({ error } = await supabase.from('events').update(retry1).eq('id', evt.id));
-      }
-      if (error) {
-        // Strip photo_url too in case that column has issues
-        const { photo_url: _pu, event_link: _el, ticket_price: _tp, is_ticketed: _it, ...retry2 } = payload;
-        ({ error } = await supabase.from('events').update(retry2).eq('id', evt.id));
-        // Try photo_url alone
-        if (photoUrl) await supabase.from('events').update({ photo_url: photoUrl }).eq('id', evt.id);
+        // photo_url might be too large for the column — try without it
+        const { photo_url: _pu, ...withoutPhoto } = payload;
+        ({ error } = await supabase.from('events').update(withoutPhoto).eq('id', evt.id));
+        if (!error) alert('Event saved but photo was too large to store. Try a smaller image.');
       }
       if (error) {
         alert('Failed to save: ' + error.message);
