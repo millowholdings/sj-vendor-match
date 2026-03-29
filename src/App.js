@@ -2756,6 +2756,103 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         )}
       </div>
 
+      {/* ── PENDING ITEMS ── */}
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Pending</h3>
+
+      {/* Pending host invitations */}
+      {requests.filter(r=>r.status==='pending').length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Host Requests</div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {requests.filter(r=>r.status==='pending').map(r => (
+              <div key={r.id} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'14px 16px'}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{r.event_name || r.event_type}</div>
+                    <div style={{fontSize:12,color:'#7a6a5a'}}>{r.host_name} · {fmtDate(r.event_date)} · Zip {r.event_zip}</div>
+                    {r.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:4,fontStyle:'italic'}}>"{r.notes}"</div>}
+                  </div>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                    <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                    <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                    <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pending applications */}
+      {myApplications.filter(a=>a.status==='pending').length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>My Applications — Awaiting Response</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {myApplications.filter(a=>a.status==='pending').map(a => (
+              <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+                </div>
+                <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Pending Review</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No pending items */}
+      {requests.filter(r=>r.status==='pending').length === 0 && myApplications.filter(a=>a.status==='pending').length === 0 && !loadingReqs && (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px',marginBottom:16,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a'}}>No pending items. <button onClick={()=>setTab('opportunities')} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:13,fontFamily:'inherit'}}>Browse events</button> to find new opportunities.</div>
+        </div>
+      )}
+
+      {/* Quick actions */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Messages</button>
+        <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Browse Events</button>
+        <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>My Calendar</button>
+      </div>
+
+      {/* ── CONFIRMED ── */}
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Confirmed</h3>
+
+      {/* Confirmed bookings */}
+      {[...requests.filter(r=>r.status==='accepted'), ...myApplications.filter(a=>a.status==='accepted')].length > 0 ? (
+        <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
+          {[...requests.filter(r=>r.status==='accepted'), ...myApplications.filter(a=>a.status==='accepted')].map(a => (
+            <div key={a.id} style={{background:'#fff',border:'2px solid #b8e8c8',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
+                <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+              </div>
+              <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Confirmed</span>
+                <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px',marginBottom:24,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a'}}>No confirmed events yet. Apply to events or respond to host invitations above.</div>
+        </div>
+      )}
+
+      {/* Declined (collapsed) */}
+      {[...requests.filter(r=>r.status==='declined'), ...myApplications.filter(a=>a.status==='declined')].length > 0 && (
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:12,color:'#a89a8a',marginBottom:8}}>{[...requests.filter(r=>r.status==='declined'), ...myApplications.filter(a=>a.status==='declined')].length} not selected</div>
+          {[...requests.filter(r=>r.status==='declined'), ...myApplications.filter(a=>a.status==='declined')].map(a => (
+            <div key={a.id} style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 14px',marginBottom:4,fontSize:12,color:'#a89a8a'}}>
+              {a.event_name || 'Event'} · {fmtDate(a.event_date)}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ── My Calendar ── */}
       <UnifiedDashboardCalendar authUser={user} vendorProfile={vendorProfile} userEvents={[]} setTab={setTab} />
 
@@ -2767,69 +2864,6 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
           <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
         </div>
       </div>
-
-      {/* ── My Event Applications ── */}
-      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Event Applications</h3>
-      {loadingReqs ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
-      : myApplications.length === 0 ? (
-        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',marginBottom:24,textAlign:'center'}}>
-          <div style={{fontSize:13,color:'#7a6a5a',marginBottom:8}}>You haven't applied to any events yet.</div>
-          <button onClick={()=>setTab('opportunities')} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
-        </div>
-      ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
-          {myApplications.map(a => (
-            <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
-              <div>
-                <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
-                <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
-              </div>
-              <span style={{
-                background: a.status==='accepted'?'#d4f4e0':a.status==='declined'?'#fdecea':'#fdf4dc',
-                color: a.status==='accepted'?'#1a6b3a':a.status==='declined'?'#8b1a1a':'#7a5a10',
-                padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700,whiteSpace:'nowrap'
-              }}>{a.status==='accepted'?'Accepted':a.status==='declined'?'Not Selected':'Pending Review'}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Host Invitations ── */}
-      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Host Invitations</h3>
-      {loadingReqs ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
-      : requests.length === 0 ? (
-        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',marginBottom:24,textAlign:'center'}}>
-          <div style={{fontSize:13,color:'#7a6a5a'}}>No invitations from hosts yet. Hosts will find you in the vendor directory and send invitations.</div>
-        </div>
-      ) : (
-        <div style={{display:'flex',flexDirection:'column',gap:12}}>
-          {requests.map(r => (
-            <div key={r.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px'}}>
-              <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{r.event_name || r.event_type}</div>
-                  <div style={{fontSize:13,color:'#7a6a5a'}}>{r.host_name} · {fmtDate(r.event_date)} · Zip {r.event_zip}</div>
-                  {r.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:4,fontStyle:'italic'}}>"{r.notes}"</div>}
-                </div>
-                <div>
-                  {r.status === 'pending' ? (
-                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
-                      <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                      <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
-                    </div>
-                  ) : (
-                    <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
-                      <span style={{background:r.status==='accepted'?'#d4f4e0':'#fdecea',color:r.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{r.status}</span>
-                      <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
@@ -6730,7 +6764,7 @@ function AppInner() {
               <div style={{padding:'0 24px',maxWidth:1200,margin:'0 auto',width:'100%',boxSizing:'border-box'}}>
                 <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:16}}>
                   {[
-                    {title:'For Vendors',steps:['Create your profile — pick your category, set your travel radius, and upload photos. Offer more than one product or service? You can create separate listings for each under one account.','Get matched & discovered — hosts in your area will see you in their vendor list, and you can browse open events and apply directly to the ones that fit.','Apply & book — browse open events, apply with one click, and manage everything from your dashboard.']},
+                    {title:'For Vendors',steps:['Create your profile — pick your category, set your travel radius, and upload photos. Offer more than one product or service? You can create separate listings for each under one account.','Get matched & discovered — hosts can find you and request you for their event, or you can browse open events and apply directly to the ones that fit.','Respond & manage — accept or decline host requests, message hosts directly, and manage all your events from your dashboard.']},
                     {title:'For Event Hosts',steps:['Add your event — enter your event details, pick the vendor categories you need, and set your preferences.','Find vendors — browse matched vendors in your area, or let vendors come to you through applications.','Book & manage — review applications, send booking requests, and coordinate everything in one place.']},
                     {title:'For Event Guests',steps:['Sign up for alerts — enter your zip code and pick the event types you love.','Discover events — browse upcoming markets, pop-ups, and festivals near you.','See who\'s there — check which vendors are attending before you go.']},
                   ].map(col=>(
