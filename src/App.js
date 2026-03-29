@@ -70,6 +70,23 @@ const SERVICE_SUBCATEGORIES = {
 const RADIUS_OPTIONS = [5, 10, 15, 20, 30, 50];
 
 // Zip code lat/lng for South Jersey distance calculation
+// Zip to city name mapping for display
+const ZIP_CITY = {
+  "08002":"Cherry Hill","08003":"Cherry Hill","08004":"Atco","08007":"Barrington","08009":"Berlin",
+  "08012":"Blackwood","08021":"Clementon","08026":"Gibbsboro","08029":"Glendora","08030":"Gloucester City",
+  "08033":"Haddonfield","08034":"Cherry Hill","08035":"Haddon Heights","08036":"Hainesport","08043":"Voorhees",
+  "08045":"Lawnside","08048":"Lumberton","08052":"Maple Shade","08053":"Marlton","08054":"Mount Laurel",
+  "08055":"Medford","08057":"Moorestown","08059":"Mount Ephraim","08060":"Mount Holly","08063":"National Park",
+  "08065":"Palmyra","08075":"Riverton","08077":"Riverton","08078":"Runnemede","08080":"Sewell",
+  "08081":"Sicklerville","08083":"Somerdale","08086":"Thorofare","08088":"Vincentown","08089":"Waterford Works",
+  "08090":"Wenonah","08091":"West Berlin","08093":"Westville","08094":"Williamstown","08096":"Woodbury",
+  "08097":"Woodbury Heights","08101":"Camden","08102":"Camden","08103":"Camden","08104":"Camden",
+  "08105":"Camden","08106":"Audubon","08107":"Oaklyn","08108":"Collingswood","08109":"Merchantville",
+  "08110":"Pennsauken","08226":"Ocean City","08232":"Pleasantville","08244":"Somers Point",
+  "08401":"Atlantic City","08402":"Margate City","08406":"Ventnor City",
+};
+function getCityFromZip(zip) { return ZIP_CITY[zip] || null; }
+
 const ZIP_COORDS = {
   "08002":[39.934,-75.014],"08003":[39.901,-74.974],"08004":[39.793,-74.760],
   "08007":[39.868,-75.061],"08009":[39.788,-74.947],"08012":[39.778,-75.044],
@@ -2042,6 +2059,7 @@ function AuthModal({ onClose, onAuth, defaultEmail, setTab, setShowEventGoerSign
               <div style={{fontSize:28,marginBottom:8}}>📧</div>
               <div style={{fontSize:15,fontWeight:600,color:'#1a6b3a',marginBottom:8}}>Check your email</div>
               <div style={{fontSize:13,color:'#7a6a5a'}}>We sent a password reset link to {email}</div>
+              <div style={{fontSize:12,color:'#a89a8a',marginTop:6}}>Check your spam folder if you don't see it. Link expires in 24 hours.</div>
               <button onClick={onClose} style={{marginTop:16,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close</button>
             </div>
           ) : (
@@ -2743,7 +2761,9 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
               </div>
             )}
             {m.lookbookUrl && <div style={{marginBottom:8}}><a href={m.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b'}}>📋 View Price Menu / Lookbook</a></div>}
-            <div style={{fontSize:11,color:'#a89a8a',marginTop:8}}>This is how your profile appears to hosts. Click "Edit Profile" to make changes.</div>
+            <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:6,padding:'8px 12px',marginTop:12,fontSize:12,color:'#1a4a6b'}}>
+              <strong>Profile Preview</strong> — this is how your listing appears to hosts browsing the vendor directory. Click "Edit Profile" to make changes.
+            </div>
           </>
         )}
       </div>
@@ -2797,6 +2817,44 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         )}
       </div>
 
+      {/* ── First-time onboarding ── */}
+      {isApproved && requests.length === 0 && myApplications.length === 0 && !loadingReqs && (
+        <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:10,padding:'16px 20px',marginBottom:20}}>
+          <div style={{fontWeight:700,fontSize:15,color:'#1a4a6b',marginBottom:8}}>Welcome to your dashboard!</div>
+          <div style={{fontSize:13,color:'#1a4a6b',lineHeight:1.8}}>
+            1. <strong>Browse events</strong> — find opportunities that match your category and location<br/>
+            2. <strong>Apply to events</strong> — one click to let hosts know you're interested<br/>
+            3. <strong>Respond to invitations</strong> — hosts can find and invite you directly
+          </div>
+          <button onClick={()=>setTab('opportunities')} style={{marginTop:12,background:'#1a4a6b',color:'#fff',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
+        </div>
+      )}
+
+      {/* ── Analytics summary ── */}
+      {isApproved && (requests.length > 0 || myApplications.length > 0) && (
+        <div style={{display:'flex',gap:12,marginBottom:20,flexWrap:'wrap'}}>
+          <div style={{flex:'1 1 100px',background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',textAlign:'center'}}>
+            <div style={{fontSize:22,fontWeight:700,color:'#c8a850'}}>{requests.length + myApplications.length}</div>
+            <div style={{fontSize:11,color:'#7a6a5a'}}>Total Activity</div>
+          </div>
+          <div style={{flex:'1 1 100px',background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',textAlign:'center'}}>
+            <div style={{fontSize:22,fontWeight:700,color:'#1a6b3a'}}>{[...requests,...myApplications].filter(a=>a.status==='accepted').length}</div>
+            <div style={{fontSize:11,color:'#7a6a5a'}}>Confirmed</div>
+          </div>
+          <div style={{flex:'1 1 100px',background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',textAlign:'center'}}>
+            <div style={{fontSize:22,fontWeight:700,color:'#c8a850'}}>{[...requests,...myApplications].filter(a=>a.status==='pending').length}</div>
+            <div style={{fontSize:11,color:'#7a6a5a'}}>Pending</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Insurance visibility note ── */}
+      {isApproved && !vendorProfile?.insurance && (
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'10px 14px',marginBottom:20,fontSize:12,color:'#7a5a10',lineHeight:1.5}}>
+          <strong>Tip:</strong> Hosts can filter vendors by insurance status. Adding a certificate of insurance to your profile increases your visibility and booking rate.
+        </div>
+      )}
+
       {/* ── Messages notification ── */}
       {unreadCount > 0 && (
         <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
@@ -2848,7 +2906,8 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
               <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
-                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · {getCityFromZip(a.event_zip) ? getCityFromZip(a.event_zip)+' · ' : ''}Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+                  {a.sent_at && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>Applied {new Date(a.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
                 </div>
                 <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Pending Review</span>
               </div>
@@ -2914,10 +2973,15 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       {/* Contact & Feedback */}
       <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
         <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your listing?</div>
-        <div style={{display:'flex',gap:8}}>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
           <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
         </div>
+      </div>
+
+      {/* Account deletion */}
+      <div style={{textAlign:'center',marginBottom:24}}>
+        <button onClick={async()=>{if(!window.confirm('Are you sure you want to delete your account? This will remove all your vendor profiles and cannot be undone.'))return;await supabase.from('vendors').delete().eq('user_id',user.id);await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'none',color:'#a89a8a',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textDecoration:'underline'}}>Delete My Account</button>
       </div>
     </div>
   );
@@ -3257,11 +3321,32 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </div>
       </div>
 
+      {/* ── Confirmed Vendor Lineup ── */}
+      {applications.filter(a=>a.status==='accepted').length > 0 && (
+        <div style={{background:'#fff',border:'2px solid #b8e8c8',borderRadius:10,padding:'16px 20px',marginBottom:24}}>
+          <h3 style={{fontFamily:'Playfair Display,serif',fontSize:18,margin:'0 0 12px',color:'#1a6b3a'}}>Confirmed Vendor Lineup</h3>
+          {userEvents.filter(e=>e.status==='approved').map(evt => {
+            const confirmed = applications.filter(a=>a.status==='accepted'&&a.event_name===evt.event_name);
+            if (confirmed.length === 0) return null;
+            return (
+              <div key={evt.id} style={{marginBottom:12}}>
+                <div style={{fontSize:13,fontWeight:700,color:'#1a1410',marginBottom:6}}>{evt.event_name} — {fmtDate(evt.date)} <span style={{fontWeight:400,color:'#7a6a5a'}}>({confirmed.length} of {evt.spots||'?'} spots filled)</span></div>
+                <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                  {confirmed.map(a=>(
+                    <span key={a.id} style={{background:'#d4f4e0',color:'#1a6b3a',padding:'4px 12px',borderRadius:16,fontSize:12,fontWeight:600}}>{a.vendor_name}{a.vendor_category ? ` · ${a.vendor_category}`:''}</span>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:8}}>Vendor Applications & Responses</h3>
       <div style={{fontSize:12,color:'#7a6a5a',marginBottom:16,lineHeight:1.5}}>Before accepting a vendor, confirm their insurance coverage, business licenses, and any details important to your event. All contracts and payments are handled directly between you and the vendor.</div>
       {loadingApps ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
       : applications.length === 0 ? (
-        <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p></div>
+        <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p><p style={{fontSize:13,color:'#a89a8a',maxWidth:400,margin:'8px auto 0'}}>Applications appear here when vendors find your event in the directory and apply. You can also <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:13,fontFamily:'inherit'}} onClick={()=>setTab('matches')}>browse and invite vendors</button> directly.</p></div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           {applications.map(a => {
@@ -5251,6 +5336,9 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const [myZip, setMyZip] = useState("");
   const [myRadius, setMyRadius] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
+  const [savedEvents, setSavedEvents] = useState(() => { try { return JSON.parse(localStorage.getItem('sjvm_saved_events')||'[]'); } catch { return []; } });
+  const toggleSave = (id) => { setSavedEvents(s => { const next = s.includes(id) ? s.filter(x=>x!==id) : [...s,id]; localStorage.setItem('sjvm_saved_events',JSON.stringify(next)); return next; }); };
+  const shareEvent = (opp) => { const url = window.location.origin; const text = `${opp.eventName} — ${fmtDate(opp.date)} in ${getCityFromZip(opp.zip)||'South Jersey'}`; if (navigator.share) navigator.share({title:opp.eventName,text,url}).catch(()=>{}); else { navigator.clipboard.writeText(`${text}\n${url}`).then(()=>alert('Event link copied!')).catch(()=>{}); } };
   const [vendorsByEvent, setVendorsByEvent] = useState({});
   const [loadingVendors, setLoadingVendors] = useState({});
   const todayStr = new Date().toISOString().split('T')[0];
@@ -5363,7 +5451,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                   <div style={{display:'flex',flexWrap:'wrap',gap:'12px 24px',marginBottom:12}}>
                     <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Date </span><span style={{fontSize:14,fontWeight:500}}>{fmtDate(opp.date)}</span></div>
                     {(opp.startTime || opp.endTime) && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Time </span><span style={{fontSize:14,fontWeight:500}}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</span></div>}
-                    <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)} mi away` : ''}</span></div>
+                    <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>{getCityFromZip(opp.zip) || 'Zip '+opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)} mi away` : ''}</span></div>
                     {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
                     {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
                   </div>
@@ -5390,6 +5478,11 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                       ))}
                     </div>
                   )}
+                </div>
+                {/* Save & Share */}
+                <div style={{borderTop:'1px solid #e8ddd0',padding:'10px 24px',display:'flex',gap:8}}>
+                  <button onClick={()=>toggleSave(opp.id)} style={{flex:1,background:savedEvents.includes(opp.id)?'#fdf4dc':'#f5f0ea',color:savedEvents.includes(opp.id)?'#7a5a10':'#7a6a5a',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{savedEvents.includes(opp.id)?'♥ Saved':'♡ Save'}</button>
+                  <button onClick={()=>shareEvent(opp)} style={{flex:1,background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>↗ Share</button>
                 </div>
               </div>
               );
@@ -5590,7 +5683,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                     <>
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14,paddingTop:14,borderTop:'1px solid #e8ddd0'}}>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Host</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.contactName}</div></div>
-                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>{getCityFromZip(opp.zip) || 'Zip '+opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots} available</div></div>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Contact</div><div style={{ fontSize:13, color:'#a89a8a' }}>🔒 Available after booking</div></div>
                       </div>
@@ -7619,6 +7712,8 @@ function MyCalendarPage({ authUser, vendorProfile, userEvents, setTab }) {
   const [vendorBookings, setVendorBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [blockedDates, setBlockedDates] = useState(() => { try { return JSON.parse(localStorage.getItem('sjvm_blocked_dates')||'[]'); } catch { return []; } });
+  const toggleBlockDate = (ds) => { setBlockedDates(bd => { const next = bd.includes(ds) ? bd.filter(d=>d!==ds) : [...bd,ds]; localStorage.setItem('sjvm_blocked_dates',JSON.stringify(next)); return next; }); };
 
   const today = new Date();
   const [viewYear, setViewYear] = useState(today.getFullYear());
@@ -7753,11 +7848,11 @@ function MyCalendarPage({ authUser, vendorProfile, userEvents, setTab }) {
             const isSel=ds===selectedDate;
             const info=dateMap[ds];
             return (
-              <div key={d} onClick={()=>info&&setSelectedDate(isSel?null:ds)}
+              <div key={d} onClick={()=>setSelectedDate(isSel?null:ds)}
                 style={{minHeight:70,borderRight:'1px solid #f0e8e0',borderBottom:'1px solid #f0e8e0',padding:'6px 4px',
-                  cursor:info?'pointer':'default',background:isSel?'#fdf9f5':'#fff',
+                  cursor:'pointer',background:blockedDates.includes(ds)?'#fdecea':isSel?'#fdf9f5':'#fff',
                   boxShadow:isToday?'inset 0 0 0 2px #c8a84b':'none'}}>
-                <div style={{fontSize:13,fontWeight:isToday?800:500,color:isToday?'#c8a84b':'#4a3a28',marginBottom:2}}>{d}</div>
+                <div style={{fontSize:13,fontWeight:isToday?800:500,color:blockedDates.includes(ds)?'#8b1a1a':isToday?'#c8a84b':'#4a3a28',marginBottom:2}}>{d}{blockedDates.includes(ds)?'⛔':''}</div>
                 {info && (
                   <div style={{display:'flex',flexDirection:'column',gap:2}}>
                     {info.hostEvents.map(e=>(
@@ -7789,12 +7884,19 @@ function MyCalendarPage({ authUser, vendorProfile, userEvents, setTab }) {
       </div>
 
       {/* Detail panel */}
-      {selectedDate && selectedInfo && (
+      {selectedDate && (
         <div style={{background:'#fff',borderRadius:12,border:'2px solid #c8a84b',padding:20,marginBottom:20}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:20,color:'#1a1410'}}>{fmtD(selectedDate)}</div>
-            <button onClick={()=>setSelectedDate(null)} style={{background:'#f5f0ea',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#7a6a5a',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            <div style={{display:'flex',gap:6}}>
+              {vendorProfile && (
+                <button onClick={()=>toggleBlockDate(selectedDate)} style={{background:blockedDates.includes(selectedDate)?'#d4f4e0':'#fdecea',color:blockedDates.includes(selectedDate)?'#1a6b3a':'#8b1a1a',border:'none',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{blockedDates.includes(selectedDate)?'✓ Unblock Date':'⛔ Block Date'}</button>
+              )}
+              <button onClick={()=>setSelectedDate(null)} style={{background:'#f5f0ea',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:12,fontWeight:600,cursor:'pointer',color:'#7a6a5a',fontFamily:'DM Sans,sans-serif'}}>Close</button>
+            </div>
           </div>
+          {blockedDates.includes(selectedDate) && <div style={{background:'#fdecea',borderRadius:6,padding:'8px 12px',marginBottom:12,fontSize:12,color:'#8b1a1a',fontWeight:600}}>This date is marked as unavailable</div>}
+          {selectedInfo && (<>
           {/* Host events on this date */}
           {selectedInfo.hostEvents.map(e=>(
             <div key={e.id} style={{background:'#1a1410',borderRadius:10,padding:'14px 18px',marginBottom:10}}>
@@ -7840,6 +7942,7 @@ function MyCalendarPage({ authUser, vendorProfile, userEvents, setTab }) {
               </div>
             </div>
           ))}
+      </>)}
         </div>
       )}
 
