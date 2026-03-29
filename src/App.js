@@ -4983,19 +4983,24 @@ function VendorApplyModal({ opp, onClose }) {
     setSubmitting(true);
     const responseToken = crypto.randomUUID();
     const payload = {
-      id: Date.now(), session_id: 'vendor-application',
+      session_id: 'vendor-application',
       vendor_id: form.vendorId || null, vendor_name: form.vendorName,
       vendor_emoji: '', vendor_category: form.category || '',
       host_name: opp.contactName, host_email: opp.contactEmail,
       event_name: opp.eventName, event_type: opp.eventType,
       event_zip: opp.zip, event_date: opp.date,
-      start_time: opp.startTime, end_time: opp.endTime,
+      start_time: opp.startTime || null, end_time: opp.endTime || null,
       address: '', attendance: '', vendor_count: String(opp.spots || ''),
-      budget: opp.boothFee || '', notes: form.message,
+      budget: opp.boothFee || '', notes: form.message || null,
       status: 'pending', sent_at: new Date().toISOString(),
       response_token: responseToken,
     };
-    const { error } = await supabase.from('booking_requests').insert(payload);
+    // Try insert; retry without columns that may not exist in older schemas
+    let { error } = await supabase.from('booking_requests').insert(payload);
+    if (error && (error.code === '42703' || error.message?.includes('column'))) {
+      const { response_token: _rt, ...fallback } = payload;
+      ({ error } = await supabase.from('booking_requests').insert(fallback));
+    }
     if (error) {
       console.error('Application error:', error);
       alert('Failed to submit application. Please try again.');
