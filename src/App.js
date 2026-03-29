@@ -6817,8 +6817,8 @@ function AppInner() {
     };
     let { data: newEvent, error: eventErr } = await supabase.from('events').insert(eventPayload).select().single();
     // Retry without newer columns if they don't exist yet
-    if (eventErr && (eventErr.code === '42703' || eventErr.code === 'PGRST204')) {
-      const { vendor_discovery: _vd, event_link: _el, ...fallback } = eventPayload;
+    if (eventErr && (eventErr.code === '42703' || eventErr.code === 'PGRST204' || eventErr.message?.includes('column'))) {
+      const { vendor_discovery: _vd, event_link: _el, vendor_notes: _vn, event_goer_notes: _egn, share_with_event_goers: _sweg, allow_duplicate_categories: _adc, allow_duplicate_subcategories: _ads, ...fallback } = eventPayload;
       ({ data: newEvent, error: eventErr } = await supabase.from('events').insert(fallback).select().single());
     }
     if (eventErr) {
