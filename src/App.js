@@ -826,7 +826,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
             <option value="10+">10+ years</option>
           </select>
         </div>
-        <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special..." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
+        <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special. If you offer both products and services, describe them both here — or create separate listings for each from your dashboard." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
       </div>
 
       <hr className="form-divider" />
@@ -867,6 +867,12 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           {form.vendorType.service && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
         </div>
       </div>
+
+      {form.vendorType.market && form.vendorType.service && (
+        <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:13,color:'#1a4a6b',lineHeight:1.5}}>
+          <strong>Tip:</strong> If your products and services are separate businesses (e.g. jewelry + live music), we recommend creating a separate listing for each. You'll get better matches and hosts can find you more easily. You can add more listings anytime from your dashboard.
+        </div>
+      )}
 
       {form.vendorType.market && (
         <>
@@ -929,13 +935,6 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginTop:16,marginBottom:8}}>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:12}}>Your Rate & Availability</div>
             <div className="form-grid" style={{gap:10}}>
-              <div className="form-group"><label>Primary Service Type *</label>
-                <select value={form.serviceType} onChange={e=>set('serviceType',e.target.value)}>
-                  <option value="">Select your service...</option>
-                  {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
-                </select>
-                {form.serviceType==='Other' && <input placeholder="Describe your service..." value={form.serviceTypeOther||''} onChange={e=>set('serviceTypeOther',e.target.value)} style={{marginTop:6,width:'100%',border:'1.5px solid #c8a84b',borderRadius:8,padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',boxSizing:'border-box',outline:'none',background:'#fdf9f5'}} />}
-              </div>
               <div className="form-group"><label>Minimum Booking Duration</label>
                 <select value={form.minBookingDuration} onChange={e=>set('minBookingDuration',e.target.value)}>
                   {SERVICE_DURATIONS.map(d=><option key={d}>{d}</option>)}
@@ -2240,7 +2239,7 @@ function UnifiedDashboardCalendar({ authUser, vendorProfile, userEvents, setTab 
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
+function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
   const [requests, setRequests] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
@@ -2437,6 +2436,40 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
 
+      {/* Profile switcher for multi-listing vendors */}
+      {allVendorProfiles && allVendorProfiles.length > 1 && (
+        <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',marginBottom:20}}>
+          <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Your Listings</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {allVendorProfiles.map(p => (
+              <button key={p.id} onClick={()=>setVendorProfile(p)}
+                style={{padding:'8px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',
+                  border: vendorProfile?.id===p.id ? '2px solid #c8a850' : '1px solid #e8ddd0',
+                  background: vendorProfile?.id===p.id ? '#fdf9f0' : '#fff',
+                  color:'#1a1410',transition:'all 0.15s'}}>
+                {p.name}{vendorProfile?.id===p.id && <span style={{marginLeft:6,fontSize:11,color:'#c8a850'}}>Active</span>}
+              </button>
+            ))}
+            <button onClick={()=>{setTab('vendor');window.scrollTo({top:0});}}
+              style={{padding:'8px 16px',borderRadius:8,fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',
+                border:'1px dashed #c8a850',background:'none',color:'#c8a850'}}>
+              + Add Listing
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Single listing — add another prompt */}
+      {allVendorProfiles && allVendorProfiles.length === 1 && (
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 16px',marginBottom:20,flexWrap:'wrap',gap:8}}>
+          <span style={{fontSize:13,color:'#7a6a5a'}}>Have another business or service?</span>
+          <button onClick={()=>{setTab('vendor');window.scrollTo({top:0});}}
+            style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'5px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',whiteSpace:'nowrap'}}>
+            + Add Another Listing
+          </button>
+        </div>
+      )}
+
       {saveSuccess && (
         <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:24,textAlign:'center',animation:'fadeIn 0.3s ease'}}>
           <div style={{fontSize:16,fontWeight:700,color:'#1a6b3a'}}>Changes submitted for review successfully!</div>
@@ -2520,12 +2553,6 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
                       </div>
                     </div>
                   )}
-                  <div className="form-group"><label>Primary Service</label>
-                    <select value={editForm.serviceType} onChange={e=>ef('serviceType',e.target.value)}>
-                      <option value="">Select...</option>
-                      {SERVICE_TYPES.map(t=><option key={t}>{t}</option>)}
-                    </select>
-                  </div>
                   <div className="form-group"><label>Rate Type</label>
                     <select value={editForm.serviceRateType} onChange={e=>ef('serviceRateType',e.target.value)}>
                       <option value="fixed">Fixed Rate</option>
@@ -5524,7 +5551,8 @@ function AppInner() {
   const openSignup = (role) => { setAuthModalMode('signup'); setAuthModalRole(role||null); setShowAuthModal(true); };
   const openLogin = () => { setAuthModalMode(null); setAuthModalRole(null); setShowAuthModal(true); };
   const [authEmail, setAuthEmail] = useState('');
-  const [vendorProfile, setVendorProfile] = useState(null); // raw DB row for logged-in vendor
+  const [vendorProfile, setVendorProfile] = useState(null); // active vendor profile (raw DB row)
+  const [allVendorProfiles, setAllVendorProfiles] = useState([]); // all vendor profiles for this user
   const [userEvents, setUserEvents] = useState([]); // raw DB rows for logged-in host
   const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email?.toLowerCase());
 
@@ -5580,24 +5608,27 @@ function AppInner() {
 
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
-    if (!authUser) { setVendorProfile(null); setUserEvents([]); setEventGoerProfile(null); return; }
+    if (!authUser) { setVendorProfile(null); setAllVendorProfiles([]); setUserEvents([]); setEventGoerProfile(null); return; }
     // Check if user is an event guest
     supabase.from('event_goers').select('*').eq('email', authUser.email).limit(1).single()
       .then(({ data }) => { if (data) setEventGoerProfile(data); });
-    // Find vendor linked to this user
-    supabase.from('vendors').select('*').eq('user_id', authUser.id).limit(1).single()
-      .then(({ data }) => { if (data) setVendorProfile(data); });
-    // Also check by email if not linked yet (case-insensitive for iCloud/etc)
-    supabase.from('vendors').select('*').ilike('contact_email', authUser.email).limit(1).single()
-      .then(({ data }) => {
-        if (data && !data.user_id) {
-          // Link existing vendor to this auth user
-          supabase.from('vendors').update({ user_id: authUser.id }).eq('id', data.id).then(() => {});
-          setVendorProfile(data);
-        } else if (data) {
-          setVendorProfile(p => p || data);
+    // Find ALL vendor profiles linked to this user (by user_id or email)
+    (async () => {
+      const profiles = [];
+      const { data: byId } = await supabase.from('vendors').select('*').eq('user_id', authUser.id);
+      if (byId) profiles.push(...byId);
+      const { data: byEmail } = await supabase.from('vendors').select('*').ilike('contact_email', authUser.email);
+      if (byEmail) {
+        for (const v of byEmail) {
+          if (!profiles.some(p => p.id === v.id)) {
+            if (!v.user_id) { supabase.from('vendors').update({ user_id: authUser.id }).eq('id', v.id).then(() => {}); }
+            profiles.push(v);
+          }
         }
-      });
+      }
+      setAllVendorProfiles(profiles);
+      if (profiles.length > 0) setVendorProfile(p => p || profiles[0]);
+    })();
     // Find events linked to this user
     supabase.from('events').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
       .then(({ data }) => { if (data) setUserEvents(data); });
@@ -6061,7 +6092,7 @@ function AppInner() {
       serviceCategories: form.serviceCategories || [],
       serviceSubcategories: form.serviceSubcategories || [],
       isServiceProvider: form.vendorType?.service || form.isServiceProvider || false,
-      serviceType: form.serviceType || null,
+      serviceType: form.serviceType || form.serviceSubcategories?.[0] || form.serviceCategories?.[0] || null,
       serviceRateMin: form.serviceRateMin || null,
       serviceRateMax: form.serviceRateMax || null,
       serviceRateType: form.serviceRateType || 'fixed',
@@ -6542,13 +6573,22 @@ function AppInner() {
                     </div>
                   ))}
                 </div>
-                <button className="btn-submit" style={{ marginTop:20 }} onClick={()=>{setVendorSuccess(false);setVendorConfirm(null);}}>Submit Another Profile</button>
+                <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:10,padding:'16px 20px',marginTop:24}}>
+                  <div style={{fontWeight:700,fontSize:15,color:'#1a4a6b',marginBottom:6}}>Have another business or service?</div>
+                  <p style={{fontSize:13,color:'#1a4a6b',lineHeight:1.6,margin:'0 0 12px'}}>You can create multiple listings under one account — one for each thing you offer. Each listing gets its own categories, photos, pricing, and event matches.</p>
+                  <button style={{background:'#1a4a6b',color:'#fff',border:'none',borderRadius:6,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}} onClick={()=>{setVendorSuccess(false);setVendorConfirm(null);}}>+ Add Another Listing</button>
+                </div>
               </>
             ) : (
               <>
                 <div className="section-title">Vendor Registration</div>
                 <p className="section-sub">Join South Jersey's growing vendor community and get matched with events near you.</p>
-                <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
+                {authUser && vendorProfile && (
+      <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:10,padding:'16px 20px',marginBottom:20,fontSize:14,color:'#1a4a6b',lineHeight:1.6}}>
+        <strong>Adding another listing?</strong> This will create a separate profile under your account. Each listing gets its own categories, photos, and pricing — perfect if you offer different products or services.
+      </div>
+    )}
+    <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
               </>
             )}
           </div>
@@ -6604,7 +6644,7 @@ function AppInner() {
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
