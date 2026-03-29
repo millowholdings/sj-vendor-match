@@ -2302,16 +2302,21 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       // Check if conversation already exists
       const existing = conversations?.find(c => c.id === convoId);
       if (existing) { if (setActiveConvoId) setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
-      // Create system message in Supabase
+      // Create two system messages so both vendor and host can find this conversation
       const recipientId = hostUserId || user.id;
-      await supabase.from('messages').insert({
+      const sysMsg = {
         conversation_id: convoId,
         sender_id: 'system', sender_type: 'system',
-        recipient_id: recipientId, recipient_type: 'host',
         event_name: request.event_name || '',
         message_text: `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`,
         is_read: true,
-      });
+      };
+      // Message visible to host (recipient = host)
+      await supabase.from('messages').insert({ ...sysMsg, recipient_id: recipientId, recipient_type: 'host' });
+      // Message visible to vendor (recipient = vendor) so loadMessages finds it
+      if (recipientId !== user.id) {
+        await supabase.from('messages').insert({ ...sysMsg, recipient_id: user.id, recipient_type: 'vendor' });
+      }
       const newConvo = {
         id: convoId, vendorId: vendorId, vendorName: vendorProfile?.name || '',
         vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
