@@ -4525,7 +4525,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     <div style={{gridColumn:'1/-1'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Categories Needed:</span> {(evt.categoriesNeeded||[]).join(', ') || '—'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Same Category:</span> {evt.allowDuplicateCategories ? '✓ Multiple vendors OK' : '✗ One per category'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Same Subcategory:</span> {evt.allowDuplicateSubcategories ? '✓ Multiple OK' : '✗ One per specialty'}</div>
-                    {evt.notes && <div style={{gridColumn:'1/-1',background:'#fdf9f5',borderRadius:6,padding:'8px 12px',borderLeft:'3px solid #e8c97a'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Host Notes:</span><div style={{fontSize:13,color:'#1a1410',marginTop:4}}>{evt.notes}</div></div>}
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Vendor Discovery:</span> {evt.vendorDiscovery==='both'?'Browse + Apply':evt.vendorDiscovery==='browse'?'Browse Only':evt.vendorDiscovery==='apply'?'Applications Only':'Both'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Visible to Guests:</span> {evt.shareWithEventGoers===false ? 'No — vendors only' : 'Yes'}</div>
+                    {(evt.vendorNotes || evt.notes) && <div style={{gridColumn:'1/-1',background:'#fdf9f5',borderRadius:6,padding:'8px 12px',borderLeft:'3px solid #e8c97a'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Vendor Notes:</span><div style={{fontSize:13,color:'#1a1410',marginTop:4}}>{evt.vendorNotes || evt.notes}</div></div>}
+                    {evt.eventGoerNotes && <div style={{gridColumn:'1/-1',background:'#fdf9f5',borderRadius:6,padding:'8px 12px',borderLeft:'3px solid #1a6b3a'}}><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Guest Notes:</span><div style={{fontSize:13,color:'#1a1410',marginTop:4}}>{evt.eventGoerNotes}</div></div>}
                   </div>
                   {/* Services Needed */}
                   {evt.servicesNeeded && evt.servicesNeeded.length > 0 && (
@@ -4652,13 +4655,18 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Events ({opps.length})</h3>
       {opps.length===0
         ? <div className="empty-state"><div className="big">&#128221;</div><p>No live events yet.</p></div>
-        : <table className="admin-table">
-            <thead><tr><th>Event</th><th>Type</th><th>Zip</th><th>Date</th><th>Source</th><th>Status</th><th>Actions</th></tr></thead>
+        : <div style={{overflowX:'auto'}}><table className="admin-table">
+            <thead><tr><th>Event</th><th>Type</th><th>Date</th><th>Location</th><th>Host</th><th>Spots</th><th>Fee</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredOpps.map(o=>(
-                <tr key={o.id} style={o.source==='Concierge Request'?{background:'#fdf9f0'}:{}}>
-                  <td><strong>{o.eventName}</strong>{o.eventLink && <a href={o.eventLink} target="_blank" rel="noopener noreferrer" style={{marginLeft:6,fontSize:11,color:'#1a4a6b'}}>🔗</a>}</td><td>{o.eventType}</td><td>{o.zip}</td>
-                  <td>{fmtDate(o.date)}</td><td>{o.source}</td>
+                <tr key={o.id}>
+                  <td><strong>{o.eventName}</strong>{o.eventLink && <a href={o.eventLink} target="_blank" rel="noopener noreferrer" style={{marginLeft:6,fontSize:11,color:'#1a4a6b'}}>🔗</a>}{o.shareWithEventGoers===false && <span style={{marginLeft:4,fontSize:9,color:'#7a5a10',background:'#fdf4dc',padding:'1px 5px',borderRadius:4}}>Private</span>}</td>
+                  <td style={{fontSize:12}}>{o.eventType}</td>
+                  <td style={{fontSize:12,whiteSpace:'nowrap'}}>{fmtDate(o.date)}</td>
+                  <td style={{fontSize:12}}>Zip {o.zip}</td>
+                  <td style={{fontSize:12}}>{o.contactName}<br/><span style={{color:'#a89a8a',fontSize:10}}>{o.contactEmail}</span></td>
+                  <td>{o.spots||'—'}</td>
+                  <td style={{fontSize:12}}>{o.boothFee||'Free'}</td>
                   <td>{eventStatusPill(o.status)}</td>
                   <td style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                     <button onClick={()=>{setAdminEditForm({event_name:o.eventName,date:o.date,zip:o.zip,event_type:o.eventType,booth_fee:o.boothFee||''});setEditingAdminEntity({type:'event',id:o.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
@@ -4668,7 +4676,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
       }
 
       {/* ── Approved Vendors ────────────────────────────────── */}
@@ -4707,6 +4715,13 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Radius:</span> {v.radius}mi</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Insurance:</span> {v.insurance?'✓ Yes':'No'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Years:</span> {v.yearsActive||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Setup Time:</span> {v.setupTime ? v.setupTime+' min' : '—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Table/Space:</span> {v.tableSize||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Electric:</span> {v.needsElectric?'Yes':'No'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Response Time:</span> {v.responseTime||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Booking Lead:</span> {v.bookingLeadTime||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Event Frequency:</span> {v.eventFrequency||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Max Booth Fee:</span> {v.price||'—'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Categories:</span> {(v.allCategories||[v.category]).join(', ')}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Subcategories:</span> {(v.subcategories||[]).join(', ')||'—'}</div>
                     </div>
