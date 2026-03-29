@@ -3719,7 +3719,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal }) {
   const [showProfile, setShowProfile] = useState(false);
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
@@ -3827,7 +3827,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             )
           )}
           {!hostEvent && openMessage && authUser && (
-            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>openMessage(v)}>
+            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>setInquiryModal && setInquiryModal({vendor:v})}>
               💬 Message Vendor
             </button>
           )}
@@ -3927,7 +3927,7 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal }) {
+function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, setInquiryModal }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterVendorType, setFilterVendorType] = useState('');
@@ -4054,7 +4054,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} setInquiryModal={setInquiryModal} />)}</div>
       }
 
       {hasZip && outRange.length>0 && (
@@ -6031,6 +6031,7 @@ function AppInner() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [inquiryModal, setInquiryModal] = useState(null); // { vendor } — for messaging without an event
   const navTo = (t) => { setTab(t); setMobileMenuOpen(false); window.scrollTo({top:0}); };
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
@@ -6346,29 +6347,52 @@ function AppInner() {
     openMessage(vendor);
   };
 
-  const openMessage = async (vendor) => {
+  const openMessage = async (vendor, inquiryType, inquiryMessage) => {
     const uid = authUser?.id || 'anon';
     const convoId = `${uid}_${vendor.id}`;
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
+    const hasEvent = !!hostEvent?.eventName;
+    const contextLabel = hasEvent ? hostEvent.eventName : (inquiryType || 'General Inquiry');
     // Create system message in Supabase
+    const sysText = hasEvent
+      ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
+      : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
     await supabase.from('messages').insert({
       conversation_id: convoId,
       sender_id: 'system', sender_type: 'system',
       recipient_id: uid, recipient_type: 'host',
-      event_name: hostEvent?.eventName || '',
-      message_text: `Conversation started with ${vendor.name}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`,
+      event_name: hasEvent ? hostEvent.eventName : contextLabel,
+      message_text: sysText,
       is_read: true,
+    });
+    // Also create vendor-visible copy so both sides find the conversation
+    await supabase.from('messages').insert({
+      conversation_id: convoId,
+      sender_id: 'system', sender_type: 'system',
+      recipient_id: vendor.id, recipient_type: 'vendor',
+      event_name: hasEvent ? hostEvent.eventName : contextLabel,
+      message_text: sysText,
+      is_read: false,
     });
     const newConvo = {
       id: convoId, vendorId: vendor.id, vendorName: vendor.name,
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
-      hostName: authUser?.email || 'Host', eventName: hostEvent?.eventName || '', status: 'active',
-      messages: [{ id: Date.now(), from: 'system', text: `Conversation started with ${vendor.name}.`, ts: new Date().toISOString() }],
+      hostName: authUser?.email || 'Host', eventName: hasEvent ? hostEvent.eventName : contextLabel, status: 'active',
+      messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
     };
     setConversations(c => [newConvo, ...c]);
     setActiveConvoId(convoId);
     setTab("messages");
+    // Send vendor email notification for no-event inquiries
+    if (!hasEvent) {
+      const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
+      if (vendorRow?.contact_email) {
+        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name:'South Jersey Vendor Market', email:'noreply@southjerseyvendormarket.com', to: vendorRow.contact_email, subject:`New inquiry from a host — ${contextLabel}`, message:`Hi ${vendorRow.contact_name || vendor.name},\n\nA host has sent you a message on South Jersey Vendor Market.\n\nInquiry type: ${contextLabel}${inquiryMessage ? '\nMessage: '+inquiryMessage : ''}\n\nLog in to your vendor dashboard to view and reply.\n\n— South Jersey Vendor Market` }),
+        }).catch(e=>console.error('API call failed:',e));
+      }
+    }
   };
 
   const handleVendorSubmit = async (form, files = {}) => {
@@ -6995,7 +7019,7 @@ function AppInner() {
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">Log in to browse and message vendors. <button onClick={()=>setShowAuthModal(true)} style={{background:'none',border:'none',color:'#e8c97a',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}}>Log in or sign up</button></p></div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
-            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
+            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} setInquiryModal={setInquiryModal} />)}
         {tab==="upcoming-markets" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
@@ -7027,7 +7051,43 @@ function AppInner() {
       {showContactModal && <ContactModal onClose={()=>setShowContactModal(false)} userName={authUser?.user_metadata?.full_name||''} userEmail={authUser?.email||''} />}
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
       {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} defaultEmail={authUser?.email||''} defaultName={vendorProfile?.contact_name||''} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); if(authUser) supabase.from('event_goers').select('*').eq('email',authUser.email).limit(1).single().then(({data})=>{if(data)setEventGoerProfile(data);}); }} />}
+      {inquiryModal && <InquiryModal vendor={inquiryModal.vendor} onClose={()=>setInquiryModal(null)} onSend={(type,msg)=>{openMessage(inquiryModal.vendor,type,msg);setInquiryModal(null);}} />}
     </>
+  );
+}
+
+function InquiryModal({ vendor, onClose, onSend }) {
+  const [inquiryType, setInquiryType] = useState('');
+  const [message, setMessage] = useState('');
+  const types = ['Planning a Future Event','Checking Availability','General Inquiry'];
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:460,width:'100%',overflow:'hidden'}}>
+        <div style={{background:'#1a1410',padding:'20px 24px'}}>
+          <div style={{fontSize:14,color:'#a89a8a'}}>Message Vendor</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{vendor?.name}</div>
+        </div>
+        <div style={{padding:'24px'}}>
+          <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:10}}>What is this inquiry about?</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:16}}>
+            {types.map(t=>(
+              <button key={t} onClick={()=>setInquiryType(t)} style={{textAlign:'left',padding:'10px 14px',borderRadius:8,border:inquiryType===t?'2px solid #c8a850':'1px solid #e8ddd0',background:inquiryType===t?'#fdf9f0':'#fff',cursor:'pointer',fontSize:14,fontWeight:inquiryType===t?600:400,color:'#1a1410',fontFamily:'DM Sans,sans-serif'}}>{t}</button>
+            ))}
+          </div>
+          <div className="form-group" style={{marginBottom:16}}>
+            <label>Message (optional)</label>
+            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={3} placeholder="Tell the vendor what you're looking for..." style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'10px 14px',fontSize:14,fontFamily:'DM Sans,sans-serif',resize:'vertical',outline:'none',boxSizing:'border-box'}} />
+          </div>
+          <div style={{fontSize:11,color:'#a89a8a',marginBottom:16,lineHeight:1.5}}>
+            Vendor contact info is not shared through general messaging. Contact details are only revealed after an accepted booking on a posted event.
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button disabled={!inquiryType} onClick={()=>onSend(inquiryType,message)} style={{flex:2,background:inquiryType?'#1a1410':'#e8ddd0',color:inquiryType?'#e8c97a':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:inquiryType?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>Send Message</button>
+            <button onClick={onClose} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -7386,8 +7446,8 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                 ➤
               </button>
             </div>
-            <div style={{ fontSize:11, color:'#a89a8a', marginTop:6 }}>
-              📎 Share documents, images, or links · 💡 All conversations are protected under the Non-Circumvention Agreement.
+            <div style={{ fontSize:11, color:'#a89a8a', marginTop:6, lineHeight:1.5 }}>
+              📎 Share documents, images, or links<br/>This conversation is protected under the <strong>South Jersey Vendor Market Non-Circumvention Agreement</strong>. Vendor contact info is shared only after an accepted booking on a posted event.
             </div>
           </div>
         </div>
