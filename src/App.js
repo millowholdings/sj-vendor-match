@@ -2286,41 +2286,46 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
 
   // Open or create a conversation with a host from a booking request
   const messageHost = async (request) => {
-    // Look up host's user_id from events table
-    let hostUserId = null;
-    if (request.event_name) {
-      const { data } = await supabase.from('events').select('user_id').eq('event_name', request.event_name).limit(1);
-      hostUserId = data?.[0]?.user_id;
+    try {
+      // Look up host's user_id from events table
+      let hostUserId = null;
+      if (request.event_name) {
+        const { data } = await supabase.from('events').select('user_id').eq('event_name', request.event_name).limit(1);
+        hostUserId = data?.[0]?.user_id;
+      }
+      if (!hostUserId && request.host_email) {
+        const { data } = await supabase.from('events').select('user_id').ilike('contact_email', request.host_email).limit(1);
+        hostUserId = data?.[0]?.user_id;
+      }
+      const vendorId = vendorProfile?.id || user.id;
+      const convoId = hostUserId ? `${hostUserId}_${vendorId}` : `${user.id}_host_${(request.host_email||'').replace(/[^a-z0-9]/gi,'')}`;
+      // Check if conversation already exists
+      const existing = conversations?.find(c => c.id === convoId);
+      if (existing) { if (setActiveConvoId) setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
+      // Create system message in Supabase
+      const recipientId = hostUserId || user.id;
+      await supabase.from('messages').insert({
+        conversation_id: convoId,
+        sender_id: 'system', sender_type: 'system',
+        recipient_id: recipientId, recipient_type: 'host',
+        event_name: request.event_name || '',
+        message_text: `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`,
+        is_read: true,
+      });
+      const newConvo = {
+        id: convoId, vendorId: vendorId, vendorName: vendorProfile?.name || '',
+        vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
+        hostName: request.host_name || request.host_email || 'Host', eventName: request.event_name || '', status: 'active',
+        messages: [{ id: Date.now(), from: 'system', text: `Conversation started about ${request.event_name || 'an event'}.`, ts: new Date().toISOString() }],
+      };
+      if (setConversations) setConversations(c => [newConvo, ...c]);
+      if (setActiveConvoId) setActiveConvoId(convoId);
+      setTab('messages'); window.scrollTo({top:0});
+    } catch (err) {
+      console.error('messageHost error:', err);
+      // Fallback: just navigate to messages
+      setTab('messages'); window.scrollTo({top:0});
     }
-    if (!hostUserId && request.host_email) {
-      // Fallback: look up by email in auth (via events contact_email)
-      const { data } = await supabase.from('events').select('user_id').ilike('contact_email', request.host_email).limit(1);
-      hostUserId = data?.[0]?.user_id;
-    }
-    // Create conversation_id: {hostUserId}_{vendorId} to match host-initiated format
-    const vendorId = vendorProfile?.id || user.id;
-    const convoId = hostUserId ? `${hostUserId}_${vendorId}` : `host_${request.host_email}_${vendorId}`;
-    // Check if conversation already exists
-    const existing = conversations?.find(c => c.id === convoId);
-    if (existing) { setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
-    // Create system message in Supabase
-    await supabase.from('messages').insert({
-      conversation_id: convoId,
-      sender_id: 'system', sender_type: 'system',
-      recipient_id: hostUserId || 'unknown', recipient_type: 'host',
-      event_name: request.event_name || '',
-      message_text: `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`,
-      is_read: true,
-    }).catch(e=>console.error('Message create error:',e));
-    const newConvo = {
-      id: convoId, vendorId: vendorId, vendorName: vendorProfile?.name || '',
-      vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
-      hostName: request.host_name || request.host_email || 'Host', eventName: request.event_name || '', status: 'active',
-      messages: [{ id: Date.now(), from: 'system', text: `Conversation started about ${request.event_name || 'an event'}.`, ts: new Date().toISOString() }],
-    };
-    if (setConversations) setConversations(c => [newConvo, ...c]);
-    if (setActiveConvoId) setActiveConvoId(convoId);
-    setTab('messages'); window.scrollTo({top:0});
   };
 
   const saveProfile = async () => {
