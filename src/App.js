@@ -2250,7 +2250,7 @@ function UnifiedDashboardCalendar({ authUser, vendorProfile, userEvents, setTab 
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
+function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile, conversations, setConversations, setActiveConvoId }) {
   const [requests, setRequests] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
@@ -2283,6 +2283,45 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
   const [editForm, setEditForm] = useState(initEditForm);
   const ef = (k,v) => setEditForm(f=>({...f,[k]:v}));
   const SIGNIFICANT_FIELDS = ['home_zip','radius'];
+
+  // Open or create a conversation with a host from a booking request
+  const messageHost = async (request) => {
+    // Look up host's user_id from events table
+    let hostUserId = null;
+    if (request.event_name) {
+      const { data } = await supabase.from('events').select('user_id').eq('event_name', request.event_name).limit(1);
+      hostUserId = data?.[0]?.user_id;
+    }
+    if (!hostUserId && request.host_email) {
+      // Fallback: look up by email in auth (via events contact_email)
+      const { data } = await supabase.from('events').select('user_id').ilike('contact_email', request.host_email).limit(1);
+      hostUserId = data?.[0]?.user_id;
+    }
+    // Create conversation_id: {hostUserId}_{vendorId} to match host-initiated format
+    const vendorId = vendorProfile?.id || user.id;
+    const convoId = hostUserId ? `${hostUserId}_${vendorId}` : `host_${request.host_email}_${vendorId}`;
+    // Check if conversation already exists
+    const existing = conversations?.find(c => c.id === convoId);
+    if (existing) { setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
+    // Create system message in Supabase
+    await supabase.from('messages').insert({
+      conversation_id: convoId,
+      sender_id: 'system', sender_type: 'system',
+      recipient_id: hostUserId || 'unknown', recipient_type: 'host',
+      event_name: request.event_name || '',
+      message_text: `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`,
+      is_read: true,
+    }).catch(e=>console.error('Message create error:',e));
+    const newConvo = {
+      id: convoId, vendorId: vendorId, vendorName: vendorProfile?.name || '',
+      vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
+      hostName: request.host_name || request.host_email || 'Host', eventName: request.event_name || '', status: 'active',
+      messages: [{ id: Date.now(), from: 'system', text: `Conversation started about ${request.event_name || 'an event'}.`, ts: new Date().toISOString() }],
+    };
+    if (setConversations) setConversations(c => [newConvo, ...c]);
+    if (setActiveConvoId) setActiveConvoId(convoId);
+    setTab('messages'); window.scrollTo({top:0});
+  };
 
   const saveProfile = async () => {
     setSaving(true);
@@ -2775,7 +2814,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
                   <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                     <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
                     <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                    <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+                    <button onClick={()=>messageHost(r)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
                   </div>
                 </div>
               </div>
@@ -2830,7 +2869,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
               </div>
               <div style={{display:'flex',gap:6,alignItems:'center'}}>
                 <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Confirmed</span>
-                <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+                <button onClick={()=>messageHost(a)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
               </div>
             </div>
           ))}
@@ -6940,7 +6979,7 @@ function AppInner() {
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} />}
         {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
