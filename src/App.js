@@ -9,31 +9,33 @@ const ADMIN_EMAILS = ['tiffany@southjerseyvendormarket.com', 'tiffany@subtlebouj
 const CATEGORIES = [
   "Food & Beverage", "Jewelry & Accessories", "Art & Prints", "Candles & Home Decor",
   "Clothing & Apparel", "Beauty & Skincare", "Plants & Floral", "Crafts & Handmade",
-  "Health & Wellness", "Kids & Baby", "Pet Products", "Photography & Media",
-  "Wedding & Bridal", "Baby & Maternity", "Party & Event Decor", "Personalized Gifts",
-  "Vintage & Thrift", "Spiritual & Metaphysical", "Entertainment", "Other"
+  "Health & Wellness", "Kids, Baby & Maternity", "Pet Products",
+  "Wedding & Events", "Personalized Gifts",
+  "Vintage & Thrift", "Spiritual & Metaphysical"
 ];
 
 const SUBCATEGORIES = {
-  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Wine & Spirits", "Craft Beer & Brewery", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie", "Other"],
-  "Jewelry & Accessories": ["Earrings", "Necklaces & Pendants", "Bracelets & Bangles", "Rings", "Hair Accessories", "Bags & Purses", "Permanent", "Charm", "Custom/Personalized", "Handmade", "Other"],
+  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Wine & Spirits", "Craft Beer & Brewery", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie", "Honey & Farm Products", "Other"],
+  "Jewelry & Accessories": ["Earrings", "Necklaces & Pendants", "Bracelets & Bangles", "Rings", "Hair Accessories", "Bags & Purses", "Permanent", "Charm", "Handmade", "Other"],
   "Art & Prints": ["Illustrations & Drawing", "Paintings", "Digital Prints", "Custom Portraits", "Stickers & Postcards", "Mixed Media", "Other"],
   "Candles & Home Decor": ["Soy Candles", "Wax Melts", "Diffusers & Oils", "Wall Art", "Throw Pillows", "Seasonal Decor", "Other"],
   "Clothing & Apparel": ["T-Shirts & Hoodies", "Dresses & Skirts", "Kids Clothing", "Hats & Beanies", "Activewear", "Custom/Personalized", "Other"],
   "Beauty & Skincare": ["Skincare & Serums", "Body Butters & Lotions", "Lip Care", "Hair Care", "Bath Products", "Makeup & Cosmetics", "Injectibles", "Other"],
   "Plants & Floral": ["Succulents & Cacti", "Tropical Plants", "Floral Arrangements", "Dried Florals", "Seeds & Bulbs", "Terrariums", "Other"],
-  "Crafts & Handmade": ["Woodwork", "Ceramics & Pottery", "Knit & Crochet", "Resin Art", "Macrame", "Paper Crafts", "Charcuterie", "Invitations", "Custom", "Other"],
-  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Yoga", "Personal Training", "Physical Therapy", "Other"],
-  "Kids & Baby": ["Toys & Games", "Clothing", "Nursery Decor", "Books", "Personalized Gifts", "Educational", "Other"],
+  "Crafts & Handmade": ["Woodwork", "Ceramics & Pottery", "Knit & Crochet", "Resin Art", "Macrame", "Paper Crafts", "Custom", "Other"],
+  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Yoga", "Personal Training", "Physical Therapy", "CBD & Hemp", "Natural Remedies & Tinctures", "Aromatherapy", "Other"],
+  "Kids, Baby & Maternity": ["Toys & Games", "Clothing", "Nursery Decor", "Books", "Personalized Gifts", "Educational", "Baby Shower Favors", "Maternity Apparel", "Gender Reveal Items", "Milestone Keepsakes", "Other"],
   "Pet Products": ["Treats & Food", "Toys", "Collars & Leashes", "Grooming", "Apparel", "Beds & Accessories", "Other"],
-  "Photography & Media": ["Event Photography", "Portrait Sessions", "Digital Downloads", "Prints & Albums", "Video Services", "Headshots", "Other"],
-  "Wedding & Bridal": ["Bridal Accessories", "Wedding Favors", "Bridesmaid Gifts", "Vow Books & Stationery", "Bridal Robes & Apparel", "Wedding Decor", "Custom Veils & Hair Accessories", "Other"],
-  "Baby & Maternity": ["Baby Shower Favors", "Nursery Decor", "Baby Clothing & Accessories", "Maternity Apparel", "Gender Reveal Items", "Milestone Keepsakes", "Custom Baby Gifts", "Other"],
-  "Party & Event Decor": ["Balloon Arrangements", "Table Centerpieces", "Backdrops & Banners", "Custom Signage", "Party Favors", "Themed Decorations", "Photo Booth Props", "Other"],
-  "Personalized Gifts": ["Custom Tumblers & Cups", "Engraved Items", "Embroidered Goods", "Custom Jewelry", "Monogrammed Gifts", "Photo Gifts", "Name & Word Art", "Wine Charms", "Other"],
+  "Wedding & Events": ["Bridal Accessories", "Wedding Favors", "Bridesmaid Gifts", "Vow Books & Stationery", "Bridal Robes & Apparel", "Wedding Decor", "Custom Veils & Hair Accessories", "Balloon Arrangements", "Table Centerpieces", "Backdrops & Banners", "Custom Signage", "Party Favors", "Themed Decorations", "Photo Booth Props", "Other"],
+  "Personalized Gifts": ["Custom Tumblers & Cups", "Engraved Items", "Embroidered Goods", "Monogrammed Gifts", "Photo Gifts", "Name & Word Art", "Wine Charms", "Other"],
   "Vintage & Thrift": ["Vintage Clothing", "Antiques & Collectibles", "Vintage Jewelry", "Upcycled Goods", "Retro Home Decor", "Vinyl & Media", "Other"],
   "Spiritual & Metaphysical": ["Crystals & Gemstones", "Tarot & Oracle Cards", "Sage & Cleansing", "Spiritual Jewelry", "Meditation & Mindfulness", "Altar Supplies", "Other"],
-  "Entertainment": ["Solo Acoustic Artist", "Acoustic Duo", "Full Band", "DJ (with MC)", "DJ (Music Only)", "Self DJ Rental", "Cover Band", "Jazz Ensemble", "Classical/String Quartet", "Karaoke Host", "Comedian/Stand-Up", "Magician", "Caricature Artist", "Photo Booth Operator", "Balloon Artist", "Face Painter", "Henna Artist", "Tarot/Palm Reader", "Fire Performer", "Strolling Entertainer", "Other"],
+};
+// Map old category names to new ones for existing vendor/event data
+const CATEGORY_MAP = {
+  "Kids & Baby":"Kids, Baby & Maternity", "Baby & Maternity":"Kids, Baby & Maternity",
+  "Wedding & Bridal":"Wedding & Events", "Party & Event Decor":"Wedding & Events",
+  "Photography & Media":"Art & Prints", "Entertainment":"Crafts & Handmade",
 };
 
 const EVENT_TYPES = [
@@ -119,8 +121,8 @@ function dbVendorToApp(v) {
   return {
     id:                v.id,
     name:              v.name,
-    category:          v.category,
-    allCategories:     m.allCategories || [v.category],
+    category:          CATEGORY_MAP[v.category] || v.category,
+    allCategories:     (m.allCategories || [v.category]).map(c => CATEGORY_MAP[c] || c),
     subcategories:     v.subcategories  || [],
     homeZip:           v.home_zip,
     radius:            v.radius,
@@ -179,7 +181,7 @@ function dbEventToApp(e) {
     endTime:          e.end_time   ? e.end_time.slice(0, 5)   : "",
     boothFee:         e.booth_fee         || "",
     spots:            e.spots             || 0,
-    categoriesNeeded: e.categories_needed || [],
+    categoriesNeeded: (e.categories_needed || []).map(c => CATEGORY_MAP[c] || c),
     contactName:      e.contact_name      || "",
     contactEmail:     e.contact_email     || "",
     contactPhone:     e.contact_phone     || "",
