@@ -5114,6 +5114,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const [filterDate, setFilterDate] = useState("");
   const [filterTicketed, setFilterTicketed] = useState("");
   const [myZip, setMyZip] = useState("");
+  const [myRadius, setMyRadius] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const [vendorsByEvent, setVendorsByEvent] = useState({});
   const [loadingVendors, setLoadingVendors] = useState({});
@@ -5126,6 +5127,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
     .filter(o => !filterDate || o.date === filterDate)
     .filter(o => !filterTicketed || (filterTicketed==='yes' ? o.isTicketed : !o.isTicketed))
     .map(o => ({ ...o, dist: zipOk ? distanceMiles(myZip, o.zip) : null }))
+    .filter(o => !myRadius || !zipOk || o.dist === null || o.dist <= myRadius)
     .sort((a,b) => { if (a.dist!==null && b.dist!==null) return a.dist - b.dist; return a.date.localeCompare(b.date); });
 
   const loadVendors = async (opp) => {
@@ -5164,8 +5166,22 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
           <div className="match-filter-group" style={{maxWidth:200}}>
             <label>My Zip Code</label>
             <input placeholder="e.g. 08033" value={myZip} maxLength={5} onChange={e=>setMyZip(e.target.value.replace(/\D/g,'').slice(0,5))} />
-            {myZip.length===5 && <div className={`zip-feedback ${zipOk?'zip-ok':'zip-warn'}`}>{zipOk ? '✓ Sorted by distance' : '⚠ Zip unverified'}</div>}
+            {myZip.length===5 && <div className={`zip-feedback ${zipOk?'zip-ok':'zip-warn'}`}>{zipOk ? (myRadius ? `✓ Within ${myRadius} miles` : '✓ Sorted by distance') : '⚠ Zip unverified'}</div>}
           </div>
+          {zipOk && (
+            <div className="match-filter-group" style={{maxWidth:160}}>
+              <label>Radius</label>
+              <select value={myRadius} onChange={e=>setMyRadius(+e.target.value)}>
+                <option value={0}>Any distance</option>
+                <option value={5}>5 miles</option>
+                <option value={10}>10 miles</option>
+                <option value={15}>15 miles</option>
+                <option value={20}>20 miles</option>
+                <option value={30}>30 miles</option>
+                <option value={50}>50 miles</option>
+              </select>
+            </div>
+          )}
           <div className="match-filter-group">
             <label>Event Type</label>
             <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
