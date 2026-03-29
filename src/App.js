@@ -6355,7 +6355,29 @@ function AppInner() {
       const senderLabel = m.sender_type === 'system' ? 'System' : m.sender_type === 'vendor' ? (vendorNames[m.sender_id] || 'Vendor') : (m.sender_id === uid ? 'You' : 'Host');
       conv.messages.push({ id: m.id, from: m.sender_id === uid ? 'host' : (m.sender_type === 'system' ? 'system' : 'vendor'), text: m.message_text, ts: m.created_at, senderName: senderLabel, attachments: m.attachments || undefined });
     });
-    setConversations(Object.values(convMap));
+    // Filter out broken conversations (non-canonical IDs, 'unknown' recipients, no messages)
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}/i;
+    const validConvos = Object.values(convMap).filter(c => {
+      // Must have the current user's ID in the conversation_id
+      if (!c.id.includes(uid)) return false;
+      // Both parts of conversation_id must look like UUIDs
+      const parts = c.id.split('_');
+      if (parts.length !== 2 || !uuidPattern.test(parts[0]) || !uuidPattern.test(parts[1])) return false;
+      // Must have at least one message
+      if (c.messages.length === 0) return false;
+      return true;
+    });
+    // Deduplicate — if multiple conversations exist for the same vendor, keep the newest
+    const seen = {};
+    const deduped = [];
+    for (const c of validConvos) {
+      const key = c.vendorId || c.id;
+      if (!seen[key] || c.messages.length > (seen[key].messages?.length || 0)) {
+        seen[key] = c;
+      }
+    }
+    deduped.push(...Object.values(seen));
+    setConversations(deduped);
     setUnreadCount(msgs.filter(m => m.recipient_id === uid && !m.is_read).length);
     } catch (e) { console.error('loadMessages error:', e); }
   }, [authUser]);
