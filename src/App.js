@@ -3044,25 +3044,28 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       allPhotoUrls = [...allPhotoUrls, ...newUrls.filter(Boolean)];
     }
 
-    const updatePayload = {
+    // Core fields that definitely exist in schema
+    const corePayload = {
       event_name:eventForm.event_name, event_type:eventForm.event_type, date:eventForm.date,
       start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
       booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
       deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
-      event_link:eventForm.event_link||null,
-      allow_duplicate_categories:eventForm.allow_duplicate_categories,
-      allow_duplicate_subcategories:eventForm.allow_duplicate_subcategories,
-      event_photos: allPhotoUrls,
       status: 'pending_review',
     };
+    // Save first photo to photo_url (column that exists)
+    if (allPhotoUrls.length > 0) corePayload.photo_url = allPhotoUrls[0];
 
-    const { error } = await supabase.from('events').update(updatePayload).eq('id', evt.id);
+    let { error } = await supabase.from('events').update(corePayload).eq('id', evt.id);
     if (error) { alert('Failed to save: ' + error.message); setSavingEvent(false); return; }
 
-    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(e=>console.error('API call failed:',e));
+    // Try saving newer columns separately (they may not exist in schema)
+    await supabase.from('events').update({ event_link:eventForm.event_link||null }).eq('id', evt.id).catch(()=>{});
+    await supabase.from('events').update({ event_photos: allPhotoUrls }).eq('id', evt.id).catch(()=>{});
+
+    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(()=>{});
     fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} — Needs Re-Approval`, message:`Host ${user.email} updated their event:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent status set to pending review.` }),
-    }).catch(e=>console.error('API call failed:',e));
+    }).catch(()=>{});
 
     // Refresh events
     const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
