@@ -829,7 +829,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
             <option value="10+">10+ years</option>
           </select>
         </div>
-        <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special. If you offer both products and services, describe them both here — or create separate listings for each from your dashboard." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
+        <div className="form-group full"><label>Business Description *</label><textarea placeholder="Tell hosts what makes your business special — what you offer, your style, and what sets you apart." value={form.description} onChange={e=>set('description',e.target.value)} /></div>
       </div>
 
       <hr className="form-divider" />
@@ -854,28 +854,25 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
 
       {/* ── STEP 2: Categories ── */}
       {formStep === 2 && (<>
-      <h3 className="form-section-title"><span className="dot" />What Type of Vendor Are You?</h3>
-      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply — you can be both!</p>
-      <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
-        <div onClick={()=>set('vendorType',{...form.vendorType,market:!form.vendorType.market})}
+      <h3 className="form-section-title"><span className="dot" />What Type of Listing Is This?</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Choose one per listing. You can create additional listings for other offerings from your dashboard.</p>
+      <div style={{display:'flex',gap:12,marginBottom:16,flexWrap:'wrap'}}>
+        <div onClick={()=>set('vendorType',{market:true,service:false})}
           style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.market?'#c8a850':'#e8ddd0'}`,background:form.vendorType.market?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Market Vendor</div>
-          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products/services at events and pay booth fees</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products at events and pay a booth fee</div>
           {form.vendorType.market && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
         </div>
-        <div onClick={()=>set('vendorType',{...form.vendorType,service:!form.vendorType.service})}
+        <div onClick={()=>set('vendorType',{market:false,service:true})}
           style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.service?'#c8a850':'#e8ddd0'}`,background:form.vendorType.service?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Event Service Provider</div>
-          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I provide services and get paid by hosts</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I provide a service and get paid by the host</div>
           {form.vendorType.service && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
         </div>
       </div>
-
-      {form.vendorType.market && form.vendorType.service && (
-        <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'12px 16px',marginBottom:20,fontSize:13,color:'#1a4a6b',lineHeight:1.5}}>
-          <strong>Tip:</strong> If your products and services are separate businesses (e.g. jewelry + live music), we recommend creating a separate listing for each. You'll get better matches and hosts can find you more easily. You can add more listings anytime from your dashboard.
-        </div>
-      )}
+      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',marginBottom:24,fontSize:13,color:'#7a6a5a',lineHeight:1.5}}>
+        <strong>Do both?</strong> No problem — create this listing first, then add another from your dashboard. Each listing gets its own categories, photos, and pricing so hosts can find exactly what they need.
+      </div>
 
       {form.vendorType.market && (
         <>
@@ -1156,7 +1153,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Contact:</span> {form.ownerName || '—'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Email:</span> {form.email || '—'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Location:</span> Zip {form.homeZip || '—'} ({form.radius}mi)</div>
-          <div><span style={{color:'#a89a8a',fontWeight:600}}>Type:</span> {form.vendorType?.market&&form.vendorType?.service?'Market + Service':form.vendorType?.service?'Service Provider':'Market Vendor'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Type:</span> {form.vendorType?.service?'Service Provider':'Market Vendor'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Categories:</span> {[...(form.categories||[]),...(form.serviceCategories||[])].join(', ') || '—'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {photoFiles.length} uploaded</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Insurance:</span> {form.insurance ? 'Yes' : 'No'}</div>
