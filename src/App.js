@@ -1729,7 +1729,7 @@ function EventGoerSignupModal({ onClose, onSuccess, defaultEmail, defaultName })
     // Send welcome email
     fetch('/api/send-guest-welcome', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ email:form.email, name:form.name, zip:form.zip, radius:form.radius, eventTypes:form.eventTypes, frequency: form.wantsAlerts ? form.frequency : 'none' }),
-    }).catch(()=>{});
+    }).catch(e=>console.error('API call failed:',e));
     if (onSuccess) onSuccess();
   };
 
@@ -2347,10 +2347,10 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       // Everything below is fire-and-forget background work
       fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:'tiffany@southjerseyvendormarket.com', category:vp.category||editForm.serviceCategories?.[0]||'—', vendorType:editForm.isServiceProvider?'service':'market' }),
-      }).catch(()=>{});
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).catch(()=>{});
+      }).catch(e=>console.error('API call failed:',e));
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).catch(e=>console.error('API call failed:',e));
       supabase.from('vendors').select('*').eq('id', vid).single()
-        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); }).catch(()=>{});
+        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); }).catch(e=>console.error('API call failed:',e));
     } catch (err) {
       clearTimeout(forceComplete);
       setSaving(false);
@@ -2898,10 +2898,10 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     const { error } = await supabase.from('events').update(updatePayload).eq('id', evt.id);
     if (error) { alert('Failed to save: ' + error.message); setSavingEvent(false); return; }
 
-    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(()=>{});
+    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(e=>console.error('API call failed:',e));
     fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} — Needs Re-Approval`, message:`Host ${user.email} updated their event:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent status set to pending review.` }),
-    }).catch(()=>{});
+    }).catch(e=>console.error('API call failed:',e));
 
     // Refresh events
     const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
@@ -3320,11 +3320,17 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
     setSaving(false); setEditing(false);
   };
 
-  // Filter events matching preferences
+  // Filter events matching preferences (type + distance)
+  const guestZipOk = form.zip && form.zip.length === 5 && isKnownZip(form.zip);
   const matched = opps.filter(o => {
     const today = new Date().toISOString().split('T')[0];
     if (o.date < today) return false;
+    if (o.shareWithEventGoers === false) return false;
     if (form.eventTypes.length > 0 && !form.eventTypes.includes(o.eventType)) return false;
+    if (guestZipOk && form.radius) {
+      const dist = distanceMiles(form.zip, o.zip);
+      if (dist !== null && dist > form.radius) return false;
+    }
     return true;
   }).slice(0, 10);
 
@@ -4264,7 +4270,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (evt?.contactEmail) {
         fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ to:evt.contactEmail, name:evt.contactName, type:'event', entityName:evt.eventName, approved:false, reason:'Your event has been removed: '+removeReason }),
-        }).catch(()=>{});
+        }).catch(e=>console.error('API call failed:',e));
       }
     } else if (type === 'vendor') {
       const v = vendors.find(x => x.id === id) || pendingVendors.find(x => x.id === id);
@@ -4275,7 +4281,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (v?.contactEmail || v?.contact_email) {
         fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ to:v.contactEmail||v.contact_email, name:v.contactName||v.contact_name||v.name, type:'vendor', entityName:v.name, approved:false, reason:'Your vendor listing has been removed: '+removeReason }),
-        }).catch(()=>{});
+        }).catch(e=>console.error('API call failed:',e));
       }
     } else if (type === 'event_guest') {
       const g = eventGoers.find(x => x.id === id);
@@ -4285,7 +4291,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (g?.email) {
         fetch('/api/send-approval-email', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ to:g.email, name:g.name, type:'vendor', entityName:'Event Guest Account', approved:false, reason:'Your event guest account has been removed: '+removeReason }),
-        }).catch(()=>{});
+        }).catch(e=>console.error('API call failed:',e));
       }
     }
     setRemoveDialog(null);
@@ -4340,7 +4346,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (error) { failed++; continue; }
       succeeded++;
       approved.push(v);
-      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
+      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(e=>console.error('API call failed:',e));
     }
     setVendors(prev => [...approved.map(v=>dbVendorToApp({...v,status:'approved'})), ...prev]);
     setPendingVendors(prev => prev.filter(v => !approved.some(a=>a.id===v.id)));
@@ -4358,7 +4364,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (error) { failed++; continue; }
       succeeded++;
       approvedIds.push(evt.id);
-      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(()=>{});
+      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(e=>console.error('API call failed:',e));
     }
     setAllEvents(prev => prev.map(e => approvedIds.includes(e.id) ? {...e, status:'approved'} : e));
     setOpps(prev => [...pendingEvents.filter(e=>approvedIds.includes(e.id)).map(e=>({...e,status:'approved'})), ...prev]);
@@ -4414,7 +4420,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     const updated = { ...evt, status: 'approved', adminNotes: notes };
     setAllEvents(prev => prev.map(e => e.id === evt.id ? updated : e));
     setOpps(prev => [updated, ...prev]);
-    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(()=>{});
+    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(e=>console.error('API call failed:',e));
   };
 
   const rejectEvent = async (evt) => {
@@ -4424,7 +4430,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     if (error) { alert('Failed to reject event: ' + error.message); return; }
     setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, status: 'rejected', rejectionReason: reason } : e));
     // Send rejection notification email
-    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:false,reason})}).catch(()=>{});
+    fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:false,reason})}).catch(e=>console.error('API call failed:',e));
   };
 
   const markConciergeActive = async (evt) => {
@@ -4604,7 +4610,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   if(error){alert('Error approving vendor. Please try again.');return;}
                   setPendingVendors(p=>p.filter(x=>x.id!==v.id));
                   setVendors(prev=>[dbVendorToApp({...v,status:'approved'}), ...prev]);
-                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(e=>console.error('API call failed:',e));
                 }}
                 onReject={async()=>{
                   const reason = window.prompt(`Reject "${v.name}"? Enter a reason (sent to vendor):`);
@@ -4612,7 +4618,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   const{error}=await supabase.from('vendors').update({status:'rejected'}).eq('id',v.id);
                   if(error){alert('Error rejecting vendor. Please try again.');return;}
                   setPendingVendors(p=>p.filter(x=>x.id!==v.id));
-                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:false,reason})}).catch(()=>{});
+                  fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:false,reason})}).catch(e=>console.error('API call failed:',e));
                 }}
               />
             ))}
@@ -4844,7 +4850,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td style={{fontSize:12}}>{fmtDate(e.date)}</td>
                   <td style={{fontSize:12,color:'#8b1a1a',maxWidth:200}}>{e.rejectionReason||'—'}</td>
                   <td>
-                    <button onClick={async()=>{const{error}=await supabase.from('events').update({status:'approved',rejection_reason:null}).eq('id',e.id);if(error){alert('Error');return;}setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,status:'approved',rejectionReason:null}:x));setOpps(prev=>[{...e,status:'approved'},...prev]);fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:e.contactEmail,name:e.contactName,type:'event',entityName:e.eventName,approved:true})}).catch(()=>{});}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Re-approve</button>
+                    <button onClick={async()=>{const{error}=await supabase.from('events').update({status:'approved',rejection_reason:null}).eq('id',e.id);if(error){alert('Error');return;}setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,status:'approved',rejectionReason:null}:x));setOpps(prev=>[{...e,status:'approved'},...prev]);fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:e.contactEmail,name:e.contactName,type:'event',entityName:e.eventName,approved:true})}).catch(e=>console.error('API call failed:',e));}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Re-approve</button>
                   </td>
                 </tr>
               ))}
@@ -4932,46 +4938,43 @@ function VendorApplyModal({ opp, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [autoFilled, setAutoFilled] = useState(false);
+  const [vendorProfiles, setVendorProfiles] = useState([]);
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
 
-  // Auto-fill from vendor profile (auth user or localStorage fallback)
+  const fillFrom = (data) => {
+    if (!data) return;
+    setForm(f => ({
+      ...f,
+      vendorName: data.name || '',
+      contactName: data.contact_name || '',
+      email: data.contact_email || '',
+      phone: data.contact_phone || '',
+      category: data.category || '',
+      vendorId: data.id || null,
+    }));
+    setAutoFilled(true);
+  };
+
+  // Load all vendor profiles for this user
   useEffect(() => {
-    const fillFrom = (data) => {
-      if (!data) return;
-      setForm(f => ({
-        ...f,
-        vendorName: f.vendorName || data.name || '',
-        contactName: f.contactName || data.contact_name || '',
-        email: f.email || data.contact_email || '',
-        phone: f.phone || data.contact_phone || '',
-        category: f.category || data.category || '',
-        vendorId: data.id || null,
-      }));
-      setAutoFilled(true);
-    };
-    // Try auth user first
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
-          .eq('user_id', session.user.id).limit(1).single()
-          .then(({ data }) => {
-            if (data) fillFrom(data);
-            else {
-              // Fallback to email match (case-insensitive)
-              supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
-                .ilike('contact_email', session.user.email).limit(1).single()
-                .then(({ data: d2 }) => fillFrom(d2));
-            }
-          });
+        const profiles = [];
+        const { data: byId } = await supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category').eq('user_id', session.user.id);
+        if (byId) profiles.push(...byId);
+        const { data: byEmail } = await supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category').ilike('contact_email', session.user.email);
+        if (byEmail) byEmail.forEach(v => { if (!profiles.some(p=>p.id===v.id)) profiles.push(v); });
+        setVendorProfiles(profiles);
+        if (profiles.length > 0) fillFrom(profiles[0]);
       } else {
-        // Fallback to localStorage vendor ID
         const vid = localStorage.getItem('sjvm_calendar_vendor_id');
         if (vid) {
-          supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category')
-            .eq('id', vid).single().then(({ data }) => fillFrom(data));
+          const { data } = await supabase.from('vendors').select('id,name,contact_name,contact_email,contact_phone,category').eq('id', vid).limit(1);
+          if (data?.[0]) { setVendorProfiles([data[0]]); fillFrom(data[0]); }
         }
       }
-    });
+    })();
   }, []);
 
   const handleSubmit = async () => {
@@ -5039,6 +5042,16 @@ function VendorApplyModal({ opp, onClose }) {
             <>
               {autoFilled ? (
                 <>
+                  {vendorProfiles.length > 1 && (
+                    <div style={{marginBottom:12}}>
+                      <div style={{fontSize:12,fontWeight:600,color:'#7a6a5a',marginBottom:6}}>Apply as:</div>
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {vendorProfiles.map(p=>(
+                          <button key={p.id} onClick={()=>fillFrom(p)} style={{padding:'6px 14px',borderRadius:8,fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:form.vendorId===p.id?'2px solid #c8a850':'1px solid #e8ddd0',background:form.vendorId===p.id?'#fdf9f0':'#fff',color:'#1a1410'}}>{p.name}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#1a6b3a'}}>
                     <strong>Applying as:</strong> {form.vendorName} ({form.email}){form.category ? ` · ${form.category}` : ''}
                   </div>
@@ -5122,25 +5135,23 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
     .filter(o => !myRadius || !zipOk || o.dist === null || o.dist <= myRadius)
     .sort((a,b) => { if (a.dist!==null && b.dist!==null) return a.dist - b.dist; return a.date.localeCompare(b.date); });
 
-  const loadVendors = async (opp) => {
-    if (vendorsByEvent[opp.id]) return;
-    setLoadingVendors(l => ({...l, [opp.id]: true}));
-    const { data } = await supabase.from('booking_requests').select('vendor_name,vendor_category,vendor_emoji,status')
-      .eq('event_name', opp.eventName).eq('status', 'accepted');
-    setVendorsByEvent(v => ({...v, [opp.id]: data || []}));
-    setLoadingVendors(l => ({...l, [opp.id]: false}));
-  };
-
-  const handleExpand = (opp) => {
-    const next = expandedId === opp.id ? null : opp.id;
-    setExpandedId(next);
-    if (next) loadVendors(opp);
-  };
-
-  // Auto-load vendors for all visible events
+  // Batch-load confirmed vendors for all visible events
   useEffect(() => {
-    upcoming.forEach(opp => { if (!vendorsByEvent[opp.id]) loadVendors(opp); });
-  }, [upcoming.length]); // eslint-disable-line
+    const eventNames = upcoming.map(o => o.eventName).filter(Boolean);
+    if (eventNames.length === 0) return;
+    supabase.from('booking_requests').select('vendor_name,vendor_category,vendor_emoji,status,event_name')
+      .in('event_name', eventNames).eq('status', 'accepted')
+      .then(({ data }) => {
+        if (!data) return;
+        const byEvent = {};
+        upcoming.forEach(o => { byEvent[o.id] = []; });
+        data.forEach(v => {
+          const opp = upcoming.find(o => o.eventName === v.event_name);
+          if (opp) byEvent[opp.id].push(v);
+        });
+        setVendorsByEvent(prev => ({...prev, ...byEvent}));
+      });
+  }, [upcoming.map(o=>o.id).join(',')]); // eslint-disable-line
 
   return (
     <>
@@ -5276,7 +5287,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   );
 }
 
-function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) {
+function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, setVendorProfile, setShowAuthModal }) {
   const isVendor = !!vendorProfile;
   const canSeeFullDetails = authUser && isVendor;
   const [filterType, setFilterType] = useState("");
@@ -5352,7 +5363,14 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
           </div>
         </div>
         {vendorProfile && (
-          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12,flexWrap:'wrap'}}>
+            {allVendorProfiles && allVendorProfiles.length > 1 && (
+              <div style={{display:'flex',gap:4,marginRight:8}}>
+                {allVendorProfiles.map(p=>(
+                  <button key={p.id} onClick={()=>setVendorProfile(p)} style={{padding:'4px 10px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif',border:vendorProfile?.id===p.id?'2px solid #c8a850':'1px solid #e8ddd0',background:vendorProfile?.id===p.id?'#fdf9f0':'#fff',color:'#1a1410'}}>{p.name||p.contact_name}</button>
+                ))}
+              </div>
+            )}
             <button onClick={()=>setShowMatching(!showMatching)} style={{
               background:showMatching?'#1a6b3a':'#f5f0ea', color:showMatching?'#fff':'#7a6a5a',
               border:showMatching?'none':'1px solid #e8ddd0', borderRadius:6, padding:'6px 14px',
@@ -6305,7 +6323,7 @@ function AppInner() {
     const vendorPayload = {
       name:                form.businessName,
       contact_name:        form.ownerName     || null,
-      category:            form.categories?.[0] || form.serviceCategories?.[0] || 'Other',
+      category:            form.categories?.[0] || form.serviceCategories?.[0] || CATEGORIES[0],
       subcategories:       form.subcategories || [],
       home_zip:            form.homeZip,
       radius:              form.radius,
@@ -6375,7 +6393,7 @@ function AppInner() {
       if (fullVendor) {
         setPendingVendors(p => [fullVendor, ...p]);
       } else {
-        setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other', home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { ...metadataPayload }, subcategories: form.subcategories || [] }, ...p]);
+        setPendingVendors(p => [{ id: newVendor.id, name: form.businessName, contact_name: form.ownerName, category: form.categories?.[0] || form.serviceCategories?.[0] || CATEGORIES[0], home_zip: form.homeZip, radius: form.radius, contact_email: form.email, contact_phone: form.phone, status: 'pending', created_at: new Date().toISOString(), metadata: { ...metadataPayload }, subcategories: form.subcategories || [] }, ...p]);
       }
     }
     // Send notification emails
@@ -6387,7 +6405,7 @@ function AppInner() {
           contactName: form.ownerName,
           vendorEmail: form.email,
           phone: form.phone,
-          category: form.categories?.[0] || form.serviceCategories?.[0] || 'Other',
+          category: form.categories?.[0] || form.serviceCategories?.[0] || CATEGORIES[0],
           vendorType: form.vendorType?.market && form.vendorType?.service ? 'both' : form.vendorType?.service ? 'service' : 'market',
         }),
       });
@@ -6531,7 +6549,7 @@ function AppInner() {
     // Notify admin of new event submission (styled email with gold button)
     fetch('/api/send-event-admin-notification', { method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({ eventName: form.eventName||form.eventType, hostName: form.contactName, hostEmail: form.email, eventDate: form.date, eventType: form.eventType, eventZip: form.eventZip }),
-    }).catch(()=>{});
+    }).catch(e=>console.error('API call failed:',e));
 
     // Pending events don't appear in public feed — they go through admin approval
     // Only add to user's own events list for their dashboard
@@ -6860,10 +6878,10 @@ function AppInner() {
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
-          : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} setShowAuthModal={setShowAuthModal} />)}
+          : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} allVendorProfiles={allVendorProfiles} setVendorProfile={setVendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} setEventGoers={setEventGoers} />}
-        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} loadMessages={loadMessages} />}
+        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
@@ -6955,7 +6973,7 @@ function AttachmentBubble({ att, isHost }) {
 }
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
-function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, loadMessages }) {
+function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, vendorProfile, loadMessages }) {
   const [draft, setDraft] = useState('');
   const [senderName, setSenderName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -6977,8 +6995,8 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     // Save to Supabase
     supabase.from('messages').insert({
       conversation_id: activeConvoId,
-      sender_id: uid, sender_type: 'host',
-      recipient_id: recipientId, recipient_type: 'vendor',
+      sender_id: uid, sender_type: vendorProfile ? 'vendor' : 'host',
+      recipient_id: recipientId, recipient_type: vendorProfile ? 'host' : 'vendor',
       event_name: conv.eventName || '',
       message_text: text || '(file attachment)',
       attachments: attachments && attachments.length > 0 ? attachments : null,
@@ -6995,7 +7013,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       if (vendor?.contact_email) {
         fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ name: senderName || 'A host', email: uid, subject: `New message about ${conv.eventName || 'your booking'}`, message: `You have a new message from ${senderName || 'a host'} about ${conv.eventName || 'a booking'}. Log in to your vendor dashboard to view and reply.` }),
-        }).catch(()=>{});
+        }).catch(e=>console.error('API call failed:',e));
       }
     }
   };
@@ -7069,7 +7087,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
         conversation_id: convoId, sender_id: 'system', sender_type: 'system',
         recipient_id: uid, recipient_type: 'host',
         event_name: req.eventName || '', message_text: msg, is_read: false,
-      }).catch(()=>{});
+      }).catch(e=>console.error('API call failed:',e));
       setConversations(convos => convos.map(c => {
         if (c.vendorId !== req.vendorId) return c;
         return {...c, status: status==='accepted'?'booked':'active', messages: [...c.messages, {id:Date.now(), from:'system', text: msg, ts:new Date().toISOString()}]};
@@ -7078,7 +7096,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       if (req.hostEmail) {
         fetch('/api/send-booking-response', { method:'POST', headers:{'Content-Type':'application/json'},
           body: JSON.stringify({ hostEmail:req.hostEmail, hostName:req.hostName, vendorName:req.vendorName, vendorCategory:req.vendorCategory, eventName:req.eventName, eventDate:req.eventDate, status, vendorMessage:vendorMsg }),
-        }).catch(()=>{});
+        }).catch(e=>console.error('API call failed:',e));
       }
     }
   };
