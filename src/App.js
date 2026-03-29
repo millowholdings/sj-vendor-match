@@ -3020,74 +3020,66 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
   const saveEvent = async (evt) => {
     setSavingEvent(true);
-    // Hard timeout — always unlock after 8 seconds no matter what
-    const forceUnlock = setTimeout(() => { setSavingEvent(false); setEditingEvent(null); }, 8000);
     try {
-      // Minimal update with only fields guaranteed to exist
-      const payload = {
-        event_name: eventForm.event_name,
-        event_type: eventForm.event_type,
-        date: eventForm.date,
-        start_time: eventForm.start_time || null,
-        end_time: eventForm.end_time || null,
-        zip: eventForm.zip,
-        booth_fee: eventForm.booth_fee || null,
-        spots: eventForm.spots || null,
-        notes: eventForm.notes || null,
-        deadline: eventForm.deadline || null,
-        status: 'pending_review',
+      // Upload new photos first so we have URLs for the update
+      let photoUrl = editExistingPhotos.length > 0 ? editExistingPhotos[0] : (evt.photo_url || null);
+      for (const f of editNewPhotos) {
+        try {
+          const path = `events/${evt.id}/photos/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)}`;
+          const { error: upErr } = await supabase.storage.from('vendor-files').upload(path, f, { upsert: true, contentType: f.type });
+          if (!upErr) {
+            photoUrl = supabase.storage.from('vendor-files').getPublicUrl(path).data.publicUrl;
+          } else {
+            console.error('Photo upload failed:', upErr.message);
+          }
+        } catch (e) { console.error('Photo upload exception:', e); }
+      }
+
+      // Build full payload — include everything, then strip what fails
+      const fullPayload = {
+        event_name: eventForm.event_name, event_type: eventForm.event_type,
+        date: eventForm.date, start_time: eventForm.start_time || null, end_time: eventForm.end_time || null,
+        zip: eventForm.zip, booth_fee: eventForm.booth_fee || null, spots: eventForm.spots || null,
+        notes: eventForm.notes || null, deadline: eventForm.deadline || null,
+        photo_url: photoUrl, status: 'pending_review',
+        ticket_price: eventForm.ticket_price || null, is_ticketed: eventForm.is_ticketed || false,
+        event_link: eventForm.event_link || null,
       };
 
-      const { error } = await supabase.from('events').update(payload).eq('id', evt.id);
-      if (error) { alert('Failed to save: ' + error.message); clearTimeout(forceUnlock); setSavingEvent(false); return; }
-
-      // Try optional columns one at a time — silently skip if they don't exist
-      const tryUpdate = async (fields) => { try { await supabase.from('events').update(fields).eq('id', evt.id); } catch {} };
-      await tryUpdate({ ticket_price: eventForm.ticket_price || null });
-      await tryUpdate({ is_ticketed: eventForm.is_ticketed || false });
-      await tryUpdate({ event_link: eventForm.event_link || null });
-
-      // Handle photos: upload new, keep existing, update photo_url
-      let finalPhotoUrl = editExistingPhotos.length > 0 ? editExistingPhotos[0] : null;
-      if (editNewPhotos.length > 0) {
-        try {
-          const bucket = 'vendor-files';
-          const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-          for (const f of editNewPhotos) {
-            const path = `events/${evt.id}/photos/${Date.now()}-${safeName(f.name)}`;
-            const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
-            if (!upErr) {
-              finalPhotoUrl = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-            } else {
-              console.error('Photo upload failed:', upErr.message);
-            }
-          }
-        } catch (photoErr) { console.error('Photo upload error:', photoErr); }
+      let { error } = await supabase.from('events').update(fullPayload).eq('id', evt.id);
+      // If full payload fails (column doesn't exist), retry with minimal
+      if (error) {
+        console.error('Full update failed, retrying minimal:', error.message);
+        const { event_link: _el, ticket_price: _tp, is_ticketed: _it, ...minimal } = fullPayload;
+        ({ error } = await supabase.from('events').update(minimal).eq('id', evt.id));
       }
-      // Always update photo_url — set to new photo, existing photo, or null if removed
-      await tryUpdate({ photo_url: finalPhotoUrl });
+      if (error) {
+        console.error('Minimal update also failed:', error.message);
+        alert('Failed to save: ' + error.message);
+        setSavingEvent(false);
+        return;
+      }
 
-      // Notify admin
+      // Refresh from DB and update ALL state sources
+      const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
+      if (data) {
+        const mapped = dbEventToApp(data);
+        if (setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
+        if (setAllEvents) setAllEvents(prev => prev.map(e => e.id === mapped.id ? mapped : e));
+        if (setOpps) setOpps(prev => prev.map(e => e.id === mapped.id ? mapped : e));
+      }
+
+      // Notify admin (fire and forget)
       fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name}`, message:`Host ${user.email} updated their event. Status set to pending review.` }),
       }).catch(()=>{});
 
-      // Refresh both userEvents (raw) and allEvents (mapped) so admin sees updates immediately
-      const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
-      if (data) {
-        if (setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
-        setAllEvents(prev => prev.map(e => e.id === data.id ? dbEventToApp(data) : e));
-        // Also update opps if it was live
-        setOpps(prev => prev.map(e => e.id === data.id ? dbEventToApp(data) : e));
-      }
-      clearTimeout(forceUnlock);
       setEditingEvent(null); setSavingEvent(false);
       alert('Changes saved! Your event has been submitted for admin review.');
     } catch (err) {
       console.error('saveEvent error:', err);
-      clearTimeout(forceUnlock);
       setSavingEvent(false);
-      alert('Something went wrong. Please try again.');
+      alert('Something went wrong: ' + (err.message || 'Please try again.'));
     }
   };
 
