@@ -2923,7 +2923,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard, unreadCount, conversations }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard, unreadCount, conversations, openMessage }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -3288,18 +3288,23 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   {(a.status === 'accepted' || a.status === 'declined') && (
                     <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
                   )}
+                  {openMessage && a.vendor_id && (
+                    <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+                  )}
                   <button onClick={()=>handleReview(a)} style={{background: isReviewing ? '#c8a84b' : '#fdf4dc',color: isReviewing ? '#1a1410' : '#7a5a10',border: isReviewing ? 'none' : '1px solid #ffd966',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{isReviewing ? 'Close' : 'Review'}</button>
                 </div>
               </div>
 
               {/* Decline reason prompt */}
               {showDeclinePrompt === a.id && (
-                <div style={{marginTop:12,padding:12,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8}}>
-                  <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:6}}>Reason for declining (optional):</div>
-                  <textarea value={declineReason} onChange={e=>setDeclineReason(e.target.value)} placeholder="e.g. Already have a vendor in this category..." style={{width:'100%',minHeight:60,border:'1px solid #e8ddd0',borderRadius:6,padding:8,fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical'}} maxLength={300} />
-                  <div style={{display:'flex',gap:8,marginTop:8}}>
-                    <button onClick={()=>respond(a.id,'declined',declineReason)} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Confirm Decline</button>
-                    <button onClick={()=>setShowDeclinePrompt(null)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+                <div style={{marginTop:12,padding:14,background:'#fdecea',border:'1px solid #f5c6c6',borderRadius:8}}>
+                  <div style={{fontSize:14,fontWeight:700,color:'#8b1a1a',marginBottom:4}}>Decline {a.vendor_name}?</div>
+                  <div style={{fontSize:12,color:'#7a6a5a',marginBottom:8}}>Let the vendor know why so they can improve for future events. This will be sent to them.</div>
+                  <textarea value={declineReason} onChange={e=>setDeclineReason(e.target.value)} placeholder="e.g. We already have a vendor in this category, but we'd love to have you at a future event!" style={{width:'100%',minHeight:70,border:'1px solid #f5c6c6',borderRadius:6,padding:10,fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical',boxSizing:'border-box'}} maxLength={500} />
+                  <div style={{fontSize:11,color:'#a89a8a',marginTop:4,marginBottom:8}}>{declineReason.length}/500 characters</div>
+                  <div style={{display:'flex',gap:8}}>
+                    <button onClick={()=>respond(a.id,'declined',declineReason)} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline Vendor</button>
+                    <button onClick={()=>setShowDeclinePrompt(null)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'8px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
                   </div>
                 </div>
               )}
@@ -7048,7 +7053,7 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
