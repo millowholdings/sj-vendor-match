@@ -113,6 +113,8 @@ function distanceMiles(zip1, zip2) {
 function isValidZip(zip) { return /^\d{5}$/.test(zip); }
 function isKnownZip(zip) { return !!ZIP_COORDS[zip]; }
 function generateRef() { return 'SJVM-' + Date.now().toString(36).toUpperCase().slice(-4) + Math.random().toString(36).slice(2,5).toUpperCase(); }
+// Canonical conversation ID — always the same for any two users regardless of who initiates
+function getConvoId(id1, id2) { return [id1, id2].sort().join('_'); }
 
 // ─── Supabase row → app shape converters ─────────────────────────────────────
 function dbVendorToApp(v) {
@@ -2297,38 +2299,27 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         const { data } = await supabase.from('events').select('user_id').ilike('contact_email', request.host_email).limit(1);
         hostUserId = data?.[0]?.user_id;
       }
+      if (!hostUserId) { setTab('messages'); window.scrollTo({top:0}); return; }
       const vendorId = vendorProfile?.id || user.id;
-      const convoId = hostUserId ? `${hostUserId}_${vendorId}` : `${user.id}_host_${(request.host_email||'').replace(/[^a-z0-9]/gi,'')}`;
+      const convoId = getConvoId(hostUserId, vendorId);
       // Check if conversation already exists
       const existing = conversations?.find(c => c.id === convoId);
       if (existing) { if (setActiveConvoId) setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
-      // Create two system messages so both vendor and host can find this conversation
-      const recipientId = hostUserId || user.id;
-      const sysMsg = {
-        conversation_id: convoId,
-        sender_id: 'system', sender_type: 'system',
-        event_name: request.event_name || '',
-        message_text: `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`,
-        is_read: true,
-      };
-      // Message visible to host (recipient = host)
-      await supabase.from('messages').insert({ ...sysMsg, recipient_id: recipientId, recipient_type: 'host' });
-      // Message visible to vendor (recipient = vendor) so loadMessages finds it
-      if (recipientId !== user.id) {
-        await supabase.from('messages').insert({ ...sysMsg, recipient_id: user.id, recipient_type: 'vendor' });
-      }
+      const sysText = `Conversation started by ${vendorProfile?.name || 'Vendor'} about ${request.event_name || 'an event'}. Contact info is shared only after a booking is confirmed.`;
+      // Create messages visible to both parties
+      await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: hostUserId, recipient_type: 'host', event_name: request.event_name || '', message_text: sysText, is_read: false });
+      await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: user.id, recipient_type: 'vendor', event_name: request.event_name || '', message_text: sysText, is_read: true });
       const newConvo = {
         id: convoId, vendorId: vendorId, vendorName: vendorProfile?.name || '',
         vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
         hostName: request.host_name || request.host_email || 'Host', eventName: request.event_name || '', status: 'active',
-        messages: [{ id: Date.now(), from: 'system', text: `Conversation started about ${request.event_name || 'an event'}.`, ts: new Date().toISOString() }],
+        messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
       };
       if (setConversations) setConversations(c => [newConvo, ...c]);
       if (setActiveConvoId) setActiveConvoId(convoId);
       setTab('messages'); window.scrollTo({top:0});
     } catch (err) {
       console.error('messageHost error:', err);
-      // Fallback: just navigate to messages
       setTab('messages'); window.scrollTo({top:0});
     }
   };
@@ -6390,49 +6381,33 @@ function AppInner() {
 
   const openMessage = async (vendor, inquiryType, inquiryMessage) => {
     const uid = authUser?.id || 'anon';
-    const convoId = `${uid}_${vendor.id}`;
+    const convoId = getConvoId(uid, vendor.id);
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
     const hasEvent = !!hostEvent?.eventName;
     const contextLabel = hasEvent ? hostEvent.eventName : (inquiryType || 'General Inquiry');
-    // Create system message in Supabase
     const sysText = hasEvent
       ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
       : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
-    await supabase.from('messages').insert({
-      conversation_id: convoId,
-      sender_id: 'system', sender_type: 'system',
-      recipient_id: uid, recipient_type: 'host',
-      event_name: hasEvent ? hostEvent.eventName : contextLabel,
-      message_text: sysText,
-      is_read: true,
-    });
-    // Also create vendor-visible copy so both sides find the conversation
-    await supabase.from('messages').insert({
-      conversation_id: convoId,
-      sender_id: 'system', sender_type: 'system',
-      recipient_id: vendor.id, recipient_type: 'vendor',
-      event_name: hasEvent ? hostEvent.eventName : contextLabel,
-      message_text: sysText,
-      is_read: false,
-    });
+    const evtName = hasEvent ? hostEvent.eventName : contextLabel;
+    // Create messages visible to both parties
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true });
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendor.id, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false });
     const newConvo = {
       id: convoId, vendorId: vendor.id, vendorName: vendor.name,
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
-      hostName: authUser?.email || 'Host', eventName: hasEvent ? hostEvent.eventName : contextLabel, status: 'active',
+      hostName: authUser?.email || 'Host', eventName: evtName, status: 'active',
       messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
     };
     setConversations(c => [newConvo, ...c]);
     setActiveConvoId(convoId);
     setTab("messages");
-    // Send vendor email notification for no-event inquiries
-    if (!hasEvent) {
-      const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
-      if (vendorRow?.contact_email) {
-        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-          body: JSON.stringify({ name:'South Jersey Vendor Market', email:'noreply@southjerseyvendormarket.com', to: vendorRow.contact_email, subject:`New inquiry from a host — ${contextLabel}`, message:`Hi ${vendorRow.contact_name || vendor.name},\n\nA host has sent you a message on South Jersey Vendor Market.\n\nInquiry type: ${contextLabel}${inquiryMessage ? '\nMessage: '+inquiryMessage : ''}\n\nLog in to your vendor dashboard to view and reply.\n\n— South Jersey Vendor Market` }),
-        }).catch(e=>console.error('API call failed:',e));
-      }
+    // Send vendor email notification for all new conversations
+    const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
+    if (vendorRow?.contact_email) {
+      fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:'South Jersey Vendor Market', email:'noreply@southjerseyvendormarket.com', to: vendorRow.contact_email, subject:`New message from a host — ${evtName}`, message:`Hi ${vendorRow.contact_name || vendor.name},\n\nA host has sent you a message on South Jersey Vendor Market.\n\n${hasEvent ? 'Event: '+evtName : 'Inquiry: '+contextLabel}${inquiryMessage ? '\nMessage: '+inquiryMessage : ''}\n\nLog in to your vendor dashboard to view and reply.\n\n— South Jersey Vendor Market` }),
+      }).catch(e=>console.error('API call failed:',e));
     }
   };
 
@@ -7214,13 +7189,14 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     const uid = authUser?.id || 'anon';
     const conv = conversations.find(c => c.id === activeConvoId);
     if (!conv) return;
-    // Determine recipient: if I'm the vendor, send to host (extract from convoId); if I'm the host, send to vendor
-    const convoIdParts = activeConvoId.split('_');
     const isVendor = !!vendorProfile;
-    const recipientId = isVendor ? (convoIdParts[0] || uid) : (conv.vendorId || 'unknown');
+    // Determine recipient from canonical convoId: the other party's ID
+    const convoIdParts = activeConvoId.split('_');
+    const otherId = convoIdParts[0] === uid ? convoIdParts[1] : convoIdParts[0];
+    const recipientId = otherId || conv.vendorId || 'unknown';
     const ts = new Date().toISOString();
-    // Update UI immediately (before DB save so user sees it instantly)
-    const myFrom = 'host'; // current user's messages always render right-aligned as 'host'
+    // Update UI immediately
+    const myFrom = isVendor ? 'vendor' : 'host';
     setConversations(convos => convos.map(c => {
       if (c.id !== activeConvoId) return c;
       return { ...c, messages: [...c.messages, { id: Date.now(), from: myFrom, senderName, text: text || '', ts, ...(attachments && attachments.length > 0 ? { attachments } : {}) }] };
