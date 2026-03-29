@@ -794,17 +794,13 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       {formStep === 1 && (<>
       {!authUser && (
         <>
-          <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
-          <div style={{background:'#1a1410',borderRadius:12,padding:'20px 24px',marginBottom:24}}>
-            <div style={{fontSize:14,color:'#e8c97a',fontWeight:700,marginBottom:4}}>Your vendor account lets you:</div>
-            <div style={{fontSize:13,color:'#c8b898',lineHeight:1.6}}>Log in to manage your profile, view and respond to booking requests, and apply to events with one click.</div>
+          <div style={{display:'flex',gap:10,marginBottom:20}}>
+            <button onClick={()=>{if(typeof setShowAuthModal==='function')setShowAuthModal(true);}} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Log In</button>
+            <button onClick={()=>{}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
             <div className="form-group"><label>Create Password *</label><PasswordInput placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
-          </div>
-          <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
-            Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(typeof setShowAuthModal==='function')setShowAuthModal(true);}}>Log in</button> and your profile will be linked.
           </div>
           <hr className="form-divider" />
         </>
@@ -1263,17 +1259,13 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       {formStep === 1 && (<>
       {!authUser && (
         <>
-          <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
-          <div style={{background:'#1a1410',borderRadius:12,padding:'20px 24px',marginBottom:24}}>
-            <div style={{fontSize:14,color:'#e8c97a',fontWeight:700,marginBottom:4}}>Your host account lets you:</div>
-            <div style={{fontSize:13,color:'#c8b898',lineHeight:1.6}}>Log in to manage your events, review vendor applications, and track booking requests from your dashboard.</div>
+          <div style={{display:'flex',gap:10,marginBottom:20}}>
+            <button onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Log In</button>
+            <button onClick={()=>{}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
             <div className="form-group"><label>Create Password *</label><PasswordInput placeholder="Min 6 characters" value={form.password} onChange={e=>set('password',e.target.value)} /></div>
-          </div>
-          <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,textAlign:'center'}}>
-            Already have an account? <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',fontSize:12,fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}} onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}}>Log in</button> and your event will be linked.
           </div>
           <hr className="form-divider" />
         </>
