@@ -545,13 +545,13 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
   };
   return (
     <>
-      <CheckboxGroup label="Your Categories *" options={CATEGORIES} selected={categories} onChange={handleCatChange} otherValue={otherCategory||''} onOtherChange={v=>onOtherCategoryChange && onOtherCategoryChange(v)} />
-      {categories.length > 0 && (
+      <CheckboxGroup label="Your Categories *" options={CATEGORIES} selected={categories.filter(c => CATEGORIES.includes(c))} onChange={handleCatChange} otherValue={otherCategory||''} onOtherChange={v=>onOtherCategoryChange && onOtherCategoryChange(v)} />
+      {categories.filter(c => CATEGORIES.includes(c)).length > 0 && (
         <div className="subcat-block">
           <div style={{ fontSize:12, fontWeight:700, color:'#7a6a5a', textTransform:'uppercase', letterSpacing:1, marginBottom:16 }}>
             Subcategories — select all that apply
           </div>
-          {categories.map(cat => {
+          {categories.filter(c => CATEGORIES.includes(c)).map(cat => {
             const catSubs = SUBCATEGORIES[cat] || [];
             const allOn   = catSubs.length > 0 && catSubs.every(s => subcategories.includes(s));
             return (
@@ -746,7 +746,10 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(VENDOR_DRAFT_KEY);
-      return saved ? { ...DEFAULT_VENDOR_FORM, ...JSON.parse(saved) } : DEFAULT_VENDOR_FORM;
+      if (!saved) return DEFAULT_VENDOR_FORM;
+      const draft = { ...DEFAULT_VENDOR_FORM, ...JSON.parse(saved) };
+      if (draft.categories) draft.categories = [...new Set(draft.categories.map(c => CATEGORY_MAP[c] || c).filter(c => CATEGORIES.includes(c)))];
+      return draft;
     } catch { return DEFAULT_VENDOR_FORM; }
   });
   useEffect(() => { const { password: _pw, ...draft } = form; localStorage.setItem(VENDOR_DRAFT_KEY, JSON.stringify(draft)); }, [form]);
@@ -1206,7 +1209,11 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [form, setForm] = useState(() => {
     try {
       const saved = localStorage.getItem(HOST_DRAFT_KEY);
-      return saved ? { ...DEFAULT_HOST_FORM, ...JSON.parse(saved) } : DEFAULT_HOST_FORM;
+      if (!saved) return DEFAULT_HOST_FORM;
+      const draft = { ...DEFAULT_HOST_FORM, ...JSON.parse(saved) };
+      // Migrate old category names in draft
+      if (draft.vendorCategories) draft.vendorCategories = [...new Set(draft.vendorCategories.map(c => CATEGORY_MAP[c] || c).filter(c => CATEGORIES.includes(c)))];
+      return draft;
     } catch { return DEFAULT_HOST_FORM; }
   });
   useEffect(() => { const { password: _pw, ...draft } = form; localStorage.setItem(HOST_DRAFT_KEY, JSON.stringify(draft)); }, [form]);
