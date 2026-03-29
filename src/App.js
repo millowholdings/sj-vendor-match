@@ -7412,6 +7412,33 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
         }).catch(e => console.error('Message retry error:', e));
       }
     }
+    // Send email notification to recipient via Resend (5-min debounce on server)
+    if (!msgErr) {
+      (async () => {
+        try {
+          // Look up recipient email
+          let recipientEmail = null, recipientName = null;
+          if (isVendor) {
+            // Vendor sending to host — look up host email from events
+            const { data: evtRow } = await supabase.from('events').select('contact_email,contact_name').ilike('contact_email', recipientId).limit(1);
+            if (!evtRow?.[0]) {
+              // Try by user_id
+              const { data: evts } = await supabase.from('events').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
+              if (evts?.[0]) { recipientEmail = evts[0].contact_email; recipientName = evts[0].contact_name; }
+            } else { recipientEmail = evtRow[0].contact_email; recipientName = evtRow[0].contact_name; }
+          } else {
+            // Host sending to vendor — look up vendor email
+            const { data: vRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
+            if (vRow?.[0]) { recipientEmail = vRow[0].contact_email; recipientName = vRow[0].contact_name; }
+          }
+          if (recipientEmail) {
+            fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+              body: JSON.stringify({ recipientEmail, recipientName, senderName, senderType: isVendor ? 'vendor' : 'host', eventName: conv.eventName || '', messagePreview: text || '' }),
+            }).catch(e=>console.error('Message notification failed:',e));
+          }
+        } catch (e) { console.error('Email lookup error:', e); }
+      })();
+    }
   };
 
   const sendMessage = () => {
