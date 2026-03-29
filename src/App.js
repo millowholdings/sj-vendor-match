@@ -3927,12 +3927,12 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
               </button>
             )
           )}
-          {!hostEvent && openMessage && authUser && (
-            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>setInquiryModal && setInquiryModal({vendor:v})}>
+          {openMessage && authUser && (
+            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? openMessage(v) : (setInquiryModal && setInquiryModal({vendor:v}))}>
               💬 Message Vendor
             </button>
           )}
-          {!hostEvent && !authUser && (
+          {!authUser && (
             <button className="contact-btn" style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontWeight:600,fontSize:13}} onClick={()=>setShowAuthModal && setShowAuthModal(true)}>
               Log In to Message
             </button>
