@@ -3024,19 +3024,23 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       // Upload new photos first so we have URLs for the update
       let photoUrl = editExistingPhotos.length > 0 ? editExistingPhotos[0] : (evt.photo_url || null);
       for (const f of editNewPhotos) {
-        try {
-          const path = `events/${evt.id}/photos/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)}`;
-          const { error: upErr } = await supabase.storage.from('vendor-files').upload(path, f, { upsert: true, contentType: f.type });
-          if (!upErr) {
-            photoUrl = supabase.storage.from('vendor-files').getPublicUrl(path).data.publicUrl;
-          } else {
-            console.error('Photo upload failed:', upErr.message);
-          }
-        } catch (e) { console.error('Photo upload exception:', e); }
+        const path = `events/${evt.id}/photos/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(0,100)}`;
+        const { error: upErr } = await supabase.storage.from('vendor-files').upload(path, f, { upsert: true, contentType: f.type });
+        if (upErr) {
+          console.error('Photo upload to vendor-files failed:', upErr.message);
+          // If bucket doesn't exist or policy blocks, store as base64 data URL
+          try {
+            const reader = new FileReader();
+            const dataUrl = await new Promise((resolve) => { reader.onload = () => resolve(reader.result); reader.readAsDataURL(f); });
+            photoUrl = dataUrl;
+          } catch (e) { console.error('Base64 fallback failed:', e); }
+        } else {
+          photoUrl = supabase.storage.from('vendor-files').getPublicUrl(path).data.publicUrl;
+        }
       }
 
-      // Build full payload — include everything, then strip what fails
-      const fullPayload = {
+      // Update event — start with all fields, strip on failure
+      const payload = {
         event_name: eventForm.event_name, event_type: eventForm.event_type,
         date: eventForm.date, start_time: eventForm.start_time || null, end_time: eventForm.end_time || null,
         zip: eventForm.zip, booth_fee: eventForm.booth_fee || null, spots: eventForm.spots || null,
@@ -3046,15 +3050,20 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         event_link: eventForm.event_link || null,
       };
 
-      let { error } = await supabase.from('events').update(fullPayload).eq('id', evt.id);
-      // If full payload fails (column doesn't exist), retry with minimal
+      let { error } = await supabase.from('events').update(payload).eq('id', evt.id);
       if (error) {
-        console.error('Full update failed, retrying minimal:', error.message);
-        const { event_link: _el, ticket_price: _tp, is_ticketed: _it, ...minimal } = fullPayload;
-        ({ error } = await supabase.from('events').update(minimal).eq('id', evt.id));
+        // Strip optional columns and retry
+        const { event_link: _el, ticket_price: _tp, is_ticketed: _it, ...retry1 } = payload;
+        ({ error } = await supabase.from('events').update(retry1).eq('id', evt.id));
       }
       if (error) {
-        console.error('Minimal update also failed:', error.message);
+        // Strip photo_url too in case that column has issues
+        const { photo_url: _pu, event_link: _el, ticket_price: _tp, is_ticketed: _it, ...retry2 } = payload;
+        ({ error } = await supabase.from('events').update(retry2).eq('id', evt.id));
+        // Try photo_url alone
+        if (photoUrl) await supabase.from('events').update({ photo_url: photoUrl }).eq('id', evt.id);
+      }
+      if (error) {
         alert('Failed to save: ' + error.message);
         setSavingEvent(false);
         return;
