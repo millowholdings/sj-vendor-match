@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -5516,11 +5516,12 @@ function AppInner() {
   // Load conversations from Supabase
   const loadMessages = useCallback(async () => {
     if (!authUser) { setConversations([]); setUnreadCount(0); return; }
+    try {
     const uid = authUser.id;
-    const { data: msgs } = await supabase.from('messages').select('*')
+    const { data: msgs, error } = await supabase.from('messages').select('*')
       .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
       .order('created_at', { ascending: true });
-    if (!msgs) return;
+    if (error || !msgs) return;
     // Group by conversation_id
     const convMap = {};
     msgs.forEach(m => {
@@ -5534,6 +5535,7 @@ function AppInner() {
     });
     setConversations(Object.values(convMap));
     setUnreadCount(msgs.filter(m => m.recipient_id === uid && !m.is_read).length);
+    } catch (e) { console.error('loadMessages error:', e); }
   }, [authUser]);
 
   useEffect(() => { loadMessages(); }, [loadMessages]);
