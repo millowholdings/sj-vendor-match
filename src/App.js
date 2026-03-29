@@ -40,7 +40,7 @@ const CATEGORY_MAP = {
 const EVENT_TYPES = [
   "Pop-Up & Vendor Market", "Craft & Art Fair", "Farmers & Flea Market",
   "Holiday Market", "Sip & Shop", "Food/Drink Festival",
-  "Community Festival", "Fundraiser", "Corporate & Networking", "Private Party"
+  "Community Festival", "Fundraiser", "Corporate & Networking", "Private Party", "Other"
 ];
 const REMOVED_EVENT_TYPES = ["Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Other"];
 const EVENT_TYPE_MAP = {
@@ -1288,7 +1288,6 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
-        <div className="form-group"><label>Apply By Date</label><input type="date" value={form.applyByDate} max={form.date || undefined} onChange={e=>set('applyByDate',e.target.value)} /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Deadline for vendors to apply</div></div>
         <div className="form-group full"><label>Event Website or Facebook Page <span style={{fontSize:11,color:'#a89a8a',fontWeight:400}}>(optional)</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Add a link to your event page if you have one</div></div>
         <div className="form-group full">
           <label>Recurring Event?</label>
@@ -1426,43 +1425,6 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         )}
       </div>
 
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Event Visibility</h3>
-      <div className="form-group">
-        <label>Share this event with event guests?</label>
-        <div style={{display:'flex',gap:10}}>
-          <button type="button" onClick={()=>set('shareWithEventGoers',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
-          <button type="button" onClick={()=>set('shareWithEventGoers',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
-        </div>
-        <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{form.shareWithEventGoers ? 'Your event will appear on the public Upcoming Markets page for guests to discover.' : 'Your event will only be visible to vendors — it won\'t appear on the public Upcoming Markets page.'}</div>
-      </div>
-
-      <hr className="form-divider" />
-      <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
-      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
-      <div style={{marginBottom:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-          <span style={{fontSize:13,fontWeight:600}}>Photos</span>
-          <span style={{fontSize:12,color:eventPhotos.length>=6?'#1a6b3a':'#a89a8a',fontWeight:600}}>{eventPhotos.length} of 6</span>
-        </div>
-        {eventPhotos.length > 0 && (
-          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
-            {eventPhotos.map((f,i)=>(
-              <div key={i} style={{position:'relative',width:80,height:80}}>
-                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
-                <button onClick={()=>setEventPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
-              </div>
-            ))}
-          </div>
-        )}
-        {eventPhotos.length < 6 && (
-          <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
-            + Add Photos ({6 - eventPhotos.length} remaining)
-            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
-          </label>
-        )}
-      </div>
-
       <div style={{display:'flex',gap:10,marginTop:20}}>
         <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Vendors & Services →</button>
       </div>
@@ -1586,45 +1548,6 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </>
       )}
 
-      <div style={{display:'flex',gap:10,marginTop:20}}>
-        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
-        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Venue & Logistics →</button>
-      </div>
-      </>)}
-
-      {/* ── STEP 3: Venue & Logistics ── */}
-      {formStep === 3 && (<>
-      <h2 className="form-section-title"><span className="dot" />Venue & Logistics</h2>
-      <div className="form-grid">
-        <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
-        <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
-        <div className="form-group"><label>Number of Vendor Spots</label><select value={form.vendorCount} onChange={e=>set('vendorCount',+e.target.value)}><option value={1}>1 vendor</option><option value={2}>2 vendors</option><option value={3}>3 vendors</option><option value={4}>4 vendors</option><option value={5}>5 vendors</option><option value={6}>6 vendors</option><option value={7}>7 vendors</option><option value={8}>8 vendors</option><option value={10}>10 vendors</option><option value={12}>12 vendors</option><option value={15}>15 vendors</option><option value={20}>20 vendors</option><option value={25}>25 vendors</option><option value={30}>30 vendors</option><option value={40}>40 vendors</option><option value={50}>50 vendors</option><option value={75}>75 vendors</option><option value={100}>100+ vendors</option></select></div>
-        <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
-        <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
-        <div className="form-group"><label>Table / Space Size</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
-        <div className="form-group">
-          <label>Allow Multiple Vendors with Similar Products?</label>
-          <select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>{set('allowDuplicateCategories',e.target.value==='yes');set('allowDuplicateSubcategories',e.target.value==='yes');}}>
-            <option value="yes">Yes — similar vendors are OK</option>
-            <option value="no">No — I want variety only</option>
-          </select>
-          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>e.g. allowing two jewelry vendors or two candle makers at the same event</div>
-        </div>
-        <div className="form-group"><label>Do You Charge Vendors a Booth Fee?</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select></div>
-        {form.budget !== 'No booth fee' && (
-          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
-        )}
-        <div className="form-group"><label>Is This a Ticketed Event?</label>
-          <div style={{display:'flex',gap:10}}>
-            <button type="button" onClick={()=>set('isTicketedEvent',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
-            <button type="button" onClick={()=>{set('isTicketedEvent',false);set('ticketPrice','');}} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
-          </div>
-        </div>
-        {form.isTicketedEvent && (
-          <div className="form-group"><label>Ticket Price</label><input type="text" value={form.ticketPrice} onChange={e=>set('ticketPrice',e.target.value)} placeholder="e.g. $5, $10-$15, Free for kids" /></div>
-        )}
-      </div>
-
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />How Would You Like to Find Vendors?</h3>
       <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:16}}>
@@ -1652,7 +1575,66 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </div>
         ))}
       </div>
+      {(form.vendorDiscovery === 'apply' || form.vendorDiscovery === 'both') && (
+        <div className="form-group" style={{marginBottom:16}}>
+          <label>Vendor Application Deadline</label>
+          <input type="date" value={form.applyByDate} max={form.date || undefined} onChange={e=>set('applyByDate',e.target.value)} />
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Last day vendors can apply to your event</div>
+        </div>
+      )}
 
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Venue & Logistics →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 3: Venue & Logistics ── */}
+      {formStep === 3 && (<>
+      <h2 className="form-section-title"><span className="dot" />Venue & Logistics</h2>
+      <div className="form-grid">
+        <div className="form-group"><label>Expected Attendance</label><select value={form.expectedAttendance} onChange={e=>set('expectedAttendance',e.target.value)}><option value="">Estimate...</option><option>Under 50</option><option>50–150</option><option>150–300</option><option>300–500</option><option>500+</option></select></div>
+        <div className="form-group"><label>Indoor or Outdoor?</label><select value={form.indoorOutdoor} onChange={e=>set('indoorOutdoor',e.target.value)}><option value="outdoor">Outdoor</option><option value="indoor">Indoor</option><option value="both">Mixed</option></select></div>
+        <div className="form-group"><label>Number of Vendor Spots</label><input type="number" min={1} max={200} value={form.vendorCount} onChange={e=>set('vendorCount',Math.max(1,+e.target.value||1))} placeholder="e.g. 10" /></div>
+        <div className="form-group"><label>Electricity Available?</label><select value={form.electricAvailable?'yes':'no'} onChange={e=>set('electricAvailable',e.target.value==='yes')}><option value="yes">Yes</option><option value="no">No</option></select></div>
+        <div className="form-group"><label>Tables Provided by Host?</label><select value={form.tableProvided?'yes':'no'} onChange={e=>set('tableProvided',e.target.value==='yes')}><option value="no">No — vendors bring their own</option><option value="yes">Yes — we provide tables</option></select></div>
+        <div className="form-group"><label>{form.tableProvided ? 'Table Size Provided' : 'Space per Vendor'}</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
+        <div className="form-group">
+          <label>Allow Multiple Vendors with Similar Products?</label>
+          <select value={form.allowDuplicateCategories?'yes':'no'} onChange={e=>{set('allowDuplicateCategories',e.target.value==='yes');set('allowDuplicateSubcategories',e.target.value==='yes');}}>
+            <option value="yes">Yes — similar vendors are OK</option>
+            <option value="no">No — I want variety only</option>
+          </select>
+          <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>e.g. allowing two jewelry vendors or two candle makers at the same event</div>
+        </div>
+        <div className="form-group"><label>Do You Charge Vendors a Booth Fee?</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select></div>
+        {form.budget !== 'No booth fee' && (
+          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
+        )}
+        <div className="form-group"><label>Is This a Ticketed Event?</label>
+          <div style={{display:'flex',gap:10}}>
+            <button type="button" onClick={()=>set('isTicketedEvent',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
+            <button type="button" onClick={()=>{set('isTicketedEvent',false);set('ticketPrice','');}} style={{flex:1,padding:'10px',borderRadius:8,border:!form.isTicketedEvent?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.isTicketedEvent?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
+          </div>
+        </div>
+        {form.isTicketedEvent && (
+          <div className="form-group"><label>Ticket Price</label><input type="text" value={form.ticketPrice} onChange={e=>set('ticketPrice',e.target.value)} placeholder="e.g. $5, $10-$15, Free for kids" /></div>
+        )}
+      </div>
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Visibility</h3>
+      <div className="form-group" style={{marginBottom:16}}>
+        <label>Share this event with event guests?</label>
+        <div style={{display:'flex',gap:10}}>
+          <button type="button" onClick={()=>set('shareWithEventGoers',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
+          <button type="button" onClick={()=>set('shareWithEventGoers',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
+        </div>
+        <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{form.shareWithEventGoers ? 'Your event will appear on the public Upcoming Markets page for guests to discover.' : 'Your event will only be visible to vendors — it won\'t appear on the public Upcoming Markets page.'}</div>
+      </div>
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Notes</h3>
       <div className="form-group" style={{ marginTop:4 }}>
         <label>Notes for Vendors</label>
         <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Load-in times, setup details, booth requirements, what vendors should know..."} value={form.vendorNotes} onChange={e=>set('vendorNotes',e.target.value)} />
@@ -1663,6 +1645,32 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <textarea placeholder="Parking info, what to expect, food options, bring a lawn chair, rain-or-shine policy..." value={form.eventGoerNotes} onChange={e=>set('eventGoerNotes',e.target.value)} />
         </div>
       )}
+
+      <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
+      <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
+      <div style={{marginBottom:16}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <span style={{fontSize:13,fontWeight:600}}>Photos</span>
+          <span style={{fontSize:12,color:eventPhotos.length>=6?'#1a6b3a':'#a89a8a',fontWeight:600}}>{eventPhotos.length} of 6</span>
+        </div>
+        {eventPhotos.length > 0 && (
+          <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:10}}>
+            {eventPhotos.map((f,i)=>(
+              <div key={i} style={{position:'relative',width:80,height:80}}>
+                <img src={URL.createObjectURL(f)} alt={`Photo ${i+1}`} style={{width:80,height:80,objectFit:'cover',borderRadius:6,border:'1px solid #e8ddd0'}} />
+                <button onClick={()=>setEventPhotos(p=>p.filter((_,j)=>j!==i))} style={{position:'absolute',top:-5,right:-5,width:18,height:18,borderRadius:'50%',background:'#c62828',color:'#fff',border:'none',fontSize:10,cursor:'pointer',lineHeight:'18px',textAlign:'center',padding:0}}>x</button>
+              </div>
+            ))}
+          </div>
+        )}
+        {eventPhotos.length < 6 && (
+          <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
+            + Add Photos ({6 - eventPhotos.length} remaining)
+            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
+          </label>
+        )}
+      </div>
 
       <div style={{display:'flex',gap:10,marginTop:20}}>
         <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
@@ -1690,8 +1698,11 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           {form.servicesNeeded.length > 0 && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Services:</span> {form.servicesNeeded.map(s=>s.type||'TBD').join(', ')}</div>}
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Discovery:</span> {form.vendorDiscovery==='both'?'Browse + Apply':form.vendorDiscovery==='browse'?'Browse & Invite':form.vendorDiscovery==='apply'?'Vendor Applications':'—'}</div>
           {form.fullServiceBooking && <div><span style={{color:'#e8c97a',fontWeight:700}}>Full Service Booking</span> — our team handles everything</div>}
+          {form.isRecurring && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Recurring:</span> {form.recurrenceFrequency==='daily'?'Daily':form.recurrenceFrequency==='weekly'?`Every ${form.recurrenceDay}`:form.recurrenceFrequency==='biweekly'?`Every other ${form.recurrenceDay}`:form.recurrenceFrequency==='monthly'?'Monthly':form.recurrenceFrequency==='custom'?`Every ${form.recurrenceWeekInterval} weeks`:''}{form.recurrenceEndType==='never'?' · Ongoing':form.recurrenceEndType==='after'?` · ${form.recurrenceCount} times`:''}</div>}
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Visible to Guests:</span> {form.shareWithEventGoers ? 'Yes' : 'No — vendors only'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {eventPhotos.length} uploaded</div>
+          {form.vendorNotes && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Vendor Notes:</span> {form.vendorNotes.length > 80 ? form.vendorNotes.slice(0,80)+'...' : form.vendorNotes}</div>}
+          {form.eventGoerNotes && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Guest Notes:</span> {form.eventGoerNotes.length > 80 ? form.eventGoerNotes.slice(0,80)+'...' : form.eventGoerNotes}</div>}
         </div>
         <button onClick={()=>setFormStep(1)} style={{marginTop:10,background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Edit any section</button>
       </div>
