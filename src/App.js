@@ -5888,6 +5888,7 @@ function AppInner() {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
   const navTo = (t) => { setTab(t); setMobileMenuOpen(false); window.scrollTo({top:0}); };
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
@@ -6721,30 +6722,36 @@ function AppInner() {
               ))}
             </div>
 
-            {/* How It Works */}
-            <div style={{padding:'32px 24px 0',maxWidth:1200,margin:'0 auto',width:'100%'}}>
-              <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(18px,2vw,26px)',color:'#fff',textAlign:'center',margin:'0 0 20px',fontWeight:700}}>How It Works</h2>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:16}}>
-                {[
-                  {title:'For Vendors',steps:['Create your profile — pick your category, set your travel radius, and upload photos of your work.','Get matched — when a host adds an event in your area, you\'ll appear in their vendor list automatically.','Apply & book — browse open events, apply with one click, and manage everything from your dashboard.']},
-                  {title:'For Event Hosts',steps:['Add your event — enter your event details, pick the vendor categories you need, and set your preferences.','Find vendors — browse matched vendors in your area, or let vendors come to you through applications.','Book & manage — review applications, send booking requests, and coordinate everything in one place.']},
-                  {title:'For Event Guests',steps:['Sign up for alerts — enter your zip code and pick the event types you love.','Discover events — browse upcoming markets, pop-ups, and festivals near you.','See who\'s there — check which vendors are attending before you go.']},
-                ].map(col=>(
-                  <div key={col.title} style={{background:'rgba(200,168,80,0.08)',border:'1px solid rgba(200,168,80,0.2)',borderRadius:10,padding:'20px 18px'}}>
-                    <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:15,color:'#c8a850',fontWeight:700,marginBottom:12}}>{col.title}</div>
-                    {col.steps.map((step,i)=>(
-                      <div key={i} style={{display:'flex',gap:10,marginBottom:10}}>
-                        <div style={{width:22,height:22,borderRadius:'50%',background:'#c8a850',color:'#0e0c0a',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2}}>{i+1}</div>
-                        <div style={{fontSize:13,color:'#c8b898',lineHeight:1.5}}><strong style={{color:'#fff'}}>{step.split(' — ')[0]}</strong> — {step.split(' — ')[1]}</div>
-                      </div>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              <p style={{textAlign:'center',fontSize:12,color:'#a89a8a',marginTop:16,lineHeight:1.6,maxWidth:600,margin:'16px auto 0'}}>
-                <strong style={{color:'#c8a850'}}>No fees through our platform.</strong> South Jersey Vendor Market is a matching service — all booth fees, service rates, and contracts are handled directly between vendors and hosts. We connect you; you handle the rest.
-              </p>
+            {/* How It Works — toggle */}
+            <div style={{textAlign:'center',marginTop:24}}>
+              <button onClick={()=>setShowHowItWorks(s=>!s)} style={{background:'none',border:'1px solid rgba(200,168,80,0.4)',color:'#c8a850',borderRadius:8,padding:'10px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:"'Public Sans',sans-serif",letterSpacing:0.3}}>
+                {showHowItWorks ? 'Hide How It Works ▲' : 'How It Works ▼'}
+              </button>
             </div>
+            {showHowItWorks && (
+              <div style={{padding:'24px 24px 0',maxWidth:1200,margin:'0 auto',width:'100%'}}>
+                <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))',gap:16}}>
+                  {[
+                    {title:'For Vendors',steps:['Create your profile — pick your category, set your travel radius, and upload photos of your work.','Get matched — when a host adds an event in your area, you\'ll appear in their vendor list automatically.','Apply & book — browse open events, apply with one click, and manage everything from your dashboard.']},
+                    {title:'For Event Hosts',steps:['Add your event — enter your event details, pick the vendor categories you need, and set your preferences.','Find vendors — browse matched vendors in your area, or let vendors come to you through applications.','Book & manage — review applications, send booking requests, and coordinate everything in one place.']},
+                    {title:'For Event Guests',steps:['Sign up for alerts — enter your zip code and pick the event types you love.','Discover events — browse upcoming markets, pop-ups, and festivals near you.','See who\'s there — check which vendors are attending before you go.']},
+                  ].map(col=>(
+                    <div key={col.title} style={{background:'rgba(200,168,80,0.08)',border:'1px solid rgba(200,168,80,0.2)',borderRadius:10,padding:'20px 18px'}}>
+                      <div style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:15,color:'#c8a850',fontWeight:700,marginBottom:12}}>{col.title}</div>
+                      {col.steps.map((step,i)=>(
+                        <div key={i} style={{display:'flex',gap:10,marginBottom:10}}>
+                          <div style={{width:22,height:22,borderRadius:'50%',background:'#c8a850',color:'#0e0c0a',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginTop:2}}>{i+1}</div>
+                          <div style={{fontSize:13,color:'#c8b898',lineHeight:1.5}}><strong style={{color:'#fff'}}>{step.split(' — ')[0]}</strong> — {step.split(' — ')[1]}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+                <p style={{textAlign:'center',fontSize:12,color:'#a89a8a',lineHeight:1.6,maxWidth:600,margin:'16px auto 0'}}>
+                  <strong style={{color:'#c8a850'}}>No event fees through our platform.</strong> South Jersey Vendor Market is a matching service — all booth fees, service rates, and contracts are handled directly between vendors and hosts. We connect you; you handle the rest.
+                </p>
+              </div>
+            )}
 
             {/* Stats bar */}
             <div style={{padding:'16px 24px',display:'flex',justifyContent:'center',gap:'clamp(40px,8vw,100px)',flexWrap:'wrap',borderTop:'1px solid rgba(200,168,80,0.25)',borderBottom:'2px solid #c8a850',marginTop:32}}>
