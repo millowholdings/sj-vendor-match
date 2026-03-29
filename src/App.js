@@ -2989,7 +2989,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard, unreadCount, conversations, openMessage }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard, unreadCount, conversations, openMessage, setAllEvents, setOpps }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -3068,9 +3068,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name}`, message:`Host ${user.email} updated their event. Status set to pending review.` }),
       }).catch(()=>{});
 
-      // Refresh
+      // Refresh both userEvents (raw) and allEvents (mapped) so admin sees updates immediately
       const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
-      if (data && setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
+      if (data) {
+        if (setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
+        setAllEvents(prev => prev.map(e => e.id === data.id ? dbEventToApp(data) : e));
+        // Also update opps if it was live
+        setOpps(prev => prev.map(e => e.id === data.id ? dbEventToApp(data) : e));
+      }
       clearTimeout(forceUnlock);
       setEditingEvent(null); setSavingEvent(false);
       alert('Changes saved! Your event has been submitted for admin review.');
@@ -7210,7 +7215,7 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setAllEvents={setAllEvents} setOpps={setOpps} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
