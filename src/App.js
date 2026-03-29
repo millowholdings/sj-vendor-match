@@ -6362,11 +6362,21 @@ function AppInner() {
 
   useEffect(() => { loadMessages(); }, [loadMessages]);
 
-  // Auto-refresh messages every 30 seconds
+  // Realtime subscription for instant message delivery
   useEffect(() => {
     if (!authUser) return;
-    const interval = setInterval(loadMessages, 30000);
-    return () => clearInterval(interval);
+    const channel = supabase.channel('messages-realtime')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          if (payload.new && (payload.new.recipient_id === authUser.id || payload.new.sender_id === authUser.id)) {
+            loadMessages();
+          }
+        }
+      )
+      .subscribe();
+    // Fallback polling every 60 seconds in case realtime disconnects
+    const interval = setInterval(loadMessages, 60000);
+    return () => { supabase.removeChannel(channel); clearInterval(interval); };
   }, [authUser, loadMessages]);
 
   // Migrate localStorage messages to Supabase on first load
