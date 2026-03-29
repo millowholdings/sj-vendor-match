@@ -2250,7 +2250,7 @@ function UnifiedDashboardCalendar({ authUser, vendorProfile, userEvents, setTab 
 }
 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
-function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile, conversations, setConversations, setActiveConvoId }) {
+function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile, conversations, setConversations, setActiveConvoId, unreadCount }) {
   const [requests, setRequests] = useState([]);
   const [myApplications, setMyApplications] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
@@ -2805,6 +2805,20 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         )}
       </div>
 
+      {/* ── Messages notification ── */}
+      {(unreadCount > 0 || (conversations && conversations.length > 0)) && (
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:unreadCount>0?'#1a1410':'#fff',border:unreadCount>0?'2px solid #e8c97a':'1px solid #e8ddd0',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:20}}>💬</span>
+            <div style={{textAlign:'left'}}>
+              <div style={{fontWeight:700,fontSize:14,color:unreadCount>0?'#e8c97a':'#1a1410'}}>{unreadCount > 0 ? `${unreadCount} unread message${unreadCount!==1?'s':''}` : `${conversations.length} conversation${conversations.length!==1?'s':''}`}</div>
+              {unreadCount > 0 && <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>}
+            </div>
+          </div>
+          <span style={{fontSize:18,color:unreadCount>0?'#e8c97a':'#a89a8a'}}>→</span>
+        </button>
+      )}
+
       {/* ── PENDING ITEMS ── */}
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Pending</h3>
 
@@ -2918,7 +2932,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
 }
 
 // ─── Host Dashboard ───────────────────────────────────────────────────────────
-function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard }) {
+function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowFeedbackModal, setUserEvents, setHostEventFromDashboard, unreadCount, conversations }) {
   const [applications, setApplications] = useState([]);
   const [loadingApps, setLoadingApps] = useState(true);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -3079,6 +3093,20 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     <div className="section" style={{maxWidth:900}}>
       <div className="section-title">My Host Dashboard</div>
       <p className="section-sub">Welcome back, {user.email}</p>
+
+      {/* ── Messages notification ── */}
+      {(unreadCount > 0 || (conversations && conversations.length > 0)) && (
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:unreadCount>0?'#1a1410':'#fff',border:unreadCount>0?'2px solid #e8c97a':'1px solid #e8ddd0',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:20}}>💬</span>
+            <div style={{textAlign:'left'}}>
+              <div style={{fontWeight:700,fontSize:14,color:unreadCount>0?'#e8c97a':'#1a1410'}}>{unreadCount > 0 ? `${unreadCount} unread message${unreadCount!==1?'s':''}` : `${conversations.length} conversation${conversations.length!==1?'s':''}`}</div>
+              {unreadCount > 0 && <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>}
+            </div>
+          </div>
+          <span style={{fontSize:18,color:unreadCount>0?'#e8c97a':'#a89a8a'}}>→</span>
+        </button>
+      )}
 
       {/* Pending review banner — shown when ALL events are still pending */}
       {userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active') && userEvents.some(e => e.status === 'pending_review' || e.status === 'concierge_pending') && (
@@ -6989,8 +7017,8 @@ function AppInner() {
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
-        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
+        {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
