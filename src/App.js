@@ -1219,6 +1219,7 @@ const DEFAULT_HOST_FORM = {
 function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
+  const [hostSubmitting, setHostSubmitting] = useState(false);
   const [eventPhotos, setEventPhotos] = useState([]);
   const [formStep, setFormStep] = useState(1);
   const HOST_STEPS = [{n:1,label:'Event Details'},{n:2,label:'Vendors & Services'},{n:3,label:'Venue & Logistics'},{n:4,label:'Review & Submit'}];
@@ -1717,7 +1718,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <span>I agree to the <button type="button" onClick={()=>setShowTos(true)} style={{ background:'none', border:'none', color:'#c8a84b', fontWeight:600, cursor:'pointer', textDecoration:'underline', padding:0, fontSize:14, fontFamily:'DM Sans, sans-serif' }}>South Jersey Vendor Market Terms of Service &amp; Non-Circumvention Agreement</button>. I understand that vendors discovered through this platform may not be contacted or booked outside of South Jersey Vendor Market within 12 months without a finder's fee.</span>
         </label>
         {showTos && <TosModal onClose={()=>setShowTos(false)} />}
-        <button className="btn-submit" onClick={()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); onSubmit(form, { eventPhotos }); }} style={{ opacity: tosAgreed?1:0.5 }}>Find My Vendors →</button>
+        <button className="btn-submit" disabled={hostSubmitting} onClick={async()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} setHostSubmitting(true); localStorage.removeItem(HOST_DRAFT_KEY); localStorage.removeItem(HOST_DRAFT_SUBS_KEY); await onSubmit(form, { eventPhotos }); setHostSubmitting(false); }} style={{ opacity: tosAgreed&&!hostSubmitting?1:0.5 }}>{hostSubmitting ? 'Submitting…' : 'Find My Vendors →'}</button>
         <button onClick={prevStep} style={{marginTop:10,background:'none',border:'1px solid #e0d5c5',color:'#7a6a5a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back to Logistics</button>
       </div>
       </>)}
@@ -6858,7 +6859,9 @@ function AppInner() {
     // Pending events don't appear in public feed — they go through admin approval
     // Only add to user's own events list for their dashboard
     if (newEvent) {
-      setUserEvents(prev => [dbEventToApp(newEvent), ...prev]);
+      const mapped = dbEventToApp(newEvent);
+      setUserEvents(prev => { if (prev.some(e=>e.id===mapped.id)) return prev; return [mapped, ...prev]; });
+      setAllEvents(prev => { if (prev.some(e=>e.id===mapped.id)) return prev; return [mapped, ...prev]; });
     }
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType, isPending: true });
