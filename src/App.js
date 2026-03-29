@@ -188,6 +188,9 @@ function dbEventToApp(e) {
     fbLink:           e.fb_link           || "",
     deadline:         e.deadline          || "",
     notes:            e.notes             || "",
+    vendorNotes:      e.vendor_notes      || "",
+    eventGoerNotes:   e.event_goer_notes  || "",
+    shareWithEventGoers: e.share_with_event_goers !== false,
     source:           e.source            || "Host Submitted",
     photoUrl:         e.photo_url         || "",
     vendorDiscovery:  e.vendor_discovery  || "both",
@@ -1188,7 +1191,7 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true, allowDuplicateSubcategories:true,
   applyByDate:'', eventLink:'',
-  budget:'No booth fee', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
+  budget:'No booth fee', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', vendorNotes:'', eventGoerNotes:'', shareWithEventGoers:true, fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
   vendorDiscovery:'both', password:''
 };
 
@@ -1429,6 +1432,17 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <hr className="form-divider" />
+      <h3 className="form-section-title"><span className="dot" />Event Visibility</h3>
+      <div className="form-group">
+        <label>Share this event with event goers?</label>
+        <div style={{display:'flex',gap:10}}>
+          <button type="button" onClick={()=>set('shareWithEventGoers',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
+          <button type="button" onClick={()=>set('shareWithEventGoers',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
+        </div>
+        <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{form.shareWithEventGoers ? 'Your event will appear on the public Upcoming Markets page for guests to discover.' : 'Your event will only be visible to vendors — it won\'t appear on the public Upcoming Markets page.'}</div>
+      </div>
+
+      <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Event Photos (Optional)</h3>
       <p style={{color:'#7a6a5a',fontSize:14,marginBottom:12}}>Upload event flyers, venue photos, or past event photos to attract vendors.</p>
       <div style={{marginBottom:16}}>
@@ -1645,9 +1659,15 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <div className="form-group" style={{ marginTop:4 }}>
-        <label>Additional Notes</label>
-        <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Anything else vendors or our team should know..."} value={form.notes} onChange={e=>set('notes',e.target.value)} />
+        <label>Notes for Vendors</label>
+        <textarea placeholder={form.fullServiceBooking ? "Tell us about your vision — theme, vibe, budget, anything that helps us pick the perfect vendors..." : "Load-in times, setup details, booth requirements, what vendors should know..."} value={form.vendorNotes} onChange={e=>set('vendorNotes',e.target.value)} />
       </div>
+      {form.shareWithEventGoers && (
+        <div className="form-group" style={{ marginTop:12 }}>
+          <label>Notes for Event Goers</label>
+          <textarea placeholder="Parking info, what to expect, food options, bring a lawn chair, rain-or-shine policy..." value={form.eventGoerNotes} onChange={e=>set('eventGoerNotes',e.target.value)} />
+        </div>
+      )}
 
       <div style={{display:'flex',gap:10,marginTop:20}}>
         <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
@@ -1675,6 +1695,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           {form.servicesNeeded.length > 0 && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Services:</span> {form.servicesNeeded.map(s=>s.type||'TBD').join(', ')}</div>}
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Discovery:</span> {form.vendorDiscovery==='both'?'Browse + Apply':form.vendorDiscovery==='browse'?'Browse & Invite':form.vendorDiscovery==='apply'?'Vendor Applications':'—'}</div>
           {form.fullServiceBooking && <div><span style={{color:'#e8c97a',fontWeight:700}}>Full Service Booking</span> — our team handles everything</div>}
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Visible to Guests:</span> {form.shareWithEventGoers ? 'Yes' : 'No — vendors only'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {eventPhotos.length} uploaded</div>
         </div>
         <button onClick={()=>setFormStep(1)} style={{marginTop:10,background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Edit any section</button>
@@ -5119,6 +5140,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const zipOk = myZip.length===5 && isKnownZip(myZip);
   const upcoming = opps
     .filter(o => o.date >= todayStr)
+    .filter(o => o.shareWithEventGoers !== false)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterDate || o.date === filterDate)
     .filter(o => !filterTicketed || (filterTicketed==='yes' ? o.isTicketed : !o.isTicketed))
@@ -5208,7 +5230,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                       {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
                       {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
                     </div>
-                    {opp.notes && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 10px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.notes}</p>}
+                    {(opp.eventGoerNotes || opp.notes) && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 10px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.eventGoerNotes || opp.notes}</p>}
                     {opp.eventLink && <div><a href={opp.eventLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a></div>}
                     {!isOpen && <div style={{fontSize:12,color:'#c8a84b',marginTop:8,fontWeight:600}}>Click to see vendors attending →</div>}
                   </div>
@@ -5393,7 +5415,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
                 </div>
                 <div style={{ padding:"20px 24px" }}>
                   {/* Preview fields — visible to everyone */}
-                  {opp.notes && <p style={{ fontSize:13, color:"#7a6a5a", lineHeight:1.6, marginBottom:14, padding:12, background:"#fdf9f5", borderRadius:6, borderLeft:"3px solid #e8c97a" }}>{opp.notes}</p>}
+                  {(opp.vendorNotes || opp.notes) && <p style={{ fontSize:13, color:"#7a6a5a", lineHeight:1.6, marginBottom:14, padding:12, background:"#fdf9f5", borderRadius:6, borderLeft:"3px solid #e8c97a" }}>{opp.vendorNotes || opp.notes}</p>}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14}}>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</div></div>
@@ -6468,7 +6490,10 @@ function AppInner() {
       contact_name: form.contactName,
       contact_email: form.email,
       contact_phone: form.phone || null,
-      notes: form.notes || null,
+      notes: form.vendorNotes || form.notes || null,
+      vendor_notes: form.vendorNotes || form.notes || null,
+      event_goer_notes: form.eventGoerNotes || null,
+      share_with_event_goers: form.shareWithEventGoers !== false,
       deadline: form.applyByDate || null,
       source: form.fullServiceBooking ? 'Concierge Request' : 'Host Submitted',
       status: form.fullServiceBooking ? 'concierge_pending' : 'pending_review',
