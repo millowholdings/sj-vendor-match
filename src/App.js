@@ -5510,12 +5510,76 @@ function AppInner() {
   }, []);
 
   // Conversations: persist to localStorage so they survive page refresh
-  const [conversations, setConversations] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(CONVERSATIONS_LS_KEY) || '[]'); } catch { return []; }
-  });
+  const [conversations, setConversations] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Load conversations from Supabase
+  const loadMessages = useCallback(async () => {
+    if (!authUser) { setConversations([]); setUnreadCount(0); return; }
+    const uid = authUser.id;
+    const { data: msgs } = await supabase.from('messages').select('*')
+      .or(`sender_id.eq.${uid},recipient_id.eq.${uid}`)
+      .order('created_at', { ascending: true });
+    if (!msgs) return;
+    // Group by conversation_id
+    const convMap = {};
+    msgs.forEach(m => {
+      if (!convMap[m.conversation_id]) convMap[m.conversation_id] = { id: m.conversation_id, messages: [], vendorId: null, vendorName: '', hostName: '', eventName: m.event_name || '', status: 'active' };
+      const conv = convMap[m.conversation_id];
+      if (m.sender_type === 'vendor') { conv.vendorId = m.sender_id; conv.vendorName = conv.vendorName || m.sender_id; }
+      if (m.sender_type === 'host') { conv.hostName = conv.hostName || m.sender_id; }
+      if (m.recipient_type === 'vendor') conv.vendorId = conv.vendorId || m.recipient_id;
+      if (m.event_name) conv.eventName = m.event_name;
+      conv.messages.push({ id: m.id, from: m.sender_id === uid ? 'host' : (m.sender_type === 'system' ? 'system' : 'vendor'), text: m.message_text, ts: m.created_at, senderName: m.sender_type, attachments: m.attachments || undefined });
+    });
+    setConversations(Object.values(convMap));
+    setUnreadCount(msgs.filter(m => m.recipient_id === uid && !m.is_read).length);
+  }, [authUser]);
+
+  useEffect(() => { loadMessages(); }, [loadMessages]);
+
+  // Auto-refresh messages every 30 seconds
   useEffect(() => {
-    try { localStorage.setItem(CONVERSATIONS_LS_KEY, JSON.stringify(conversations)); } catch {}
-  }, [conversations]);
+    if (!authUser) return;
+    const interval = setInterval(loadMessages, 30000);
+    return () => clearInterval(interval);
+  }, [authUser, loadMessages]);
+
+  // Migrate localStorage messages to Supabase on first load
+  useEffect(() => {
+    if (!authUser) return;
+    const lsKey = CONVERSATIONS_LS_KEY;
+    try {
+      const old = JSON.parse(localStorage.getItem(lsKey) || '[]');
+      if (old.length === 0) return;
+      const uid = authUser.id;
+      const inserts = [];
+      old.forEach(conv => {
+        const convoId = conv.vendorId ? `${uid}_${conv.vendorId}` : conv.id?.toString() || `legacy_${Date.now()}`;
+        (conv.messages || []).forEach(msg => {
+          if (msg.from === 'system') return;
+          inserts.push({
+            conversation_id: convoId,
+            sender_id: msg.from === 'host' ? uid : (conv.vendorId || 'unknown'),
+            sender_type: msg.from === 'host' ? 'host' : 'vendor',
+            recipient_id: msg.from === 'host' ? (conv.vendorId || 'unknown') : uid,
+            recipient_type: msg.from === 'host' ? 'vendor' : 'host',
+            event_name: conv.eventName || '',
+            message_text: msg.text || '(file attachment)',
+            attachments: msg.attachments || null,
+            is_read: true,
+            created_at: msg.ts || new Date().toISOString(),
+          });
+        });
+      });
+      if (inserts.length > 0) {
+        supabase.from('messages').insert(inserts).then(() => {
+          localStorage.removeItem(lsKey);
+          loadMessages();
+        }).catch(() => {});
+      }
+    } catch {}
+  }, [authUser]);
 
   const [activeConvoId, setActiveConvoId] = useState(null);
   const [bookingRequests, setBookingRequests] = useState([]);
@@ -5620,19 +5684,28 @@ function AppInner() {
     openMessage(vendor);
   };
 
-  const openMessage = (vendor) => {
-    const existing = conversations.find(c => c.vendorId === vendor.id);
-    if (existing) { setActiveConvoId(existing.id); setTab("messages"); return; }
+  const openMessage = async (vendor) => {
+    const uid = authUser?.id || 'anon';
+    const convoId = `${uid}_${vendor.id}`;
+    const existing = conversations.find(c => c.id === convoId);
+    if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
+    // Create system message in Supabase
+    await supabase.from('messages').insert({
+      conversation_id: convoId,
+      sender_id: 'system', sender_type: 'system',
+      recipient_id: uid, recipient_type: 'host',
+      event_name: hostEvent?.eventName || '',
+      message_text: `Conversation started with ${vendor.name}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`,
+      is_read: true,
+    });
     const newConvo = {
-      id: Date.now(), vendorId: vendor.id, vendorName: vendor.name,
+      id: convoId, vendorId: vendor.id, vendorName: vendor.name,
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
-      hostName: "You (Host)", status: "active",
-      messages: [{
-        id: 1, from: "system", text: `Conversation started with ${vendor.name}. This is a protected platform conversation — contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`, ts: new Date().toISOString()
-      }]
+      hostName: authUser?.email || 'Host', eventName: hostEvent?.eventName || '', status: 'active',
+      messages: [{ id: Date.now(), from: 'system', text: `Conversation started with ${vendor.name}.`, ts: new Date().toISOString() }],
     };
     setConversations(c => [newConvo, ...c]);
-    setActiveConvoId(newConvo.id);
+    setActiveConvoId(convoId);
     setTab("messages");
   };
 
@@ -6058,7 +6131,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
-                  Messages{(()=>{const p=bookingRequests.filter(r=>r.status==='pending').length;return p>0?` (${p} pending)`:conversations.length>0?` (${conversations.length})`:"";})()}
+                  Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
                 </button>
               </div>
             </div>
@@ -6068,7 +6141,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
                 {(!vendorProfile || userEvents.length > 0) && <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>}
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
-                  Messages{(()=>{const p=bookingRequests.filter(r=>r.status==='pending').length;return p>0?` (${p} pending)`:conversations.length>0?` (${conversations.length})`:"";})()}
+                  Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
                 </button>
               </div>
             </div>
@@ -6240,7 +6313,7 @@ function AppInner() {
           : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} />}
-        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} />}
+        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
@@ -6332,7 +6405,7 @@ function AttachmentBubble({ att, isHost }) {
 }
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
-function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests }) {
+function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, loadMessages }) {
   const [draft, setDraft] = useState('');
   const [senderName, setSenderName] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -6345,18 +6418,36 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
   }, [activeConvo?.messages?.length]);
 
-  const addMessage = (text, attachments) => {
+  const addMessage = async (text, attachments) => {
+    const uid = authUser?.id || 'anon';
+    const conv = conversations.find(c => c.id === activeConvoId);
+    if (!conv) return;
+    const recipientId = conv.vendorId || 'unknown';
+    const ts = new Date().toISOString();
+    // Save to Supabase
+    supabase.from('messages').insert({
+      conversation_id: activeConvoId,
+      sender_id: uid, sender_type: 'host',
+      recipient_id: recipientId, recipient_type: 'vendor',
+      event_name: conv.eventName || '',
+      message_text: text || '(file attachment)',
+      attachments: attachments && attachments.length > 0 ? attachments : null,
+      is_read: false,
+    }).catch(e => console.error('Message save error:', e));
+    // Update UI immediately
     setConversations(convos => convos.map(c => {
       if (c.id !== activeConvoId) return c;
-      return {
-        ...c,
-        messages: [...c.messages, {
-          id: Date.now(), from: 'host', senderName, text: text || '',
-          ts: new Date().toISOString(),
-          ...(attachments && attachments.length > 0 ? { attachments } : {})
-        }]
-      };
+      return { ...c, messages: [...c.messages, { id: Date.now(), from: 'host', senderName, text: text || '', ts, ...(attachments && attachments.length > 0 ? { attachments } : {}) }] };
     }));
+    // Send email notification to vendor
+    if (recipientId !== 'unknown') {
+      const { data: vendor } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', recipientId).single();
+      if (vendor?.contact_email) {
+        fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ name: senderName || 'A host', email: uid, subject: `New message about ${conv.eventName || 'your booking'}`, message: `You have a new message from ${senderName || 'a host'} about ${conv.eventName || 'a booking'}. Log in to your vendor dashboard to view and reply.` }),
+        }).catch(()=>{});
+      }
+    }
   };
 
   const sendMessage = () => {
@@ -6419,11 +6510,18 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     // Add system message to conversation thread
     const req = bookingRequests.find(r => r.id === reqId);
     if (req) {
+      const uid = authUser?.id || 'anon';
+      const convoId = conversations.find(c => c.vendorId === req.vendorId)?.id || `${uid}_${req.vendorId}`;
+      const msg = status === 'accepted'
+        ? `✅ Booking accepted! ${vendorMsg ? 'Vendor note: ' + vendorMsg : ''} The host will be in touch to confirm details. You're all set for ${req.eventName || 'the event'}!`
+        : `❌ Booking declined. ${vendorMsg ? 'Reason: ' + vendorMsg : 'The vendor is unavailable for this date.'} We recommend messaging other vendors.`;
+      supabase.from('messages').insert({
+        conversation_id: convoId, sender_id: 'system', sender_type: 'system',
+        recipient_id: uid, recipient_type: 'host',
+        event_name: req.eventName || '', message_text: msg, is_read: false,
+      }).catch(()=>{});
       setConversations(convos => convos.map(c => {
         if (c.vendorId !== req.vendorId) return c;
-        const msg = status === 'accepted'
-          ? `✅ Booking accepted! ${vendorMsg ? 'Vendor note: ' + vendorMsg : ''} The host will be in touch to confirm details. You're all set for ${req.eventName || 'the event'}!`
-          : `❌ Booking declined. ${vendorMsg ? 'Reason: ' + vendorMsg : 'The vendor is unavailable for this date.'} We recommend messaging other vendors.`;
         return {...c, status: status==='accepted'?'booked':'active', messages: [...c.messages, {id:Date.now(), from:'system', text: msg, ts:new Date().toISOString()}]};
       }));
       // Email host about booking response

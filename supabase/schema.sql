@@ -278,6 +278,28 @@ create policy "Public read vendor files"
   on storage.objects for select
   using (bucket_id = 'vendor-files');
 
+-- ─── Messages ───────────────────────────────────────────────────────────────
+create table if not exists messages (
+  id                  bigint primary key generated always as identity,
+  conversation_id     text not null,
+  sender_id           text not null,
+  sender_type         text not null,
+  recipient_id        text not null,
+  recipient_type      text not null,
+  event_id            text,
+  event_name          text,
+  message_text        text not null,
+  attachments         jsonb,
+  is_read             boolean default false,
+  created_at          timestamptz not null default now()
+);
+create index if not exists messages_conversation_idx on messages (conversation_id);
+create index if not exists messages_recipient_idx on messages (recipient_id);
+alter table messages enable row level security;
+create policy "Anon read messages" on messages for select using (true);
+create policy "Anon insert messages" on messages for insert with check (true);
+create policy "Anon update messages" on messages for update using (true);
+
 -- Allow anon uploads (vendors submit without auth)
 create policy "Anon upload vendor files"
   on storage.objects for insert
