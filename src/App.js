@@ -15,7 +15,7 @@ const CATEGORIES = [
 ];
 
 const SUBCATEGORIES = {
-  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie", "Other"],
+  "Food & Beverage": ["Breads & Rolls", "Cakes", "Cookies", "Other Desserts", "Custom/Personalized", "Snacks & Jerky", "Sauces & Condiments", "Beverages & Juices", "Wine & Spirits", "Craft Beer & Brewery", "Candy & Chocolates", "Meal Prep & Catering", "Charcuterie", "Other"],
   "Jewelry & Accessories": ["Earrings", "Necklaces & Pendants", "Bracelets & Bangles", "Rings", "Hair Accessories", "Bags & Purses", "Permanent", "Charm", "Custom/Personalized", "Handmade", "Other"],
   "Art & Prints": ["Illustrations & Drawing", "Paintings", "Digital Prints", "Custom Portraits", "Stickers & Postcards", "Mixed Media", "Other"],
   "Candles & Home Decor": ["Soy Candles", "Wax Melts", "Diffusers & Oils", "Wall Art", "Throw Pillows", "Seasonal Decor", "Other"],
@@ -39,9 +39,10 @@ const SUBCATEGORIES = {
 const EVENT_TYPES = [
   "Pop-Up & Vendor Market", "Craft & Art Fair", "Farmers & Flea Market",
   "Holiday Market", "Night Market", "Sip & Shop", "Food Festival",
+  "Wine & Spirits Festival", "Tasting Event", "Corporate Event", "Private Party",
   "Community Festival", "Fundraiser", "Networking Event", "Girls Night Out"
 ];
-const REMOVED_EVENT_TYPES = ["Corporate Event","Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Private Party","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Other"];
+const REMOVED_EVENT_TYPES = ["Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Other"];
 const EVENT_TYPE_MAP = {
   "Pop-Up Market":"Pop-Up & Vendor Market","Vendor Market":"Pop-Up & Vendor Market",
   "Craft Fair":"Craft & Art Fair","Art Show":"Craft & Art Fair",
@@ -50,14 +51,14 @@ const EVENT_TYPE_MAP = {
   "Other":"Community Festival",
 };
 
-const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Other"];
+const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Mobile Bar/Bartender","Wine Tasting/Sommelier","Food Truck","Catering","Coffee/Espresso Cart","Henna Artist","Event Decorator","Photo Booth","Other"];
 const SERVICE_DURATIONS = ["1 hour","2 hours","3 hours","4 hours","Half day","Full day","Other"];
 const SERVICE_CATEGORIES = ["Entertainment","Visual & Media","Kids & Activities","Food & Beverage Services","Wellness & Beauty Services","Decor & Setup","Other Services"];
 const SERVICE_SUBCATEGORIES = {
   "Entertainment": ["Solo Acoustic","Acoustic Duo","Full Band","DJ (with MC)","DJ (Music Only)","Cover Band","Jazz Ensemble","Classical/String Quartet","Karaoke Host","Comedian","Magician","Strolling Entertainer","Fire Performer","Other"],
   "Visual & Media": ["Event Photography","Videography","Photo Booth Operator","Portrait Sessions","Drone Photography","Live Painter","Other"],
   "Kids & Activities": ["Face Painter","Balloon Artist","Caricature Artist","Bounce House/Inflatables","Character Performer","Crafts Station","Other"],
-  "Food & Beverage Services": ["Mobile Bar/Bartender","Food Truck","Catering","Coffee/Espresso Cart","Cotton Candy/Popcorn","Ice Cream Cart","Other"],
+  "Food & Beverage Services": ["Mobile Bar/Bartender","Wine Tasting/Sommelier","Craft Beer/Brewery Pour","Food Truck","Catering","Coffee/Espresso Cart","Cotton Candy/Popcorn","Ice Cream Cart","Other"],
   "Wellness & Beauty Services": ["Henna Artist","Airbrush Makeup","Hair Styling","Massage Therapist","Tarot/Palm Reader","Other"],
   "Decor & Setup": ["Event Decorator","Balloon Garland/Arch","Tent/Canopy Rental","Lighting Setup","Sound System Rental","Other"],
   "Other Services": ["Other"],
@@ -972,7 +973,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
               </select>
               <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
             </div>
-            <div className="form-group"><label>Daily Booth Fee (amount willing to pay)</label>
+            <div className="form-group"><label>Max Booth Fee You'll Pay</label>
               <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
                 <option value={0}>Free / No fee</option>
                 <option value={25}>$25/day</option><option value={50}>$50/day</option><option value={75}>$75/day</option>
@@ -1002,18 +1003,29 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </>
       )}
 
-      {/* Insurance for service providers who aren't market vendors */}
+      {/* Insurance & Logistics for service providers who aren't market vendors */}
       {form.vendorType.service && !form.vendorType.market && (
         <>
           <hr className="form-divider" />
-          <h3 className="form-section-title"><span className="dot" />Insurance</h3>
-          <div className="form-group">
-            <label>Do You Carry Liability Insurance?</label>
-            <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
-              <option value="no">No — I do not carry liability insurance</option>
-              <option value="yes">Yes — I have a certificate of insurance (COI)</option>
-            </select>
-            <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured service providers. This shows as a badge on your profile.</div>
+          <h3 className="form-section-title"><span className="dot" />Insurance & Logistics</h3>
+          <div className="form-grid">
+            <div className="form-group">
+              <label>Do You Carry Liability Insurance?</label>
+              <select value={form.insurance?'yes':'no'} onChange={e=>set('insurance',e.target.value==='yes')}>
+                <option value="no">No — I do not carry liability insurance</option>
+                <option value="yes">Yes — I have a certificate of insurance (COI)</option>
+              </select>
+              <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured service providers. This shows as a badge on your profile.</div>
+            </div>
+            <div className="form-group"><label>Setup Time Needed</label>
+              <select value={form.setupTime} onChange={e=>set('setupTime',+e.target.value)}>
+                <option value={10}>10 minutes</option><option value={15}>15 minutes</option><option value={20}>20 minutes</option>
+                <option value={30}>30 minutes</option><option value={45}>45 minutes</option><option value={60}>1 hour</option>
+                <option value={90}>1.5 hours</option><option value={120}>2 hours</option>
+              </select>
+            </div>
+            <div className="form-group"><label>Space Needed</label><select value={form.tableSize} onChange={e=>set('tableSize',e.target.value)}><option>6ft</option><option>8ft</option><option>10x10 tent</option><option>10x20 tent</option><option>Flexible</option></select></div>
+            <div className="form-group"><label>Need Electrical Access?</label><select value={form.needsElectric?'yes':'no'} onChange={e=>set('needsElectric',e.target.value==='yes')}><option value="no">No</option><option value="yes">Yes</option></select></div>
           </div>
         </>
       )}
