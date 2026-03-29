@@ -7363,6 +7363,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
   const [draft, setDraft] = useState('');
   const senderName = vendorProfile?.contact_name || vendorProfile?.name || authUser?.email || 'User';
   const [uploading, setUploading] = useState(false);
+  const [stagedAttachments, setStagedAttachments] = useState([]);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -7442,9 +7443,10 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
   };
 
   const sendMessage = () => {
-    if (!draft.trim()) return;
-    addMessage(draft.trim());
+    if (!draft.trim() && stagedAttachments.length === 0) return;
+    addMessage(draft.trim() || (stagedAttachments.length > 0 ? '' : ''), stagedAttachments.length > 0 ? stagedAttachments : undefined);
     setDraft('');
+    setStagedAttachments([]);
   };
 
   const handleFileUpload = async (e) => {
@@ -7456,18 +7458,17 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
     setUploading(true);
     const bucket = 'vendor-files';
     const convoId = activeConvoId;
-    const attachments = [];
+    const uploaded = [];
     for (const file of files) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
       const path = `messages/${convoId}/${Date.now()}-${safeName}`;
       const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) { console.error('Upload error:', upErr); continue; }
       const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-      attachments.push({ name: file.name, url, type: file.type, size: file.size });
+      uploaded.push({ name: file.name, url, type: file.type, size: file.size });
     }
-    if (attachments.length > 0) {
-      addMessage(draft.trim() || '', attachments);
-      setDraft('');
+    if (uploaded.length > 0) {
+      setStagedAttachments(prev => [...prev, ...uploaded]);
     } else {
       alert('File upload failed. Please try again.');
     }
@@ -7648,6 +7649,18 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
           {/* Input area */}
           <div style={{ background:'#fff', borderTop:'1px solid #e8ddd0', padding:16, flexShrink:0 }}>
+            {/* Staged attachments preview */}
+            {stagedAttachments.length > 0 && (
+              <div style={{display:'flex',gap:6,flexWrap:'wrap',marginBottom:10,padding:'8px 10px',background:'#fdf9f5',borderRadius:8,border:'1px solid #e8ddd0'}}>
+                {stagedAttachments.map((att,i)=>(
+                  <div key={i} style={{display:'flex',alignItems:'center',gap:6,background:'#fff',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 8px',fontSize:12}}>
+                    {att.type?.startsWith('image/') ? <img src={att.url} alt={att.name} style={{width:32,height:32,objectFit:'cover',borderRadius:4}} /> : <span>📎</span>}
+                    <span style={{maxWidth:120,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{att.name}</span>
+                    <button onClick={()=>setStagedAttachments(prev=>prev.filter((_,j)=>j!==i))} style={{background:'none',border:'none',color:'#c0392b',cursor:'pointer',fontSize:14,padding:0,lineHeight:1}}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={()=>fileInputRef.current?.click()} disabled={uploading}
                 title="Share a file or document"
