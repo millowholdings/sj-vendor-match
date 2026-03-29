@@ -3572,6 +3572,21 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
         )}
       </div>
 
+      {/* Saved events */}
+      {(() => { try { const saved = JSON.parse(localStorage.getItem('sjvm_saved_events')||'[]'); const savedOpps = opps.filter(o=>saved.includes(o.id)&&o.date>=new Date().toISOString().split('T')[0]); return savedOpps.length > 0 ? (
+        <div style={{marginBottom:24}}>
+          <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>My Saved Events ({savedOpps.length})</h3>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {savedOpps.map(o=>(
+              <div key={o.id} style={{background:'#fdf9f0',border:'1px solid #ffd966',borderRadius:10,padding:'12px 16px'}}>
+                <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{o.eventName}</div>
+                <div style={{fontSize:12,color:'#7a6a5a'}}>{o.eventType} · {fmtDate(o.date)} · {getCityFromZip(o.zip)||'Zip '+o.zip}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null; } catch { return null; } })()}
+
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Upcoming Events for You</h3>
       {matched.length === 0 ? (
         <div className="empty-state"><div className="big">📅</div><p>No upcoming events match your preferences right now. Check back soon!</p></div>
@@ -5337,6 +5352,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const [myRadius, setMyRadius] = useState(0);
   const [expandedId, setExpandedId] = useState(null);
   const [savedEvents, setSavedEvents] = useState(() => { try { return JSON.parse(localStorage.getItem('sjvm_saved_events')||'[]'); } catch { return []; } });
+  const [filterSaved, setFilterSaved] = useState('');
   const toggleSave = (id) => { setSavedEvents(s => { const next = s.includes(id) ? s.filter(x=>x!==id) : [...s,id]; localStorage.setItem('sjvm_saved_events',JSON.stringify(next)); return next; }); };
   const shareEvent = (opp) => { const url = window.location.origin; const text = `${opp.eventName} — ${fmtDate(opp.date)} in ${getCityFromZip(opp.zip)||'South Jersey'}`; if (navigator.share) navigator.share({title:opp.eventName,text,url}).catch(()=>{}); else { navigator.clipboard.writeText(`${text}\n${url}`).then(()=>alert('Event link copied!')).catch(()=>{}); } };
   const [vendorsByEvent, setVendorsByEvent] = useState({});
@@ -5353,6 +5369,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
     .map(o => ({ ...o, dist: zipOk ? distanceMiles(myZip, o.zip) : null }))
     .filter(o => !myRadius || !zipOk || o.dist === null || o.dist <= myRadius)
     .sort((a,b) => { if (a.dist!==null && b.dist!==null) return a.dist - b.dist; return a.date.localeCompare(b.date); });
+  const filteredUpcoming = filterSaved === 'saved' ? upcoming.filter(o => savedEvents.includes(o.id)) : upcoming;
 
   // Batch-load confirmed vendors for all visible events
   useEffect(() => {
@@ -5427,15 +5444,24 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
               <option value="no">Free Only</option>
             </select>
           </div>
+          {savedEvents.length > 0 && (
+            <div className="match-filter-group" style={{maxWidth:160}}>
+              <label>Saved</label>
+              <select value={filterSaved} onChange={e=>setFilterSaved(e.target.value)}>
+                <option value="">All Events</option>
+                <option value="saved">My Saved Only ({savedEvents.length})</option>
+              </select>
+            </div>
+          )}
         </div>
         <div className="results-header">
-          <div className="results-count"><strong>{upcoming.length}</strong> upcoming events</div>
+          <div className="results-count"><strong>{filteredUpcoming.length}</strong> upcoming events{filterSaved==='saved' ? ' (saved)' : ''}</div>
         </div>
-        {upcoming.length===0
+        {filteredUpcoming.length===0
           ? <div className="empty-state"><div className="big">📭</div><p>No upcoming events match your filters.</p></div>
           : (
           <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
-            {upcoming.map(opp => {
+            {filteredUpcoming.map(opp => {
               const isOpen = expandedId === opp.id;
               const vendors = vendorsByEvent[opp.id] || [];
               const loading = loadingVendors[opp.id];
