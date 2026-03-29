@@ -2806,16 +2806,16 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       </div>
 
       {/* ── Messages notification ── */}
-      {(unreadCount > 0 || (conversations && conversations.length > 0)) && (
-        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:unreadCount>0?'#1a1410':'#fff',border:unreadCount>0?'2px solid #e8c97a':'1px solid #e8ddd0',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+      {unreadCount > 0 && (
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:20}}>💬</span>
             <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:700,fontSize:14,color:unreadCount>0?'#e8c97a':'#1a1410'}}>{unreadCount > 0 ? `${unreadCount} unread message${unreadCount!==1?'s':''}` : `${conversations.length} conversation${conversations.length!==1?'s':''}`}</div>
-              {unreadCount > 0 && <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>}
+              <div style={{fontWeight:700,fontSize:14,color:'#e8c97a'}}>{unreadCount} unread message{unreadCount!==1?'s':''}</div>
+              <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>
             </div>
           </div>
-          <span style={{fontSize:18,color:unreadCount>0?'#e8c97a':'#a89a8a'}}>→</span>
+          <span style={{fontSize:18,color:'#e8c97a'}}>→</span>
         </button>
       )}
 
@@ -3095,16 +3095,16 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       <p className="section-sub">Welcome back, {user.email}</p>
 
       {/* ── Messages notification ── */}
-      {(unreadCount > 0 || (conversations && conversations.length > 0)) && (
-        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:unreadCount>0?'#1a1410':'#fff',border:unreadCount>0?'2px solid #e8c97a':'1px solid #e8ddd0',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+      {unreadCount > 0 && (
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <span style={{fontSize:20}}>💬</span>
             <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:700,fontSize:14,color:unreadCount>0?'#e8c97a':'#1a1410'}}>{unreadCount > 0 ? `${unreadCount} unread message${unreadCount!==1?'s':''}` : `${conversations.length} conversation${conversations.length!==1?'s':''}`}</div>
-              {unreadCount > 0 && <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>}
+              <div style={{fontWeight:700,fontSize:14,color:'#e8c97a'}}>{unreadCount} unread message{unreadCount!==1?'s':''}</div>
+              <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>
             </div>
           </div>
-          <span style={{fontSize:18,color:unreadCount>0?'#e8c97a':'#a89a8a'}}>→</span>
+          <span style={{fontSize:18,color:'#e8c97a'}}>→</span>
         </button>
       )}
 
@@ -5248,7 +5248,8 @@ function VendorApplyModal({ opp, onClose }) {
 // ─── Upcoming Events (public calendar) ──────────────────────────────────────
 function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerSignup }) {
   const [filterType, setFilterType] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [filterTicketed, setFilterTicketed] = useState("");
   const [myZip, setMyZip] = useState("");
   const [myRadius, setMyRadius] = useState(0);
@@ -5261,7 +5262,8 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
     .filter(o => o.date >= todayStr)
     .filter(o => o.shareWithEventGoers !== false)
     .filter(o => !filterType || o.eventType===filterType)
-    .filter(o => !filterDate || o.date === filterDate)
+    .filter(o => !filterDateFrom || o.date >= filterDateFrom)
+    .filter(o => !filterDateTo || o.date <= filterDateTo)
     .filter(o => !filterTicketed || (filterTicketed==='yes' ? o.isTicketed : !o.isTicketed))
     .map(o => ({ ...o, dist: zipOk ? distanceMiles(myZip, o.zip) : null }))
     .filter(o => !myRadius || !zipOk || o.dist === null || o.dist <= myRadius)
@@ -5325,8 +5327,12 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
             </select>
           </div>
           <div className="match-filter-group">
-            <label>Date</label>
-            <input type="date" value={filterDate} min={todayStr} onChange={e=>setFilterDate(e.target.value)} />
+            <label>From Date</label>
+            <input type="date" value={filterDateFrom} min={todayStr} onChange={e=>setFilterDateFrom(e.target.value)} />
+          </div>
+          <div className="match-filter-group">
+            <label>To Date</label>
+            <input type="date" value={filterDateTo} min={filterDateFrom||todayStr} onChange={e=>setFilterDateTo(e.target.value)} />
           </div>
           <div className="match-filter-group">
             <label>Ticketed</label>
@@ -5424,8 +5430,10 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
   const canSeeFullDetails = authUser && isVendor;
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
-  const [filterDate, setFilterDate] = useState("");
+  const [filterDateFrom, setFilterDateFrom] = useState("");
+  const [filterDateTo, setFilterDateTo] = useState("");
   const [myZip, setMyZip] = useState(vendorProfile?.home_zip || "");
+  const [myRadius, setMyRadius] = useState(0);
   const [saved, setSaved] = useState([]);
   const [applyOpp, setApplyOpp] = useState(null);
   const [showSection, setShowSection] = useState('open');
@@ -5438,12 +5446,14 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
-    .filter(o => !filterDate || o.date === filterDate)
+    .filter(o => !filterDateFrom || o.date >= filterDateFrom)
+    .filter(o => !filterDateTo || o.date <= filterDateTo)
     .filter(o => !showMatching || vendorCats.length === 0 || o.categoriesNeeded.length === 0 || o.categoriesNeeded.some(c => vendorCats.includes(c)))
     .map(o => {
       const dist = zipOk ? distanceMiles(myZip, o.zip) : null;
       return {...o, dist};
     })
+    .filter(o => !myRadius || !zipOk || o.dist === null || o.dist <= myRadius)
     .sort((a,b) => {
       if (a.dist!==null && b.dist!==null) return a.dist - b.dist;
       return 0;
@@ -5471,10 +5481,24 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
               onChange={e => setMyZip(e.target.value.replace(/\D/g,"").slice(0,5))} />
             {myZip.length===5 && (
               <div className={`zip-feedback ${zipOk?"zip-ok":"zip-warn"}`}>
-                {zipOk ? "\u2713 Sorted by distance to you" : "\u26a0 Zip unverified"}
+                {zipOk ? (myRadius ? `\u2713 Within ${myRadius} miles` : "\u2713 Sorted by distance") : "\u26a0 Zip unverified"}
               </div>
             )}
           </div>
+          {zipOk && (
+            <div className="match-filter-group" style={{maxWidth:160}}>
+              <label>Radius</label>
+              <select value={myRadius} onChange={e=>setMyRadius(+e.target.value)}>
+                <option value={0}>Any distance</option>
+                <option value={5}>5 miles</option>
+                <option value={10}>10 miles</option>
+                <option value={15}>15 miles</option>
+                <option value={20}>20 miles</option>
+                <option value={30}>30 miles</option>
+                <option value={50}>50 miles</option>
+              </select>
+            </div>
+          )}
           <div className="match-filter-group">
             <label>Event Type</label>
             <select value={filterType} onChange={e=>setFilterType(e.target.value)}>
@@ -5483,8 +5507,12 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
             </select>
           </div>
           <div className="match-filter-group">
-            <label>Date</label>
-            <input type="date" value={filterDate} min={todayStr} onChange={e=>setFilterDate(e.target.value)} />
+            <label>From Date</label>
+            <input type="date" value={filterDateFrom} min={todayStr} onChange={e=>setFilterDateFrom(e.target.value)} />
+          </div>
+          <div className="match-filter-group">
+            <label>To Date</label>
+            <input type="date" value={filterDateTo} min={filterDateFrom||todayStr} onChange={e=>setFilterDateTo(e.target.value)} />
           </div>
           <div className="match-filter-group">
             <label>Category Needed</label>
@@ -6774,7 +6802,7 @@ function AppInner() {
               {authUser && (
                 <div className="mobile-menu-section">
                   <div className="mobile-menu-label">My Stuff</div>
-                  <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}</button>
+                  <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages{unreadCount>0?` (${unreadCount})`:''}</button>
                   <button className={`mobile-menu-item${tab==='my-calendar'||tab==='calendar'||tab==='host-calendar'?' active':''}`} onClick={()=>navTo('my-calendar')}>My Calendar</button>
                 </div>
               )}
@@ -6806,7 +6834,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Add a Vendor Profile</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
-                  Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
+                  Messages{unreadCount>0?` (${unreadCount})`:''}
                 </button>
               </div>
             </div>
@@ -6816,7 +6844,7 @@ function AppInner() {
                 <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Add an Event</button>
                 {(!vendorProfile || userEvents.length > 0) && <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>}
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
-                  Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
+                  Messages{unreadCount>0?` (${unreadCount})`:''}
                 </button>
               </div>
             </div>
