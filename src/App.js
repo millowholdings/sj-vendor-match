@@ -3020,58 +3020,66 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
   const saveEvent = async (evt) => {
     setSavingEvent(true);
-    const changes = {};
-    if (eventForm.event_name !== evt.event_name) changes.event_name = {old:evt.event_name, new:eventForm.event_name};
-    if (eventForm.date !== evt.date) changes.date = {old:evt.date, new:eventForm.date};
-    if (eventForm.zip !== evt.zip) changes.zip = {old:evt.zip, new:eventForm.zip};
-    if (eventForm.spots !== evt.spots) changes.spots = {old:evt.spots, new:eventForm.spots};
-    const photosChanged = editNewPhotos.length > 0 || editExistingPhotos.length !== (evt.event_photos||[]).length;
-    if (photosChanged) changes.photos = {old:`${(evt.event_photos||[]).length} photos`, new:`${editExistingPhotos.length + editNewPhotos.length} photos`};
+    // Hard timeout — always unlock after 8 seconds no matter what
+    const forceUnlock = setTimeout(() => { setSavingEvent(false); setEditingEvent(null); }, 8000);
+    try {
+      // Minimal update with only fields guaranteed to exist
+      const payload = {
+        event_name: eventForm.event_name,
+        event_type: eventForm.event_type,
+        date: eventForm.date,
+        start_time: eventForm.start_time || null,
+        end_time: eventForm.end_time || null,
+        zip: eventForm.zip,
+        booth_fee: eventForm.booth_fee || null,
+        spots: eventForm.spots || null,
+        notes: eventForm.notes || null,
+        deadline: eventForm.deadline || null,
+        status: 'pending_review',
+      };
 
-    if (Object.keys(changes).length === 0) { setEditingEvent(null); setSavingEvent(false); return; }
+      const { error } = await supabase.from('events').update(payload).eq('id', evt.id);
+      if (error) { alert('Failed to save: ' + error.message); clearTimeout(forceUnlock); setSavingEvent(false); return; }
 
-    // Upload new photos
-    let allPhotoUrls = [...editExistingPhotos];
-    if (editNewPhotos.length > 0) {
-      const bucket = 'vendor-files';
-      const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
-      const newUrls = await Promise.all(editNewPhotos.map(async (f, i) => {
-        const path = `events/${evt.id}/photos/${editExistingPhotos.length+i}-${safeName(f.name)}`;
-        const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
-        if (upErr) return null;
-        return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-      }));
-      allPhotoUrls = [...allPhotoUrls, ...newUrls.filter(Boolean)];
+      // Try optional columns one at a time — silently skip if they don't exist
+      const tryUpdate = async (fields) => { try { await supabase.from('events').update(fields).eq('id', evt.id); } catch {} };
+      tryUpdate({ ticket_price: eventForm.ticket_price || null });
+      tryUpdate({ is_ticketed: eventForm.is_ticketed || false });
+      tryUpdate({ event_link: eventForm.event_link || null });
+
+      // Upload photos if any new ones
+      if (editNewPhotos.length > 0) {
+        try {
+          const bucket = 'vendor-files';
+          const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+          for (const f of editNewPhotos) {
+            const path = `events/${evt.id}/photos/${Date.now()}-${safeName(f.name)}`;
+            const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
+            if (!upErr) {
+              const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+              tryUpdate({ photo_url: url });
+            }
+          }
+        } catch (photoErr) { console.error('Photo upload error:', photoErr); }
+      }
+
+      // Notify admin
+      fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name}`, message:`Host ${user.email} updated their event. Status set to pending review.` }),
+      }).catch(()=>{});
+
+      // Refresh
+      const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
+      if (data && setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
+      clearTimeout(forceUnlock);
+      setEditingEvent(null); setSavingEvent(false);
+      alert('Changes saved! Your event has been submitted for admin review.');
+    } catch (err) {
+      console.error('saveEvent error:', err);
+      clearTimeout(forceUnlock);
+      setSavingEvent(false);
+      alert('Something went wrong. Please try again.');
     }
-
-    // Core fields that definitely exist in schema
-    const corePayload = {
-      event_name:eventForm.event_name, event_type:eventForm.event_type, date:eventForm.date,
-      start_time:eventForm.start_time||null, end_time:eventForm.end_time||null, zip:eventForm.zip,
-      booth_fee:eventForm.booth_fee||null, spots:eventForm.spots||null, notes:eventForm.notes||null,
-      deadline:eventForm.deadline||null, ticket_price:eventForm.ticket_price||null, is_ticketed:eventForm.is_ticketed,
-      status: 'pending_review',
-    };
-    // Save first photo to photo_url (column that exists)
-    if (allPhotoUrls.length > 0) corePayload.photo_url = allPhotoUrls[0];
-
-    let { error } = await supabase.from('events').update(corePayload).eq('id', evt.id);
-    if (error) { alert('Failed to save: ' + error.message); setSavingEvent(false); return; }
-
-    // Try saving newer columns separately (they may not exist in schema)
-    await supabase.from('events').update({ event_link:eventForm.event_link||null }).eq('id', evt.id).catch(()=>{});
-    await supabase.from('events').update({ event_photos: allPhotoUrls }).eq('id', evt.id).catch(()=>{});
-
-    supabase.from('change_log').insert({ entity_type:'event', entity_id:evt.id, entity_name:eventForm.event_name, changed_by:user.email, changes, significant:true }).catch(()=>{});
-    fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name} — Needs Re-Approval`, message:`Host ${user.email} updated their event:\n${Object.entries(changes).map(([k,v])=>`${k}: ${v.old} → ${v.new}`).join('\n')}\n\nEvent status set to pending review.` }),
-    }).catch(()=>{});
-
-    // Refresh events
-    const { data } = await supabase.from('events').select('*').eq('id', evt.id).single();
-    if (data && setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? data : e));
-    setEditingEvent(null); setSavingEvent(false);
-    alert('Changes saved! Your event has been submitted for admin review. You will be notified once approved.');
   };
 
   useEffect(() => {
