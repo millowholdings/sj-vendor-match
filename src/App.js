@@ -2810,12 +2810,16 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
                 </div>
                 <div>
                   {r.status === 'pending' ? (
-                    <div style={{display:'flex',gap:6}}>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                       <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
                       <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                      <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
                     </div>
                   ) : (
-                    <span style={{background:r.status==='accepted'?'#d4f4e0':'#fdecea',color:r.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{r.status}</span>
+                    <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
+                      <span style={{background:r.status==='accepted'?'#d4f4e0':'#fdecea',color:r.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{r.status}</span>
+                      <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
+                    </div>
                   )}
                 </div>
               </div>
@@ -4316,6 +4320,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const [adminEditForm, setAdminEditForm] = useState({});
   const [savingAdminEdit, setSavingAdminEdit] = useState(false);
   const [bulkApproving, setBulkApproving] = useState(false);
+  const [showAdminPostForm, setShowAdminPostForm] = useState(false);
 
   // Load all booking applications
   useEffect(() => {
@@ -4626,7 +4631,12 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       }
 
 
-      <AdminPostForm onPost={async opp => {
+      <div style={{marginTop:40,marginBottom:16}}>
+        <button onClick={()=>setShowAdminPostForm(s=>!s)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          {showAdminPostForm ? 'Hide Post Form ▲' : '+ Post New Opportunity ▼'}
+        </button>
+      </div>
+      {showAdminPostForm && <AdminPostForm onPost={async opp => {
         const { data, error } = await supabase.from('events').insert({
           event_name:        opp.eventName,
           event_type:        opp.eventType,
@@ -4652,7 +4662,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         setOpps(prev => [mapped, ...prev]);
         setAllEvents(prev => [mapped, ...prev]);
         return true;
-      }} />
+      }} />}
 
       {/* ── Live Events ──────────────────────────────────────── */}
       <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>Live Events ({opps.length})</h3>
@@ -4688,8 +4698,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         ? <div className="empty-state"><div className="big">🛍️</div><p>No approved vendors yet.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {filteredVendors.map(v=>{
-              const vm = v.photoUrls ? v : v; // already mapped
               const photos = v.photoUrls || [];
+              const m = v.metadata || {};
               const isExpanded = expandedVendor === v.id;
               return (
               <div key={v.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,overflow:'hidden'}}>
@@ -4770,7 +4780,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     )}
                     <div style={{display:'flex',gap:12,flexWrap:'wrap',marginTop:8}}>
                       {v.lookbookUrl && <a href={v.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b',background:'#e8f4fd',padding:'4px 10px',borderRadius:6,textDecoration:'none'}}>📋 Lookbook/Menu</a>}
-                      {m.coiUrl && <a href={m.coiUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a6b3a',background:'#d4f4e0',padding:'4px 10px',borderRadius:6,textDecoration:'none'}}>📄 Certificate of Insurance</a>}
+                      {(m.coiUrl || v.coiUrl) && <a href={m.coiUrl || v.coiUrl} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a6b3a',background:'#d4f4e0',padding:'4px 10px',borderRadius:6,textDecoration:'none'}}>📄 Certificate of Insurance</a>}
                     </div>
                     {/* Admin Notes */}
                     <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
