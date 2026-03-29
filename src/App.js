@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = ['tiffany@southjerseyvendormarket.com', 'tiffany@subtleboujee.com'];
+const ADMIN_EMAILS = ['tiffany@southjerseyvendormarket.com'];
 
 // ─── Data ────────────────────────────────────────────────────────────────────
 
