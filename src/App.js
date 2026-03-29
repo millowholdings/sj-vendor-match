@@ -1434,7 +1434,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       <hr className="form-divider" />
       <h3 className="form-section-title"><span className="dot" />Event Visibility</h3>
       <div className="form-group">
-        <label>Share this event with event goers?</label>
+        <label>Share this event with event guests?</label>
         <div style={{display:'flex',gap:10}}>
           <button type="button" onClick={()=>set('shareWithEventGoers',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
           <button type="button" onClick={()=>set('shareWithEventGoers',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
@@ -1664,7 +1664,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
       {form.shareWithEventGoers && (
         <div className="form-group" style={{ marginTop:12 }}>
-          <label>Notes for Event Goers</label>
+          <label>Notes for Event Guests</label>
           <textarea placeholder="Parking info, what to expect, food options, bring a lawn chair, rain-or-shine policy..." value={form.eventGoerNotes} onChange={e=>set('eventGoerNotes',e.target.value)} />
         </div>
       )}
