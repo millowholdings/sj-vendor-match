@@ -6210,15 +6210,28 @@ function AppInner() {
       .order('created_at', { ascending: true });
     if (error || !msgs) return;
     // Group by conversation_id
+    // Collect unique vendor IDs to look up names
+    const vendorIds = new Set();
+    msgs.forEach(m => {
+      if (m.sender_type === 'vendor') vendorIds.add(m.sender_id);
+      if (m.recipient_type === 'vendor') vendorIds.add(m.recipient_id);
+    });
+    // Look up vendor names
+    const vendorNames = {};
+    if (vendorIds.size > 0) {
+      const { data: vendorRows } = await supabase.from('vendors').select('id,name,contact_name').in('id', [...vendorIds]);
+      if (vendorRows) vendorRows.forEach(v => { vendorNames[v.id] = v.name || v.contact_name || 'Vendor'; });
+    }
     const convMap = {};
     msgs.forEach(m => {
       if (!convMap[m.conversation_id]) convMap[m.conversation_id] = { id: m.conversation_id, messages: [], vendorId: null, vendorName: '', hostName: '', eventName: m.event_name || '', status: 'active' };
       const conv = convMap[m.conversation_id];
-      if (m.sender_type === 'vendor') { conv.vendorId = m.sender_id; conv.vendorName = conv.vendorName || m.sender_id; }
-      if (m.sender_type === 'host') { conv.hostName = conv.hostName || m.sender_id; }
-      if (m.recipient_type === 'vendor') conv.vendorId = conv.vendorId || m.recipient_id;
+      if (m.sender_type === 'vendor') { conv.vendorId = m.sender_id; conv.vendorName = conv.vendorName || vendorNames[m.sender_id] || 'Vendor'; }
+      if (m.sender_type === 'host') { conv.hostName = conv.hostName || 'Host'; }
+      if (m.recipient_type === 'vendor') { conv.vendorId = conv.vendorId || m.recipient_id; conv.vendorName = conv.vendorName || vendorNames[m.recipient_id] || 'Vendor'; }
       if (m.event_name) conv.eventName = m.event_name;
-      conv.messages.push({ id: m.id, from: m.sender_id === uid ? 'host' : (m.sender_type === 'system' ? 'system' : 'vendor'), text: m.message_text, ts: m.created_at, senderName: m.sender_type, attachments: m.attachments || undefined });
+      const senderLabel = m.sender_type === 'system' ? 'System' : m.sender_type === 'vendor' ? (vendorNames[m.sender_id] || 'Vendor') : (m.sender_id === uid ? 'You' : 'Host');
+      conv.messages.push({ id: m.id, from: m.sender_id === uid ? 'host' : (m.sender_type === 'system' ? 'system' : 'vendor'), text: m.message_text, ts: m.created_at, senderName: senderLabel, attachments: m.attachments || undefined });
     });
     setConversations(Object.values(convMap));
     setUnreadCount(msgs.filter(m => m.recipient_id === uid && !m.is_read).length);
@@ -7186,7 +7199,7 @@ function AttachmentBubble({ att, isHost }) {
 // ─── Messages Page ────────────────────────────────────────────────────────────
 function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, vendorProfile, loadMessages }) {
   const [draft, setDraft] = useState('');
-  const [senderName, setSenderName] = useState('');
+  const senderName = vendorProfile?.contact_name || vendorProfile?.name || authUser?.email || 'User';
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -7242,7 +7255,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
   const sendMessage = () => {
     if (!draft.trim()) return;
-    if (!senderName.trim()) { alert('Please enter your name before sending.'); return; }
     addMessage(draft.trim());
     setDraft('');
   };
@@ -7250,7 +7262,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
   const handleFileUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
-    if (!senderName.trim()) { alert('Please enter your name before sharing files.'); return; }
     const maxSize = 10 * 1024 * 1024; // 10MB
     const oversized = files.find(f => f.size > maxSize);
     if (oversized) { alert(`"${oversized.name}" is too large. Maximum file size is 10MB.`); return; }
@@ -7449,12 +7460,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
           {/* Input area */}
           <div style={{ background:'#fff', borderTop:'1px solid #e8ddd0', padding:16, flexShrink:0 }}>
-            <div style={{ display:'flex', gap:8, marginBottom:8, alignItems:'center' }}>
-              <div style={{ fontSize:12, color:'#7a6a5a', whiteSpace:'nowrap' }}>Sending as:</div>
-              <input value={senderName} onChange={e=>setSenderName(e.target.value)}
-                placeholder="Your name" maxLength={50}
-                style={{ flex:1, border:'1px solid #e0d5c5', borderRadius:6, padding:'6px 10px', fontSize:13, fontFamily:'DM Sans,sans-serif', background:'#fdf9f5', outline:'none' }} />
-            </div>
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={()=>fileInputRef.current?.click()} disabled={uploading}
                 title="Share a file or document"
