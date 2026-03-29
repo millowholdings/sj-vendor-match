@@ -2955,6 +2955,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       <div className="section-title">My Host Dashboard</div>
       <p className="section-sub">Welcome back, {user.email}</p>
 
+      {/* Pending review banner — shown when ALL events are still pending */}
+      {userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active') && userEvents.some(e => e.status === 'pending_review' || e.status === 'concierge_pending') && (
+        <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:10,padding:'20px 24px',marginBottom:16}}>
+          <div style={{fontWeight:700,fontSize:16,color:'#7a5a10',marginBottom:6}}>Your event is being reviewed</div>
+          <p style={{fontSize:14,color:'#7a5a10',lineHeight:1.6,margin:0}}>Our team is reviewing your submission and will approve it within 24 hours. Once live, you'll be able to browse vendors, receive applications, and start booking. We'll notify you by email when it's approved.</p>
+        </div>
+      )}
+
       {/* Approval notification banners */}
       {userEvents.filter(e => e.status === 'approved').length > 0 && userEvents.some(e => e.status === 'approved' && !localStorage.getItem(`sjvm_seen_approved_${e.id}`)) && (
         <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:16}}>
@@ -3083,6 +3091,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           ))}
         </div>
       )}
+
+      {/* ── Quick Actions ── */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Messages</button>
+        {userEvents.some(e=>e.status==='approved') && <button onClick={()=>{setTab('matches');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Browse Vendors</button>}
+        <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>My Calendar</button>
+        <button onClick={()=>{setTab('host');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Post Another Event</button>
+      </div>
 
       {/* ── My Calendar ── */}
       <UnifiedDashboardCalendar authUser={user} vendorProfile={null} userEvents={userEvents} setTab={setTab} />
@@ -6359,23 +6375,24 @@ function AppInner() {
                   <button className="mobile-menu-item" style={{color:'#c8a850',fontWeight:700}} onClick={()=>{setShowAuthModal(true);setMobileMenuOpen(false);}}>Log In / Sign Up</button>
                 )}
               </div>
+              {authUser && (
+                <div className="mobile-menu-section">
+                  <div className="mobile-menu-label">My Stuff</div>
+                  <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}</button>
+                  <button className={`mobile-menu-item${tab==='my-calendar'||tab==='calendar'||tab==='host-calendar'?' active':''}`} onClick={()=>navTo('my-calendar')}>My Calendar</button>
+                </div>
+              )}
               <div className="mobile-menu-section">
+                <div className="mobile-menu-label">Quick Actions</div>
+                {(authUser && userEvents.length > 0) && <button className={`mobile-menu-item${tab==='matches'?' active':''}`} onClick={()=>navTo('matches')}>Browse Vendors</button>}
+                <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Post Event</button>
+                <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Join as Vendor</button>
+                <button className={`mobile-menu-item${tab==='opportunities'?' active':''}`} onClick={()=>navTo('opportunities')}>Browse Opportunities</button>
+              </div>
+              <div className="mobile-menu-section">
+                <div className="mobile-menu-label">Explore</div>
                 <button className={`mobile-menu-item${tab==='home'?' active':''}`} onClick={()=>navTo('home')}>Home</button>
                 <button className={`mobile-menu-item${tab==='upcoming-markets'?' active':''}`} onClick={()=>navTo('upcoming-markets')}>Upcoming Markets</button>
-              </div>
-              <div className="mobile-menu-section">
-                <div className="mobile-menu-label">Vendors</div>
-                <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Join as Vendor</button>
-                <button className={`mobile-menu-item${tab==='opportunities'?' active':''}`} onClick={()=>navTo('opportunities')}>Opportunities</button>
-                <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
-                {authUser && <button className={`mobile-menu-item${tab==='calendar'?' active':''}`} onClick={()=>navTo('calendar')}>My Calendar</button>}
-              </div>
-              <div className="mobile-menu-section">
-                <div className="mobile-menu-label">Hosts</div>
-                <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Post Event</button>
-                <button className={`mobile-menu-item${tab==='matches'?' active':''}`} onClick={()=>navTo('matches')}>Browse Vendors</button>
-                <button className={`mobile-menu-item${tab==='messages'?' active':''}`} onClick={()=>navTo('messages')}>Messages</button>
-                {authUser && <button className={`mobile-menu-item${tab==='host-calendar'?' active':''}`} onClick={()=>navTo('host-calendar')}>My Calendar</button>}
               </div>
               <div className="mobile-menu-section">
                 <button className={`mobile-menu-item${tab==='pricing'?' active':''}`} onClick={()=>navTo('pricing')}>Pricing</button>
@@ -6564,6 +6581,15 @@ function AppInner() {
 
         {tab==="matches"      && (vendorProfile && userEvents.length === 0
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>post an event</a> first.</p></div>
+          : !loading && userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active')
+          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}>
+              <div className="section-title">Browse Vendors</div>
+              <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:10,padding:'20px 24px',marginTop:20}}>
+                <div style={{fontSize:16,fontWeight:700,color:'#7a5a10',marginBottom:8}}>Your event is under review</div>
+                <p style={{fontSize:14,color:'#7a5a10',lineHeight:1.6,marginBottom:16}}>Our team is reviewing your event submission. Once approved, you'll be able to browse and invite vendors here. This usually takes less than 24 hours.</p>
+                <button onClick={()=>{setTab('host-dashboard');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Back to Dashboard</button>
+              </div>
+            </div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
             : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
