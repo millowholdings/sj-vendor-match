@@ -250,6 +250,7 @@ create table if not exists booking_requests (
 
 -- Unique token for vendor response links (no auth needed)
 alter table booking_requests add column if not exists response_token text unique;
+alter table booking_requests add column if not exists event_id uuid;
 
 create index if not exists booking_requests_session_idx on booking_requests (session_id);
 create index if not exists booking_requests_token_idx   on booking_requests (response_token);

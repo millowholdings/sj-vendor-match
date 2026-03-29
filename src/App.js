@@ -2762,6 +2762,19 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       <div className="section-title">My Host Dashboard</div>
       <p className="section-sub">Welcome back, {user.email}</p>
 
+      {/* Approval notification banners */}
+      {userEvents.filter(e => e.status === 'approved').length > 0 && userEvents.some(e => e.status === 'approved' && !localStorage.getItem(`sjvm_seen_approved_${e.id}`)) && (
+        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:16}}>
+          <div style={{fontWeight:700,fontSize:14,color:'#1a6b3a',marginBottom:4}}>Your event{userEvents.filter(e => e.status === 'approved').length > 1 ? 's are' : ' is'} approved and live!</div>
+          <div style={{fontSize:13,color:'#2d7a50',marginBottom:8}}>Start finding and inviting vendors to your events.</div>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            {userEvents.filter(e => e.status === 'approved' && !localStorage.getItem(`sjvm_seen_approved_${e.id}`)).map(e => (
+              <button key={e.id} onClick={()=>{localStorage.setItem(`sjvm_seen_approved_${e.id}`,'1');if(setHostEventFromDashboard)setHostEventFromDashboard(e);setTab('matches');window.scrollTo({top:0});}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Find Vendors for {e.event_name}</button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Events</h3>
       {userEvents.length === 0 ? (
         <div className="empty-state"><div className="big">📅</div><p>No events posted yet. <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('host')}>Post your first event</button></p></div>
@@ -3136,7 +3149,7 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
 
 // ─── Vendor Profile Modal ─────────────────────────────────────────────────────
 function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, hostEvent, bookingRequests, openMessage, setTab }) {
-  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const accepted = bookingAccepted || req?.status === 'accepted';
   const cats = v.allCategories || [v.category];
   const photos = v.photoUrls || [];
@@ -3345,7 +3358,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
 function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct }) {
   const [showProfile, setShowProfile] = useState(false);
-  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id);
+  const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
   const isGuest = !authUser;
 
@@ -3551,12 +3564,17 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal }) {
+function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterVendorType, setFilterVendorType] = useState('');
   const [filterService, setFilterService] = useState('');
   const [hostZip, setHostZip] = useState(hostEvent?.eventZip || '');
+  const approvedEvents = (userEvents||[]).filter(e => e.status === 'approved' || e.status === 'concierge_active');
+  const switchEvent = (e) => {
+    setHostEvent({ eventName:e.event_name, eventType:e.event_type, eventZip:e.zip, date:e.date, startTime:e.start_time, endTime:e.end_time, contactName:e.contact_name, email:e.contact_email, vendorCategories:e.categories_needed||[], vendorCount:e.spots, budget:e.booth_fee, notes:e.notes, eventId:e.id });
+    setHostZip(e.zip || '');
+  };
   const [contacted, setContacted] = useState([]);
   const hasZip = hostZip.length === 5 && isValidZip(hostZip);
 
@@ -3599,13 +3617,27 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
     <div className="section" style={{ maxWidth:1060 }}>
       <div className="section-title">{hostEvent ? `Vendors for ${hostEvent.eventName || 'Your Event'}` : 'Vendor Directory'}</div>
       <p className="section-sub">{hostEvent ? `Find and invite vendors to ${hostEvent.eventName || 'your event'} on ${hostEvent.date || ''}` : 'Browse all active South Jersey vendors. Enter your event zip code to see who can travel to you.'}</p>
-      {hostEvent && (
-        <div style={{background:'#1a1410',borderRadius:10,padding:'12px 18px',marginBottom:16,display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
-          <div style={{display:'flex',alignItems:'center',gap:12}}>
-            <div style={{fontSize:13,color:'#e8c97a',fontWeight:700}}>{hostEvent.eventName || hostEvent.eventType}</div>
-            <div style={{fontSize:12,color:'#a89a8a'}}>{hostEvent.date} · {hostEvent.eventType} · Zip {hostEvent.eventZip}</div>
+      {/* Event picker — switch between approved events */}
+      {approvedEvents.length > 0 && (
+        <div style={{background:'#1a1410',borderRadius:10,padding:'12px 18px',marginBottom:16}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:8}}>
+            <div style={{display:'flex',alignItems:'center',gap:10}}>
+              <label style={{fontSize:11,color:'#a89a8a',fontWeight:600,whiteSpace:'nowrap'}}>Finding vendors for:</label>
+              {approvedEvents.length === 1 ? (
+                <div style={{fontSize:13,color:'#e8c97a',fontWeight:700}}>{approvedEvents[0].event_name}</div>
+              ) : (
+                <select value={hostEvent?.eventId || ''} onChange={e=>{const ev=approvedEvents.find(x=>x.id===e.target.value); if(ev)switchEvent(ev);}}
+                  style={{background:'#2d2118',color:'#e8c97a',border:'1px solid #c8a84b',borderRadius:6,padding:'4px 10px',fontSize:13,fontWeight:700,fontFamily:'DM Sans,sans-serif',cursor:'pointer'}}>
+                  {!hostEvent?.eventId && <option value="">Select an event...</option>}
+                  {approvedEvents.map(ev=><option key={ev.id} value={ev.id}>{ev.event_name} — {ev.date}</option>)}
+                </select>
+              )}
+            </div>
+            {hostEvent && (
+              <div style={{fontSize:11,color:'#a89a8a'}}>{hostEvent.date} · {hostEvent.eventType} · Zip {hostEvent.eventZip}</div>
+            )}
           </div>
-          {neededCats.length > 0 && <div style={{fontSize:11,color:'#a89a8a'}}>Looking for: {neededCats.join(', ')}</div>}
+          {neededCats.length > 0 && <div style={{fontSize:10,color:'#a89a8a',marginTop:6}}>Looking for: {neededCats.join(', ')}</div>}
         </div>
       )}
       <div className="match-filters">
@@ -5605,6 +5637,7 @@ function AppInner() {
       vendorCategory: vendor.category,
       hostName: eventDetails.contactName || 'Host',
       hostEmail: eventDetails.email || '',
+      eventId: eventDetails.eventId || null,
       eventName: eventDetails.eventName || '',
       eventType: eventDetails.eventType || '',
       eventZip: eventDetails.eventZip || '',
@@ -5638,6 +5671,7 @@ function AppInner() {
       vendor_id: req.vendorId, vendor_name: req.vendorName,
       vendor_emoji: req.vendorEmoji, vendor_category: req.vendorCategory,
       host_name: req.hostName, host_email: req.hostEmail,
+      event_id: req.eventId || null,
       event_name: req.eventName, event_type: req.eventType,
       event_zip: req.eventZip, event_date: req.eventDate,
       start_time: req.startTime, end_time: req.endTime, address: req.address,
@@ -6306,7 +6340,7 @@ function AppInner() {
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>post an event</a> first.</p></div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
-            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
+            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
         {tab==="upcoming-markets" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
