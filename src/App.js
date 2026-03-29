@@ -38,9 +38,8 @@ const SUBCATEGORIES = {
 
 const EVENT_TYPES = [
   "Pop-Up & Vendor Market", "Craft & Art Fair", "Farmers & Flea Market",
-  "Holiday Market", "Night Market", "Sip & Shop", "Food Festival",
-  "Wine & Spirits Festival", "Tasting Event", "Corporate Event", "Private Party",
-  "Community Festival", "Fundraiser", "Networking Event", "Girls Night Out"
+  "Holiday Market", "Sip & Shop", "Food/Drink Festival",
+  "Community Festival", "Fundraiser", "Corporate & Networking", "Private Party"
 ];
 const REMOVED_EVENT_TYPES = ["Birthday Party","Wedding Reception","Wedding Ceremony","Bridal Shower","Baby Shower","Gender Reveal","Bachelorette Party","Anniversary Celebration","Grand Opening","Block Party","Other"];
 const EVENT_TYPE_MAP = {
@@ -49,6 +48,10 @@ const EVENT_TYPE_MAP = {
   "Flea Market":"Farmers & Flea Market","Farmers Market":"Farmers & Flea Market",
   "Grand Opening":"Community Festival","Block Party":"Community Festival",
   "Other":"Community Festival",
+  "Food Festival":"Food/Drink Festival","Wine & Spirits Festival":"Food/Drink Festival","Tasting Event":"Sip & Shop",
+  "Night Market":"Pop-Up & Vendor Market",
+  "Networking Event":"Corporate & Networking","Corporate Event":"Corporate & Networking",
+  "Girls Night Out":"Private Party",
 };
 
 const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Mobile Bar/Bartender","Wine Tasting/Sommelier","Food Truck","Catering","Coffee/Espresso Cart","Henna Artist","Event Decorator","Photo Booth","Other"];
