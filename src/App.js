@@ -6841,7 +6841,9 @@ function AppInner() {
       }));
       const validUrls = photoUrls.filter(Boolean);
       if (validUrls.length > 0) {
-        await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid);
+        await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid).catch(e=>console.error('event_photos update error:',e));
+        // Update local state with photo URLs
+        newEvent.event_photos = validUrls;
       }
     }
     // Send host confirmation email
