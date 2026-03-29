@@ -4768,11 +4768,11 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                     </div>
                   )}
                   {/* Event photos */}
-                  {evt.eventPhotos && evt.eventPhotos.length > 0 && (
+                  {((evt.eventPhotos && evt.eventPhotos.length > 0) || evt.photoUrl) && (
                     <div style={{marginBottom:16}}>
-                      <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Event Photos ({evt.eventPhotos.length})</div>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1a1410',marginBottom:8}}>Event Photos ({(evt.eventPhotos||[]).length || (evt.photoUrl ? 1 : 0)})</div>
                       <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                        {evt.eventPhotos.map((url,i)=>(
+                        {(evt.eventPhotos && evt.eventPhotos.length > 0 ? evt.eventPhotos : evt.photoUrl ? [evt.photoUrl] : []).map((url,i)=>(
                           <a key={i} href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt={`Event photo ${i+1}`} style={{width:120,height:120,objectFit:'cover',borderRadius:8,border:'1px solid #e0d5c5'}} /></a>
                         ))}
                       </div>
@@ -6841,8 +6841,13 @@ function AppInner() {
       }));
       const validUrls = photoUrls.filter(Boolean);
       if (validUrls.length > 0) {
-        await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid).catch(e=>console.error('event_photos update error:',e));
+        // Save first photo to photo_url (column that definitely exists)
+        await supabase.from('events').update({ photo_url: validUrls[0] }).eq('id', eid).catch(e=>console.error('photo_url update error:',e));
+        // Try saving all photos to event_photos array column
+        const { error: epErr } = await supabase.from('events').update({ event_photos: validUrls }).eq('id', eid);
+        if (epErr) console.error('event_photos column may not exist:', epErr.message);
         // Update local state with photo URLs
+        newEvent.photo_url = validUrls[0];
         newEvent.event_photos = validUrls;
       }
     }
