@@ -1688,6 +1688,9 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <button onClick={()=>setFormStep(1)} style={{marginTop:10,background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Edit any section</button>
       </div>
 
+      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'14px 18px',marginBottom:20,fontSize:13,color:'#7a6a5a',lineHeight:1.6}}>
+        <strong style={{color:'#1a1410'}}>Your responsibility as a host:</strong> South Jersey Vendor Market connects you with vendors — but all vetting, contracts, and payments are between you and the vendor. Before confirming any vendor, we recommend you verify their insurance, licenses, and any permits required by your venue. You are responsible for collecting booth fees, signing agreements, and confirming all details directly with each vendor.
+      </div>
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
           <input type="checkbox" checked={tosAgreed} onChange={e=>setTosAgreed(e.target.checked)} style={{ width:18, height:18, marginTop:2, flexShrink:0, display:'block' }} />
@@ -3151,7 +3154,8 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </div>
       </div>
 
-      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Vendor Applications & Responses</h3>
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:8}}>Vendor Applications & Responses</h3>
+      <div style={{fontSize:12,color:'#7a6a5a',marginBottom:16,lineHeight:1.5}}>Before accepting a vendor, confirm their insurance coverage, business licenses, and any details important to your event. All contracts and payments are handled directly between you and the vendor.</div>
       {loadingApps ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
       : applications.length === 0 ? (
         <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p></div>
@@ -3930,6 +3934,9 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
         </div>
       </div>
 
+      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:'#7a6a5a',lineHeight:1.5}}>
+        Vendor profiles are self-reported. Before booking, verify insurance, licenses, and any information important to your event. All agreements and payments are between you and the vendor.
+      </div>
       <div className="results-header">
         <div className="results-count"><strong>{inRange.length}</strong> {hasZip?'vendors within travel range':'vendors found'}</div>
         {hasZip && <div style={{ fontSize:13, color:'#7a6a5a' }}>Sorted nearest → farthest from {hostZip}</div>}
