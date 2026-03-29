@@ -3711,12 +3711,6 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
                 💬 Message
               </button>
             )}
-            {!hostEvent && sendBookingRequest && (
-              <button onClick={()=>{setTab('host'); onClose();}}
-                style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                Post an Event First
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -3832,9 +3826,14 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
               </button>
             )
           )}
-          {!hostEvent && sendBookingRequest && (
-            <button className="contact-btn" style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontWeight:600,fontSize:13}} onClick={()=>setTab('host')}>
-              Post an Event First
+          {!hostEvent && openMessage && authUser && (
+            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>openMessage(v)}>
+              💬 Message Vendor
+            </button>
+          )}
+          {!hostEvent && !authUser && (
+            <button className="contact-btn" style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',fontWeight:600,fontSize:13}} onClick={()=>setShowAuthModal && setShowAuthModal(true)}>
+              Log In to Message
             </button>
           )}
           <div style={{display:'flex',gap:6}}>
@@ -6992,17 +6991,8 @@ function AppInner() {
           </div>
         )}
 
-        {tab==="matches"      && (vendorProfile && userEvents.length === 0
-          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>add an event</a> first.</p></div>
-          : !loading && userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active')
-          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}>
-              <div className="section-title">Browse Vendors</div>
-              <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:10,padding:'20px 24px',marginTop:20}}>
-                <div style={{fontSize:16,fontWeight:700,color:'#7a5a10',marginBottom:8}}>Your event is under review</div>
-                <p style={{fontSize:14,color:'#7a5a10',lineHeight:1.6,marginBottom:16}}>Our team is reviewing your event submission. Once approved, you'll be able to browse and invite vendors here. This usually takes less than 24 hours.</p>
-                <button onClick={()=>{setTab('host-dashboard');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Back to Dashboard</button>
-              </div>
-            </div>
+        {tab==="matches"      && (!authUser
+          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">Log in to browse and message vendors. <button onClick={()=>setShowAuthModal(true)} style={{background:'none',border:'none',color:'#e8c97a',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}}>Log in or sign up</button></p></div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
             : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
