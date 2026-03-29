@@ -586,9 +586,9 @@ function CategorySubcategoryPicker({ categories, subcategories, onCategoriesChan
               </div>
             );
           })}
-          {subcategories.length > 0 && (
+          {subcategories.filter(s => categories.filter(c => CATEGORIES.includes(c)).some(c => (SUBCATEGORIES[c]||[]).includes(s))).length > 0 && (
             <div className="selected-tags">
-              {subcategories.map(s => <span key={s} className="sel-tag">{s}</span>)}
+              {subcategories.filter(s => categories.filter(c => CATEGORIES.includes(c)).some(c => (SUBCATEGORIES[c]||[]).includes(s))).map(s => <span key={s} className="sel-tag">{s}</span>)}
             </div>
           )}
         </div>
@@ -750,6 +750,10 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       if (!saved) return DEFAULT_VENDOR_FORM;
       const draft = { ...DEFAULT_VENDOR_FORM, ...JSON.parse(saved) };
       if (draft.categories) draft.categories = [...new Set(draft.categories.map(c => CATEGORY_MAP[c] || c).filter(c => CATEGORIES.includes(c)))];
+      if (draft.subcategories) {
+        const validSubs = new Set((draft.categories||[]).flatMap(c => SUBCATEGORIES[c] || []));
+        draft.subcategories = draft.subcategories.filter(s => validSubs.has(s));
+      }
       return draft;
     } catch { return DEFAULT_VENDOR_FORM; }
   });
@@ -1212,8 +1216,12 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       const saved = localStorage.getItem(HOST_DRAFT_KEY);
       if (!saved) return DEFAULT_HOST_FORM;
       const draft = { ...DEFAULT_HOST_FORM, ...JSON.parse(saved) };
-      // Migrate old category names in draft
+      // Migrate old category names and clean stale subcategories in draft
       if (draft.vendorCategories) draft.vendorCategories = [...new Set(draft.vendorCategories.map(c => CATEGORY_MAP[c] || c).filter(c => CATEGORIES.includes(c)))];
+      if (draft.vendorSubcategories) {
+        const validSubs = new Set(draft.vendorCategories.flatMap(c => SUBCATEGORIES[c] || []));
+        draft.vendorSubcategories = draft.vendorSubcategories.filter(s => validSubs.has(s));
+      }
       return draft;
     } catch { return DEFAULT_HOST_FORM; }
   });
