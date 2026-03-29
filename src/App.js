@@ -1620,7 +1620,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <button type="button" onClick={()=>set('shareWithEventGoers',true)} style={{flex:1,padding:'10px',borderRadius:8,border:form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>Yes</button>
           <button type="button" onClick={()=>set('shareWithEventGoers',false)} style={{flex:1,padding:'10px',borderRadius:8,border:!form.shareWithEventGoers?'2px solid #c8a84b':'2px solid #e8ddd0',background:!form.shareWithEventGoers?'#fdf9f0':'#fff',cursor:'pointer',fontWeight:700,fontSize:14,fontFamily:'DM Sans,sans-serif',color:'#1a1410'}}>No</button>
         </div>
-        <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{form.shareWithEventGoers ? 'Your event will appear on the public Upcoming Markets page for guests to discover.' : 'Your event will only be visible to vendors — it won\'t appear on the public Upcoming Markets page.'}</div>
+        <div style={{fontSize:12,color:'#7a6a5a',marginTop:6}}>{form.shareWithEventGoers ? 'Your event will appear on the public Upcoming Events page for guests to discover.' : 'Your event will only be visible to vendors — it won\'t appear on the public Upcoming Events page.'}</div>
       </div>
 
       <hr className="form-divider" />
@@ -5108,7 +5108,7 @@ function VendorApplyModal({ opp, onClose }) {
   );
 }
 
-// ─── Upcoming Markets (public calendar) ──────────────────────────────────────
+// ─── Upcoming Events (public calendar) ──────────────────────────────────────
 function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerSignup }) {
   const [filterType, setFilterType] = useState("");
   const [filterDate, setFilterDate] = useState("");
@@ -5142,6 +5142,11 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
     setExpandedId(next);
     if (next) loadVendors(opp);
   };
+
+  // Auto-load vendors for all visible events
+  useEffect(() => {
+    upcoming.forEach(opp => { if (!vendorsByEvent[opp.id]) loadVendors(opp); });
+  }, [upcoming.length]); // eslint-disable-line
 
   return (
     <>
@@ -5194,52 +5199,44 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
               const loading = loadingVendors[opp.id];
               return (
               <div key={opp.id} style={{ background:"#fff", border:"1px solid #e8ddd0", borderRadius:12, overflow:"hidden" }}>
-                {/* Card header — always visible */}
-                <div style={{ cursor:'pointer' }} onClick={()=>handleExpand(opp)}>
-                  <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"18px 24px", display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div>
-                      <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, color:"#fff", marginBottom:2, lineHeight:1.3 }}>{opp.eventName}</div>
-                      <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
-                    </div>
-                    <div style={{color:'#a89a8a',fontSize:18,flexShrink:0,marginLeft:12}}>{isOpen ? '▲' : '▼'}</div>
-                  </div>
-                  <div style={{ padding:"16px 24px" }}>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:'12px 24px',marginBottom:opp.notes||opp.isTicketed||opp.eventLink?12:0}}>
-                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Date </span><span style={{fontSize:14,fontWeight:500}}>{fmtDate(opp.date)}</span></div>
-                      {(opp.startTime || opp.endTime) && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Time </span><span style={{fontSize:14,fontWeight:500}}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</span></div>}
-                      <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)} mi away` : ''}</span></div>
-                      {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
-                      {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
-                    </div>
-                    {(opp.eventGoerNotes || opp.notes) && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 10px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.eventGoerNotes || opp.notes}</p>}
-                    {opp.eventLink && <div><a href={opp.eventLink} target="_blank" rel="noopener noreferrer" onClick={e=>e.stopPropagation()} style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a></div>}
-                    {!isOpen && <div style={{fontSize:12,color:'#c8a84b',marginTop:8,fontWeight:600}}>Click to see vendors attending →</div>}
-                  </div>
+                {/* Card header */}
+                <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"18px 24px" }}>
+                  <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, color:"#fff", marginBottom:2, lineHeight:1.3 }}>{opp.eventName}</div>
+                  <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
                 </div>
-
-                {/* Expanded: vendors attending */}
-                {isOpen && (
-                  <div style={{borderTop:'1px solid #e8ddd0',padding:'20px 24px',background:'#fdf9f5'}}>
-                    <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:12}}>Vendors Attending</div>
-                    {loading ? (
-                      <div style={{color:'#a89a8a',fontSize:13,padding:'8px 0'}}>Loading vendors...</div>
-                    ) : vendors.length === 0 ? (
-                      <div style={{color:'#7a6a5a',fontSize:13,padding:'8px 0'}}>No confirmed vendors yet. Check back closer to the event date!</div>
-                    ) : (
-                      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(200px,1fr))',gap:10}}>
-                        {vendors.map((v,i) => (
-                          <div key={i} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'10px 14px',display:'flex',alignItems:'center',gap:10}}>
-                            {v.vendor_emoji && <span style={{fontSize:20}}>{v.vendor_emoji}</span>}
-                            <div>
-                              <div style={{fontWeight:700,fontSize:13,color:'#1a1410'}}>{v.vendor_name}</div>
-                              {v.vendor_category && <div style={{fontSize:11,color:'#7a6a5a'}}>{v.vendor_category}</div>}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                {/* Event details — always visible */}
+                <div style={{ padding:"16px 24px" }}>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'12px 24px',marginBottom:12}}>
+                    <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Date </span><span style={{fontSize:14,fontWeight:500}}>{fmtDate(opp.date)}</span></div>
+                    {(opp.startTime || opp.endTime) && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Time </span><span style={{fontSize:14,fontWeight:500}}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</span></div>}
+                    <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Location </span><span style={{fontSize:14,fontWeight:500}}>Zip {opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)} mi away` : ''}</span></div>
+                    {opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500}}>🎟️ {opp.ticketPrice || 'Ticketed'}</span></div>}
+                    {!opp.isTicketed && <div><span style={{fontSize:10,textTransform:'uppercase',letterSpacing:1,color:'#a89a8a',fontWeight:600}}>Admission </span><span style={{fontSize:14,fontWeight:500,color:'#1a6b3a'}}>Free</span></div>}
                   </div>
-                )}
+                  {(opp.eventGoerNotes || opp.notes) && <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.5,margin:'0 0 12px',padding:'10px 12px',background:'#fdf9f5',borderRadius:6,borderLeft:'3px solid #e8c97a'}}>{opp.eventGoerNotes || opp.notes}</p>}
+                  {opp.eventLink && <div style={{marginBottom:12}}><a href={opp.eventLink} target="_blank" rel="noopener noreferrer" style={{fontSize:12,color:'#1a4a6b',textDecoration:'none',display:'inline-flex',alignItems:'center',gap:4}}>🔗 Event Page</a></div>}
+                </div>
+                {/* Vendors attending — always visible */}
+                <div style={{borderTop:'1px solid #e8ddd0',padding:'16px 24px',background:'#fdf9f5'}}>
+                  <div style={{fontSize:12,fontWeight:700,color:'#1a1410',letterSpacing:0.5,marginBottom:8}}>Vendors Attending</div>
+                  {loading ? (
+                    <div style={{color:'#a89a8a',fontSize:13,padding:'4px 0'}}>Loading vendors...</div>
+                  ) : vendors.length === 0 ? (
+                    <div style={{color:'#7a6a5a',fontSize:13,padding:'4px 0'}}>No confirmed vendors yet. Check back closer to the event date!</div>
+                  ) : (
+                    <div style={{display:'flex',flexWrap:'wrap',gap:8}}>
+                      {vendors.map((v,i) => (
+                        <div key={i} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px',display:'flex',alignItems:'center',gap:8}}>
+                          {v.vendor_emoji && <span style={{fontSize:16}}>{v.vendor_emoji}</span>}
+                          <div>
+                            <div style={{fontWeight:700,fontSize:12,color:'#1a1410'}}>{v.vendor_name}</div>
+                            {v.vendor_category && <div style={{fontSize:10,color:'#7a6a5a'}}>{v.vendor_category}</div>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               );
             })}
@@ -6608,7 +6605,7 @@ function AppInner() {
               <div className="mobile-menu-section">
                 <div className="mobile-menu-label">Explore</div>
                 <button className={`mobile-menu-item${tab==='home'?' active':''}`} onClick={()=>navTo('home')}>Home</button>
-                <button className={`mobile-menu-item${tab==='upcoming-markets'?' active':''}`} onClick={()=>navTo('upcoming-markets')}>Upcoming Markets</button>
+                <button className={`mobile-menu-item${tab==='upcoming-markets'?' active':''}`} onClick={()=>navTo('upcoming-markets')}>Upcoming Events</button>
               </div>
               <div className="mobile-menu-section">
                 <button className={`mobile-menu-item${tab==='pricing'?' active':''}`} onClick={()=>navTo('pricing')}>Pricing</button>
@@ -6619,7 +6616,7 @@ function AppInner() {
           )}
           <div className="nav-tabs">
             <button className={`nav-tab${tab==="home"?" active":""}`} onClick={()=>{setTab("home");window.scrollTo({top:0});}}>Home</button>
-            <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Markets</button>
+            <button className={`nav-tab${tab==="upcoming-markets"?" active":""}`} onClick={()=>{setTab("upcoming-markets");window.scrollTo({top:0});}}>Upcoming Events</button>
             <div className="nav-group">
               <div className="nav-group-label">&#128717; Vendors</div>
               <div className="nav-group-items">
@@ -6682,7 +6679,7 @@ function AppInner() {
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
                   buttons:[{label:'Add an Event',tab:'host',signupRole:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
                 { title:'Event Guests', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
-                  buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup',signupRole:'eventGoer'}] },
+                  buttons:[{label:'Get Event Alerts',action:'eventGoerSignup',signupRole:'eventGoer'},{label:'Browse Upcoming Events',tab:'upcoming-markets'}] },
               ].map(card=>(
                 <div key={card.title} className="home-col" style={{background:'#0e0c0a',borderRadius:10,padding:24,display:'flex',flexDirection:'column',textAlign:'center',border:'2px solid #c8a850'}}>
                   <h2 style={{fontFamily:"'Lexend Deca',sans-serif",fontSize:'clamp(16px,1.6vw,24px)',color:'#fff',margin:'0 0 8px',lineHeight:1.2,fontWeight:700}}>
