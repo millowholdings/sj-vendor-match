@@ -3019,7 +3019,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Events</h3>
       {userEvents.length === 0 ? (
-        <div className="empty-state"><div className="big">📅</div><p>No events posted yet. <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('host')}>Post your first event</button></p></div>
+        <div className="empty-state"><div className="big">📅</div><p>No events posted yet. <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('host')}>Add your first event</button></p></div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12,marginBottom:32}}>
           {userEvents.map(e => (
@@ -3138,7 +3138,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Messages</button>
         {userEvents.some(e=>e.status==='approved') && <button onClick={()=>{setTab('matches');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Browse Vendors</button>}
         <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>My Calendar</button>
-        <button onClick={()=>{setTab('host');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Post Another Event</button>
+        <button onClick={()=>{setTab('host');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Add Another Event</button>
       </div>
 
       {/* ── My Calendar ── */}
@@ -6596,8 +6596,8 @@ function AppInner() {
               <div className="mobile-menu-section">
                 <div className="mobile-menu-label">Quick Actions</div>
                 {(authUser && userEvents.length > 0) && <button className={`mobile-menu-item${tab==='matches'?' active':''}`} onClick={()=>navTo('matches')}>Browse Vendors</button>}
-                <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Post Event</button>
-                <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Join as Vendor</button>
+                <button className={`mobile-menu-item${tab==='host'?' active':''}`} onClick={()=>navTo('host')}>Add an Event</button>
+                <button className={`mobile-menu-item${tab==='vendor'?' active':''}`} onClick={()=>navTo('vendor')}>Add a Vendor Profile</button>
                 <button className={`mobile-menu-item${tab==='opportunities'?' active':''}`} onClick={()=>navTo('opportunities')}>Browse Opportunities</button>
               </div>
               <div className="mobile-menu-section">
@@ -6618,7 +6618,7 @@ function AppInner() {
             <div className="nav-group">
               <div className="nav-group-label">&#128717; Vendors</div>
               <div className="nav-group-items">
-                <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Join as Vendor</button>
+                <button className={`nav-tab${tab==="vendor"?" active":""}`} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>Add a Vendor Profile</button>
                 <button className={`nav-tab${tab==="opportunities"?" active":""}`} onClick={()=>{setTab("opportunities");window.scrollTo({top:0});}}>Opportunities</button>
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
                   Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
@@ -6628,7 +6628,7 @@ function AppInner() {
             <div className="nav-group">
               <div className="nav-group-label">&#127918; Hosts</div>
               <div className="nav-group-items">
-                <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Post Event</button>
+                <button className={`nav-tab${tab==="host"?" active":""}`} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>Add an Event</button>
                 {(!vendorProfile || userEvents.length > 0) && <button className={`nav-tab${tab==="matches"?" active":""}`} onClick={()=>{setTab("matches");window.scrollTo({top:0});}}>Browse Vendors</button>}
                 <button className={`nav-tab${tab==="messages"?" active":""}`} onClick={()=>{setTab("messages");window.scrollTo({top:0});}}>
                   Messages{unreadCount>0?` (${unreadCount})`:conversations.length>0?` (${conversations.length})`:''}
@@ -6673,9 +6673,9 @@ function AppInner() {
             <div className="home-columns" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:1200,width:'100%',margin:'0 auto',padding:'32px 32px 0'}}>
               {[
                 { title:'Vendors', desc:'Create your profile, set your travel radius, and get matched with events looking for what you offer.',
-                  buttons:[{label:'Join as a Vendor',tab:'vendor',signupRole:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
+                  buttons:[{label:'Add a Vendor Profile',tab:'vendor',signupRole:'vendor'},{label:'Browse Opportunities',tab:'opportunities'},...(authUser?[{label:'My Calendar',tab:'calendar'}]:[])] },
                 { title:'Event Hosts', desc:'Post your event for free, browse vendor profiles, send booking requests, and manage it all in one place.',
-                  buttons:[{label:'Post Your Event',tab:'host',signupRole:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
+                  buttons:[{label:'Add an Event',tab:'host',signupRole:'host'},{label:'Browse Vendors',tab:'matches'},...(authUser?[{label:'My Calendar',tab:'host-calendar'}]:[])] },
                 { title:'Event Guests', desc:'Discover local markets, craft fairs, food festivals, and pop-up events happening across South Jersey.',
                   buttons:[{label:'Browse Upcoming Markets',tab:'upcoming-markets'},{label:'Get Event Alerts',action:'eventGoerSignup',signupRole:'eventGoer'}] },
               ].map(card=>(
@@ -6733,7 +6733,7 @@ function AppInner() {
                       <div style={{ fontSize:12, color:'#a89a8a', letterSpacing:2, textTransform:'uppercase', marginBottom:6 }}>Confirmation Number</div>
                       <div style={{ fontSize:22, fontWeight:700, color:'#e8c97a', letterSpacing:3, marginBottom:12 }}>{vendorConfirm.ref}</div>
                       <div style={{ fontSize:13, color:'#a89a8a', marginBottom:12 }}>Save this for your records.</div>
-                      <a href={`mailto:${vendorConfirm.email}?subject=Your SJVM Vendor Registration — ${vendorConfirm.ref}&body=Hi ${vendorConfirm.name},%0A%0AThank you for registering with South Jersey Vendor Market!%0A%0AYour confirmation number is: ${vendorConfirm.ref}%0A%0AWhat happens next:%0A• Your listing will be reviewed within 24 hours%0A• You'll be matched with nearby events automatically%0A• Check Messages for booking requests from hosts%0A%0A— South Jersey Vendor Market%0Asupport@southjerseyvendormarket.com`}
+                      <a href={`mailto:${vendorConfirm.email}?subject=Your SJVM Add a Vendor Profile — ${vendorConfirm.ref}&body=Hi ${vendorConfirm.name},%0A%0AThank you for registering with South Jersey Vendor Market!%0A%0AYour confirmation number is: ${vendorConfirm.ref}%0A%0AWhat happens next:%0A• Your listing will be reviewed within 24 hours%0A• You'll be matched with nearby events automatically%0A• Check Messages for booking requests from hosts%0A%0A— South Jersey Vendor Market%0Asupport@southjerseyvendormarket.com`}
                         style={{ display:'inline-block', background:'#e8c97a', color:'#1a1410', padding:'9px 20px', borderRadius:6, fontSize:13, fontWeight:700, textDecoration:'none', fontFamily:'DM Sans,sans-serif' }}>
                         📧 Email yourself a copy
                       </a>
@@ -6761,7 +6761,7 @@ function AppInner() {
               </>
             ) : (
               <>
-                <div className="section-title">Vendor Registration</div>
+                <div className="section-title">Add a Vendor Profile</div>
                 <p className="section-sub">Join South Jersey's growing vendor community and get matched with events near you.</p>
                 {authUser && vendorProfile && (
       <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:10,padding:'16px 20px',marginBottom:20,fontSize:14,color:'#1a4a6b',lineHeight:1.6}}>
@@ -6791,7 +6791,7 @@ function AppInner() {
               />
             ) : (
               <>
-                <div className="section-title">Host an Event</div>
+                <div className="section-title">Add an Event</div>
                 <p className="section-sub">Tell us about your event and we'll find the perfect vendors for you.</p>
                 <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
               </>
@@ -6800,7 +6800,7 @@ function AppInner() {
         )}
 
         {tab==="matches"      && (vendorProfile && userEvents.length === 0
-          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>post an event</a> first.</p></div>
+          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">This section is available to event hosts. To browse vendors, <a href="#" onClick={e=>{e.preventDefault();setTab('host')}} style={{color:'#e8c97a'}}>add an event</a> first.</p></div>
           : !loading && userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active')
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}>
               <div className="section-title">Browse Vendors</div>
@@ -7233,8 +7233,8 @@ function TosPage({ setTab }) {
         <div style={{ fontFamily:'Playfair Display,serif', fontSize:20, color:'#e8c97a', marginBottom:8 }}>Questions about our Terms?</div>
         <p style={{ color:'#a89a8a', fontSize:14, marginBottom:16 }}>Contact us at support@southjerseyvendormarket.com</p>
         <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
-          <button className="btn-primary" onClick={()=>setTab('vendor')}>Join as a Vendor</button>
-          <button className="btn-outline" onClick={()=>setTab('host')}>Post Your Event</button>
+          <button className="btn-primary" onClick={()=>setTab('vendor')}>Add a Vendor Profile</button>
+          <button className="btn-outline" onClick={()=>setTab('host')}>Add an Event</button>
         </div>
       </div>
     </div>
@@ -7582,9 +7582,9 @@ function MyCalendarPage({ authUser, vendorProfile, userEvents, setTab }) {
         <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:12,padding:32,textAlign:'center'}}>
           <div style={{fontSize:32,marginBottom:12}}>📅</div>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:18,color:'#1a1410',marginBottom:8}}>Your calendar is empty</div>
-          <p style={{fontSize:13,color:'#7a6a5a',marginBottom:16}}>Post an event as a host or apply to events as a vendor to see them here.</p>
+          <p style={{fontSize:13,color:'#7a6a5a',marginBottom:16}}>Add an event as a host or apply to events as a vendor to see them here.</p>
           <div style={{display:'flex',gap:8,justifyContent:'center'}}>
-            <button onClick={()=>setTab('host')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Post Event</button>
+            <button onClick={()=>setTab('host')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Add an Event</button>
             <button onClick={()=>setTab('opportunities')} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
           </div>
         </div>
@@ -8121,8 +8121,8 @@ function HostCalendarPage({ authUser, userEvents, setTab, hostConfirm, clearHost
       <div style={{ textAlign:'center', padding:'80px 40px', color:'#7a6a5a' }}>
         <div style={{ fontSize:48, marginBottom:16 }}>📅</div>
         <div style={{ fontFamily:'Playfair Display,serif', fontSize:28, marginBottom:12, color:'#1a1410' }}>Your Event Calendar</div>
-        <p style={{ fontSize:16, maxWidth:440, margin:'0 auto', marginBottom:24 }}>Post an event to see your calendar with booking requests and vendor lineup.</p>
-        <button onClick={()=>setTab('host')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 28px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Post Your Event</button>
+        <p style={{ fontSize:16, maxWidth:440, margin:'0 auto', marginBottom:24 }}>Add an event to see your calendar with booking requests and vendor lineup.</p>
+        <button onClick={()=>setTab('host')} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 28px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Add an Event</button>
       </div>
     );
   }
