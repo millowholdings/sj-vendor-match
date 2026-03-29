@@ -11,7 +11,7 @@ const CATEGORIES = [
   "Clothing & Apparel", "Beauty & Skincare", "Plants & Floral", "Crafts & Handmade",
   "Health & Wellness", "Kids, Baby & Maternity", "Pet Products",
   "Wedding & Events", "Personalized Gifts",
-  "Vintage & Thrift", "Spiritual & Metaphysical"
+  "Vintage & Thrift", "Spiritual & Metaphysical", "Services & Professionals"
 ];
 
 const SUBCATEGORIES = {
@@ -23,13 +23,14 @@ const SUBCATEGORIES = {
   "Beauty & Skincare": ["Skincare & Serums", "Body Butters & Lotions", "Lip Care", "Hair Care", "Bath Products", "Makeup & Cosmetics", "Injectibles", "Other"],
   "Plants & Floral": ["Succulents & Cacti", "Tropical Plants", "Floral Arrangements", "Dried Florals", "Seeds & Bulbs", "Terrariums", "Other"],
   "Crafts & Handmade": ["Woodwork", "Ceramics & Pottery", "Knit & Crochet", "Resin Art", "Macrame", "Paper Crafts", "Custom", "Other"],
-  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Yoga", "Personal Training", "Physical Therapy", "CBD & Hemp", "Natural Remedies & Tinctures", "Aromatherapy", "Other"],
+  "Health & Wellness": ["Supplements & Vitamins", "Essential Oils", "Crystals & Spiritual", "Teas & Herbal", "Fitness Products", "Mental Wellness", "Physical Therapy", "CBD & Hemp", "Natural Remedies & Tinctures", "Aromatherapy", "Other"],
   "Kids, Baby & Maternity": ["Toys & Games", "Clothing", "Nursery Decor", "Books", "Personalized Gifts", "Educational", "Baby Shower Favors", "Maternity Apparel", "Gender Reveal Items", "Milestone Keepsakes", "Other"],
   "Pet Products": ["Treats & Food", "Toys", "Collars & Leashes", "Grooming", "Apparel", "Beds & Accessories", "Other"],
   "Wedding & Events": ["Bridal Accessories", "Wedding Favors", "Bridesmaid Gifts", "Vow Books & Stationery", "Bridal Robes & Apparel", "Wedding Decor", "Custom Veils & Hair Accessories", "Balloon Arrangements", "Table Centerpieces", "Backdrops & Banners", "Custom Signage", "Party Favors", "Themed Decorations", "Photo Booth Props", "Other"],
   "Personalized Gifts": ["Custom Tumblers & Cups", "Engraved Items", "Embroidered Goods", "Monogrammed Gifts", "Photo Gifts", "Name & Word Art", "Wine Charms", "Other"],
   "Vintage & Thrift": ["Vintage Clothing", "Antiques & Collectibles", "Vintage Jewelry", "Upcycled Goods", "Retro Home Decor", "Vinyl & Media", "Other"],
   "Spiritual & Metaphysical": ["Crystals & Gemstones", "Tarot & Oracle Cards", "Sage & Cleansing", "Spiritual Jewelry", "Meditation & Mindfulness", "Altar Supplies", "Other"],
+  "Services & Professionals": ["Real Estate", "Insurance & Financial", "Home Repair & Improvement", "Pet Services", "Animal Rescue & Shelter", "Tutoring & Education", "Fitness & Personal Training", "Beauty & Salon Services", "Photography & Video", "Legal & Notary", "Health & Medical", "Cleaning Services", "Nonprofits & Community Orgs", "Other"],
 };
 // Map old category names to new ones for existing vendor/event data
 const CATEGORY_MAP = {
