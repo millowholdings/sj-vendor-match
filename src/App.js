@@ -4218,7 +4218,7 @@ function PendingVendorCard({ v, onApprove, onReject }) {
 // ─── Admin Page ───────────────────────────────────────────────────────────────
 const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
 
-function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false, eventGoers=[] }) {
+function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false, eventGoers=[], setEventGoers=()=>{} }) {
   const [unlocked, setUnlocked] = useState(() => isAdmin || sessionStorage.getItem('sjvm_admin') === '1');
   const [pw, setPw] = useState('');
   const [pwError, setPwError] = useState(false);
@@ -4307,6 +4307,79 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const [expandedVendor, setExpandedVendor] = useState(null);
   const [adminSearch, setAdminSearch] = useState('');
   const [adminNoteText, setAdminNoteText] = useState({});
+  const [adminMessageModal, setAdminMessageModal] = useState(null); // {to, name, type}
+  const [adminMessageText, setAdminMessageText] = useState('');
+  const [adminMessageSubject, setAdminMessageSubject] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [allApplications, setAllApplications] = useState([]);
+  const [loadingApps, setLoadingApps] = useState(true);
+  const [editingAdminEntity, setEditingAdminEntity] = useState(null); // {type, id}
+  const [adminEditForm, setAdminEditForm] = useState({});
+  const [savingAdminEdit, setSavingAdminEdit] = useState(false);
+  const [bulkApproving, setBulkApproving] = useState(false);
+
+  // Load all booking applications
+  useEffect(() => {
+    supabase.from('booking_requests').select('*').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setAllApplications(data); setLoadingApps(false); });
+  }, []);
+
+  const sendAdminMessage = async () => {
+    if (!adminMessageText.trim() || !adminMessageModal) return;
+    setSendingMessage(true);
+    try {
+      await fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name:'South Jersey Vendor Market', email:'tiffany@southjerseyvendormarket.com', subject: adminMessageSubject || `Message from South Jersey Vendor Market`, message: `Hi ${adminMessageModal.name},\n\n${adminMessageText}\n\n— South Jersey Vendor Market Team`, to: adminMessageModal.to }),
+      });
+      alert('Message sent to ' + adminMessageModal.to);
+    } catch { alert('Failed to send. Try again.'); }
+    setSendingMessage(false);
+    setAdminMessageModal(null); setAdminMessageText(''); setAdminMessageSubject('');
+  };
+
+  const bulkApproveVendors = async () => {
+    if (!window.confirm(`Approve all ${pendingVendors.length} pending vendors?`)) return;
+    setBulkApproving(true);
+    for (const v of pendingVendors) {
+      await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
+    }
+    setVendors(prev => [...pendingVendors.map(v=>dbVendorToApp({...v,status:'approved'})), ...prev]);
+    setPendingVendors([]);
+    setBulkApproving(false);
+  };
+
+  const bulkApproveEvents = async () => {
+    if (!window.confirm(`Approve all ${pendingEvents.length} pending events?`)) return;
+    setBulkApproving(true);
+    for (const evt of pendingEvents) {
+      await supabase.from('events').update({status:'approved'}).eq('id',evt.id);
+      fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(()=>{});
+    }
+    setAllEvents(prev => prev.map(e => pendingEvents.some(p=>p.id===e.id) ? {...e, status:'approved'} : e));
+    setOpps(prev => [...pendingEvents.map(e=>({...e,status:'approved'})), ...prev]);
+    setBulkApproving(false);
+  };
+
+  const saveAdminEdit = async () => {
+    setSavingAdminEdit(true);
+    const { type, id } = editingAdminEntity;
+    if (type === 'vendor') {
+      const v = vendors.find(x=>x.id===id) || pendingVendors.find(x=>x.id===id);
+      const { error } = await supabase.from('vendors').update({ name: adminEditForm.name, contact_email: adminEditForm.contact_email, contact_name: adminEditForm.contact_name, home_zip: adminEditForm.home_zip, category: adminEditForm.category }).eq('id', id);
+      if (error) { alert('Failed: ' + error.message); setSavingAdminEdit(false); return; }
+      setVendors(prev => prev.map(x => x.id===id ? {...x, name:adminEditForm.name, contactEmail:adminEditForm.contact_email, contactName:adminEditForm.contact_name, homeZip:adminEditForm.home_zip, category:adminEditForm.category} : x));
+    } else if (type === 'event') {
+      const { error } = await supabase.from('events').update({ event_name: adminEditForm.event_name, date: adminEditForm.date, zip: adminEditForm.zip, event_type: adminEditForm.event_type, booth_fee: adminEditForm.booth_fee || null }).eq('id', id);
+      if (error) { alert('Failed: ' + error.message); setSavingAdminEdit(false); return; }
+      const updater = e => e.id===id ? {...e, eventName:adminEditForm.event_name, date:adminEditForm.date, zip:adminEditForm.zip, eventType:adminEditForm.event_type, boothFee:adminEditForm.booth_fee} : e;
+      setAllEvents(prev => prev.map(updater));
+      setOpps(prev => prev.map(updater));
+    }
+    setSavingAdminEdit(false);
+    setEditingAdminEntity(null);
+    alert('Saved.');
+  };
 
   const saveAdminNote = async (entityType, entityId, entityName) => {
     const note = adminNoteText[`${entityType}_${entityId}`] || '';
@@ -4390,6 +4463,17 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
         <div className="admin-stat"><div className="admin-stat-num">{vendors.length}</div><div className="admin-stat-label">Approved Vendors</div></div>
         <div className="admin-stat"><div className="admin-stat-num">{opps.length}</div><div className="admin-stat-label">Live Events</div></div>
         <div className="admin-stat"><div className="admin-stat-num" style={{color:'#1a6b3a'}}>{eventGoers.length}</div><div className="admin-stat-label">Event Guests</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{new Set(allEvents.map(e=>e.userId||e.contactEmail).filter(Boolean)).size}</div><div className="admin-stat-label">Unique Hosts</div></div>
+        <div className="admin-stat"><div className="admin-stat-num">{allApplications.length}</div><div className="admin-stat-label">Total Applications</div></div>
+      </div>
+      {/* Category breakdown */}
+      <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'14px 16px',marginBottom:24}}>
+        <div style={{fontSize:11,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Top Vendor Categories</div>
+        <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+          {Object.entries(vendors.reduce((acc,v)=>{const c=v.category||'Other';acc[c]=(acc[c]||0)+1;return acc;},{})).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([cat,count])=>(
+            <span key={cat} style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:16,padding:'3px 10px',fontSize:11,color:'#5a4a3a'}}>{cat} ({count})</span>
+          ))}
+        </div>
       </div>
 
       {/* Search bar */}
@@ -4400,7 +4484,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       </div>
 
       {/* ── Pending Event Review ─────────────────────────────── */}
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🔍 Events Pending Review ({pendingEvents.length})</h3>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:40,marginBottom:16,flexWrap:'wrap',gap:8}}>
+        <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, margin:0 }}>🔍 Events Pending Review ({pendingEvents.length})</h3>
+        {pendingEvents.length > 1 && <button disabled={bulkApproving} onClick={bulkApproveEvents} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:bulkApproving?0.6:1}}>{bulkApproving?'Approving...':'Approve All Events'}</button>}
+      </div>
       {pendingEvents.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No events awaiting review.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -4496,7 +4583,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       }
 
       {/* ── Pending Vendor Applications ──────────────────────── */}
-      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>🔍 Pending Vendor Applications ({pendingVendors.length})</h3>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:40,marginBottom:16,flexWrap:'wrap',gap:8}}>
+        <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, margin:0 }}>🔍 Pending Vendor Applications ({pendingVendors.length})</h3>
+        {pendingVendors.length > 1 && <button disabled={bulkApproving} onClick={bulkApproveVendors} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:bulkApproving?0.6:1}}>{bulkApproving?'Approving...':'Approve All Vendors'}</button>}
+      </div>
       {pendingVendors.length===0
         ? <div className="empty-state"><div className="big">✅</div><p>No pending vendor submissions.</p></div>
         : <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -4588,7 +4678,11 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td><strong>{o.eventName}</strong>{o.eventLink && <a href={o.eventLink} target="_blank" rel="noopener noreferrer" style={{marginLeft:6,fontSize:11,color:'#1a4a6b'}}>🔗</a>}</td><td>{o.eventType}</td><td>{o.zip}</td>
                   <td>{fmtDate(o.date)}</td><td>{o.source}</td>
                   <td>{eventStatusPill(o.status)}</td>
-                  <td><button onClick={()=>setRemoveDialog({type:'event',id:o.id,name:o.eventName})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button></td>
+                  <td style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                    <button onClick={()=>{setAdminEditForm({event_name:o.eventName,date:o.date,zip:o.zip,event_type:o.eventType,booth_fee:o.boothFee||''});setEditingAdminEntity({type:'event',id:o.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
+                    {o.contactEmail && <button onClick={()=>{setAdminMessageModal({to:o.contactEmail,name:o.contactName||o.eventName,type:'host'});setAdminMessageSubject('');setAdminMessageText('');}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Msg</button>}
+                    <button onClick={()=>setRemoveDialog({type:'event',id:o.id,name:o.eventName})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -4613,8 +4707,10 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                       <div style={{fontSize:12,color:'#7a6a5a'}}>{v.isServiceProvider ? (v.serviceCategories||[]).join(', ') : v.category} · {v.homeZip} · {v.contactEmail}</div>
                     </div>
                   </div>
-                  <div style={{display:'flex',gap:6}}>
+                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                     <button onClick={()=>setExpandedVendor(isExpanded?null:v.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>{isExpanded?'▾ Close':'▸ View'}</button>
+                    <button onClick={()=>{setAdminEditForm({name:v.name,contact_email:v.contactEmail,contact_name:v.contactName,home_zip:v.homeZip,category:v.category});setEditingAdminEntity({type:'vendor',id:v.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
+                    <button onClick={()=>{setAdminMessageModal({to:v.contactEmail,name:v.contactName||v.name,type:'vendor'});setAdminMessageSubject('');setAdminMessageText('');}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Message</button>
                     <button onClick={async()=>{const nv=!v.foundingVendor;const{error}=await supabase.from('vendors').update({founding_vendor:nv}).eq('id',v.id);if(error){alert('Failed');return;}setVendors(p=>p.map(x=>x.id===v.id?{...x,foundingVendor:nv}:x));}} style={{background:v.foundingVendor?'#c8a850':'#fff',color:v.foundingVendor?'#1a1410':'#7a6a5a',border:`1px solid ${v.foundingVendor?'#c8a850':'#e8ddd0'}`,borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>{v.foundingVendor?'✓ Founding':'Mark Founding'}</button>
                     <button onClick={()=>setRemoveDialog({type:'vendor',id:v.id,name:v.name})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button>
                   </div>
@@ -4714,6 +4810,104 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
             </tbody>
           </table>
       }
+
+      {/* ── Booking Applications Overview ──────────────────── */}
+      <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>📋 Vendor Applications ({allApplications.length})</h3>
+      {loadingApps ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
+      : allApplications.length === 0
+        ? <div className="empty-state"><div className="big">📭</div><p>No vendor applications yet.</p></div>
+        : <div style={{maxHeight:400,overflowY:'auto',border:'1px solid #e8ddd0',borderRadius:10}}>
+            <table className="admin-table">
+              <thead><tr><th>Vendor</th><th>Event</th><th>Date</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody>
+                {allApplications.slice(0,100).map(a=>(
+                  <tr key={a.id} style={{background:a.status==='pending'?'#fdf9f0':undefined}}>
+                    <td><strong>{a.vendor_name||'—'}</strong><br/><span style={{fontSize:11,color:'#a89a8a'}}>{a.vendor_category||''}</span></td>
+                    <td>{a.event_name||'—'}</td>
+                    <td style={{fontSize:12}}>{a.event_date ? fmtDate(a.event_date) : '—'}</td>
+                    <td><span style={{background:a.status==='accepted'?'#d4f4e0':a.status==='declined'?'#fdecea':'#fdf4dc',color:a.status==='accepted'?'#1a6b3a':a.status==='declined'?'#8b1a1a':'#7a5a10',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:700}}>{a.status}</span></td>
+                    <td>
+                      {a.host_email && <button onClick={()=>{setAdminMessageModal({to:a.host_email,name:a.vendor_name||'Vendor',type:'vendor'});setAdminMessageSubject(`Re: ${a.event_name||'Event'} Application`);setAdminMessageText('');}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:4,padding:'2px 8px',fontSize:10,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Message</button>}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+      }
+
+      {/* ── Rejected Events ─────────────────────────────────── */}
+      {allEvents.filter(e=>e.status==='rejected').length > 0 && (
+        <>
+          <h3 style={{ fontFamily:"Playfair Display,serif", fontSize:20, marginBottom:16, marginTop:40 }}>❌ Rejected Events ({allEvents.filter(e=>e.status==='rejected').length})</h3>
+          <table className="admin-table">
+            <thead><tr><th>Event</th><th>Host</th><th>Date</th><th>Reason</th><th>Actions</th></tr></thead>
+            <tbody>
+              {allEvents.filter(e=>e.status==='rejected').map(e=>(
+                <tr key={e.id}>
+                  <td><strong>{e.eventName}</strong></td>
+                  <td style={{fontSize:12}}>{e.contactName}<br/><span style={{color:'#a89a8a'}}>{e.contactEmail}</span></td>
+                  <td style={{fontSize:12}}>{fmtDate(e.date)}</td>
+                  <td style={{fontSize:12,color:'#8b1a1a',maxWidth:200}}>{e.rejectionReason||'—'}</td>
+                  <td>
+                    <button onClick={async()=>{const{error}=await supabase.from('events').update({status:'approved',rejection_reason:null}).eq('id',e.id);if(error){alert('Error');return;}setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,status:'approved',rejectionReason:null}:x));setOpps(prev=>[{...e,status:'approved'},...prev]);fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:e.contactEmail,name:e.contactName,type:'event',entityName:e.eventName,approved:true})}).catch(()=>{});}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'3px 10px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Re-approve</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
+      {/* ── Admin Message Modal ────────────────────────────── */}
+      {adminMessageModal && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:'#fff',borderRadius:12,maxWidth:480,width:'100%',padding:'24px 28px'}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:18,marginBottom:4}}>Send Message</div>
+            <div style={{fontSize:13,color:'#7a6a5a',marginBottom:16}}>To: <strong>{adminMessageModal.name}</strong> ({adminMessageModal.to})</div>
+            <div className="form-group" style={{marginBottom:12}}>
+              <label>Subject</label>
+              <input value={adminMessageSubject} onChange={e=>setAdminMessageSubject(e.target.value)} placeholder="Message from South Jersey Vendor Market" />
+            </div>
+            <div className="form-group" style={{marginBottom:16}}>
+              <label>Message</label>
+              <textarea value={adminMessageText} onChange={e=>setAdminMessageText(e.target.value)} placeholder="Type your message..." style={{minHeight:100}} />
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button disabled={sendingMessage||!adminMessageText.trim()} onClick={sendAdminMessage} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'10px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:sendingMessage?0.6:1}}>{sendingMessage?'Sending...':'Send'}</button>
+              <button onClick={()=>setAdminMessageModal(null)} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'10px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Admin Edit Modal ───────────────────────────────── */}
+      {editingAdminEntity && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+          <div style={{background:'#fff',borderRadius:12,maxWidth:480,width:'100%',padding:'24px 28px'}}>
+            <div style={{fontFamily:'Playfair Display,serif',fontSize:18,marginBottom:16}}>Edit {editingAdminEntity.type === 'vendor' ? 'Vendor' : 'Event'}</div>
+            <div className="form-grid" style={{gap:10,marginBottom:16}}>
+              {editingAdminEntity.type === 'vendor' ? (<>
+                <div className="form-group"><label>Business Name</label><input value={adminEditForm.name||''} onChange={e=>setAdminEditForm(f=>({...f,name:e.target.value}))} /></div>
+                <div className="form-group"><label>Contact Name</label><input value={adminEditForm.contact_name||''} onChange={e=>setAdminEditForm(f=>({...f,contact_name:e.target.value}))} /></div>
+                <div className="form-group"><label>Email</label><input value={adminEditForm.contact_email||''} onChange={e=>setAdminEditForm(f=>({...f,contact_email:e.target.value}))} /></div>
+                <div className="form-group"><label>Home Zip</label><input value={adminEditForm.home_zip||''} onChange={e=>setAdminEditForm(f=>({...f,home_zip:e.target.value}))} maxLength={5} /></div>
+                <div className="form-group full"><label>Primary Category</label><input value={adminEditForm.category||''} onChange={e=>setAdminEditForm(f=>({...f,category:e.target.value}))} /></div>
+              </>) : (<>
+                <div className="form-group"><label>Event Name</label><input value={adminEditForm.event_name||''} onChange={e=>setAdminEditForm(f=>({...f,event_name:e.target.value}))} /></div>
+                <div className="form-group"><label>Event Type</label><select value={adminEditForm.event_type||''} onChange={e=>setAdminEditForm(f=>({...f,event_type:e.target.value}))}>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
+                <div className="form-group"><label>Date</label><input type="date" value={adminEditForm.date||''} onChange={e=>setAdminEditForm(f=>({...f,date:e.target.value}))} /></div>
+                <div className="form-group"><label>Zip Code</label><input value={adminEditForm.zip||''} onChange={e=>setAdminEditForm(f=>({...f,zip:e.target.value}))} maxLength={5} /></div>
+                <div className="form-group full"><label>Booth Fee</label><input value={adminEditForm.booth_fee||''} onChange={e=>setAdminEditForm(f=>({...f,booth_fee:e.target.value}))} placeholder="e.g. $50/vendor" /></div>
+              </>)}
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button disabled={savingAdminEdit} onClick={saveAdminEdit} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'10px',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:savingAdminEdit?0.6:1}}>{savingAdminEdit?'Saving...':'Save Changes'}</button>
+              <button onClick={()=>setEditingAdminEntity(null)} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'10px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Remove confirmation dialog */}
       {removeDialog && (
@@ -6640,7 +6834,7 @@ function AppInner() {
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
-        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} />}
+        {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} setEventGoers={setEventGoers} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} loadMessages={loadMessages} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
