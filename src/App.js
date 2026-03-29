@@ -882,7 +882,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div onClick={()=>set('vendorType',{market:true,service:false})}
           style={{flex:'1 1 220px',padding:'16px 20px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.vendorType.market?'#c8a850':'#e8ddd0'}`,background:form.vendorType.market?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
           <div style={{fontWeight:700,fontSize:15,color:'#1a1410',marginBottom:4}}>Market Vendor</div>
-          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products at events and pay a booth fee</div>
+          <div style={{fontSize:13,color:'#7a6a5a',lineHeight:1.4}}>I sell products at events and pay an event fee</div>
           {form.vendorType.market && <div style={{color:'#c8a850',fontSize:18,marginTop:6}}>&#10003;</div>}
         </div>
         <div onClick={()=>set('vendorType',{market:false,service:true})}
@@ -1000,7 +1000,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
               </select>
               <div style={{fontSize:12,color:'#7a6a5a',marginTop:4}}>Many events require insured vendors. This shows as a badge on your profile.</div>
             </div>
-            <div className="form-group"><label>Max Booth Fee You'll Pay</label>
+            <div className="form-group"><label>Max Event Fee You'll Pay</label>
               <select value={form.priceMax} onChange={e=>set('priceMax',+e.target.value)}>
                 <option value={0}>Free / No fee</option>
                 <option value={25}>$25/day</option><option value={50}>$50/day</option><option value={75}>$75/day</option>
@@ -1008,7 +1008,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
                 <option value={200}>$200/day</option><option value={250}>$250/day</option><option value={300}>$300/day</option>
                 <option value={500}>$500/day</option><option value={1000}>$1,000/day</option>
               </select>
-              <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Booth fees are paid directly to the event host — not through this platform.</div>
+              <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Event fees are paid directly to the event host — not through this platform.</div>
             </div>
             <div className="form-group">
               <label>Minimum Purchase Requirement?</label>
@@ -1212,7 +1212,7 @@ const DEFAULT_HOST_FORM = {
   vendorCategories:[], vendorSubcategories:[], vendorCount:5,
   electricAvailable:true, tableProvided:false, tableSize:'6ft', allowDuplicateCategories:true, allowDuplicateSubcategories:true,
   applyByDate:'', eventLink:'',
-  budget:'No booth fee', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', vendorNotes:'', eventGoerNotes:'', shareWithEventGoers:true, fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
+  budget:'No event fee', isTicketedEvent:false, ticketPrice:'', otherEventType:'', otherVendorCategory:'', notes:'', vendorNotes:'', eventGoerNotes:'', shareWithEventGoers:true, fullServiceBooking:false, servicesNeeded:[], needsMarketVendors:true, needsServiceProviders:false,
   vendorDiscovery:'both', password:''
 };
 
@@ -1468,7 +1468,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div onClick={()=>set('needsMarketVendors',!form.needsMarketVendors)}
           style={{flex:'1 1 220px',padding:'14px 18px',borderRadius:10,cursor:'pointer',border:`2px solid ${form.needsMarketVendors?'#c8a850':'#e8ddd0'}`,background:form.needsMarketVendors?'#fdf9f0':'#fff',transition:'all 0.15s'}}>
           <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>Market Vendors</div>
-          <div style={{fontSize:12,color:'#7a6a5a'}}>Product sellers who pay booth fees</div>
+          <div style={{fontSize:12,color:'#7a6a5a'}}>Product sellers who pay event fees</div>
           {form.needsMarketVendors && <div style={{color:'#c8a850',fontSize:16,marginTop:4}}>&#10003;</div>}
         </div>
         <div onClick={()=>set('needsServiceProviders',!form.needsServiceProviders)}
@@ -1609,9 +1609,9 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           </select>
           <div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>e.g. allowing two jewelry vendors or two candle makers at the same event</div>
         </div>
-        <div className="form-group"><label>Do You Charge Vendors a Booth Fee?</label><select value={form.budget==='No booth fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No booth fee');else set('budget','');}}><option value="no">No booth fee</option><option value="yes">Yes — booth fee required</option></select><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Booth fees are collected directly between you and the vendor — not through this platform.</div></div>
-        {form.budget !== 'No booth fee' && (
-          <div className="form-group"><label>Booth Fee Amount</label><input value={form.budget==='No booth fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
+        <div className="form-group"><label>Do You Charge Vendors an Event Fee?</label><select value={form.budget==='No event fee'?'no':'yes'} onChange={e=>{if(e.target.value==='no')set('budget','No event fee');else set('budget','');}}><option value="no">No event fee</option><option value="yes">Yes — event fee required</option></select><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Event fees are collected directly between you and the vendor — not through this platform.</div></div>
+        {form.budget !== 'No event fee' && (
+          <div className="form-group"><label>Event Fee Amount</label><input value={form.budget==='No event fee'?'':form.budget} onChange={e=>set('budget',e.target.value)} placeholder="e.g. $50 per vendor, $75/table" /></div>
         )}
         <div className="form-group"><label>Is This a Ticketed Event?</label>
           <div style={{display:'flex',gap:10}}>
@@ -1694,7 +1694,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Time:</span> {form.startTime ? fmtTime(form.startTime) : '—'}{form.endTime ? ' – '+fmtTime(form.endTime) : ''}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Attendance:</span> {form.expectedAttendance || '—'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Vendor Spots:</span> {form.vendorCount}</div>
-          <div><span style={{color:'#a89a8a',fontWeight:600}}>Booth Fee:</span> {form.budget || 'No booth fee'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Event Fee:</span> {form.budget || 'No event fee'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Vendors:</span> {[form.needsMarketVendors&&'Market',form.needsServiceProviders&&'Service'].filter(Boolean).join(' + ') || '—'}</div>
           <div><span style={{color:'#a89a8a',fontWeight:600}}>Categories:</span> {form.vendorCategories.length > 0 ? form.vendorCategories.join(', ') : '—'}</div>
           {form.servicesNeeded.length > 0 && <div style={{gridColumn:'1/-1'}}><span style={{color:'#a89a8a',fontWeight:600}}>Services:</span> {form.servicesNeeded.map(s=>s.type||'TBD').join(', ')}</div>}
@@ -1709,7 +1709,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
       </div>
 
       <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'14px 18px',marginBottom:20,fontSize:13,color:'#7a6a5a',lineHeight:1.6}}>
-        <strong style={{color:'#1a1410'}}>Your responsibility as a host:</strong> South Jersey Vendor Market connects you with vendors — but all vetting, contracts, and payments are between you and the vendor. Before confirming any vendor, we recommend you verify their insurance, licenses, and any permits required by your venue. You are responsible for collecting booth fees, signing agreements, and confirming all details directly with each vendor.
+        <strong style={{color:'#1a1410'}}>Your responsibility as a host:</strong> South Jersey Vendor Market connects you with vendors — but all vetting, contracts, and payments are between you and the vendor. Before confirming any vendor, we recommend you verify their insurance, licenses, and any permits required by your venue. You are responsible for collecting event fees, signing agreements, and confirming all details directly with each vendor.
       </div>
       <div className="form-submit">
         <label style={{ display:'flex', alignItems:'flex-start', gap:10, cursor:'pointer', marginBottom:16, textAlign:'left', textTransform:'none', letterSpacing:0, fontWeight:400, fontSize:14, color:'#4a3a28' }}>
@@ -3228,7 +3228,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Date:</span> {fmtDate(e.date)}</div>
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Time:</span> {e.start_time ? fmtTime(e.start_time) : '—'}{e.end_time ? ' – '+fmtTime(e.end_time) : ''}</div>
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Location:</span> Zip {e.zip}</div>
-                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Booth Fee:</span> {e.booth_fee||'—'}</div>
+                    <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Event Fee:</span> {e.booth_fee||'—'}</div>
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Spots:</span> {e.spots||0}</div>
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Ticketed:</span> {e.is_ticketed ? `Yes — ${e.ticket_price||'TBD'}` : 'Free'}</div>
                     <div><span style={{color:'#a89a8a',fontSize:11,fontWeight:600}}>Deadline:</span> {e.deadline ? fmtDate(e.deadline) : '—'}</div>
@@ -3249,7 +3249,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     <div className="form-group"><label>Zip Code</label><input value={eventForm.zip} onChange={ev=>eSet('zip',ev.target.value.replace(/\D/g,'').slice(0,5))} maxLength={5} /></div>
                     <div className="form-group"><label>Start Time</label><input type="time" value={eventForm.start_time} onChange={ev=>eSet('start_time',ev.target.value)} /></div>
                     <div className="form-group"><label>End Time</label><input type="time" value={eventForm.end_time} onChange={ev=>eSet('end_time',ev.target.value)} /></div>
-                    <div className="form-group"><label>Booth Fee</label><input value={eventForm.booth_fee} onChange={ev=>eSet('booth_fee',ev.target.value)} placeholder="e.g. $50/vendor" /></div>
+                    <div className="form-group"><label>Event Fee</label><input value={eventForm.booth_fee} onChange={ev=>eSet('booth_fee',ev.target.value)} placeholder="e.g. $50/vendor" /></div>
                     <div className="form-group"><label>Vendor Spots</label><input type="number" value={eventForm.spots} onChange={ev=>eSet('spots',+ev.target.value)} /></div>
                     <div className="form-group"><label>Apply By Date</label><input type="date" value={eventForm.deadline} onChange={ev=>eSet('deadline',ev.target.value)} /></div>
                     <div className="form-group"><label>Event Website / Facebook Link</label><input value={eventForm.event_link} onChange={ev=>eSet('event_link',ev.target.value)} placeholder="https://..." /></div>
@@ -4202,7 +4202,7 @@ function PricingPage({ setTab, authUser, vendorProfile, userEvents, setShowAuthM
         </div>
       </div>
       <div style={{textAlign:'center',marginTop:24,padding:'16px 20px',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10}}>
-        <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,margin:0}}>South Jersey Vendor Market is a matching and discovery platform. All booth fees, service rates, and event contracts are negotiated and paid directly between vendors and hosts — not through this site.</p>
+        <p style={{fontSize:13,color:'#7a6a5a',lineHeight:1.6,margin:0}}>South Jersey Vendor Market is a matching and discovery platform. All event fees, service rates, and event contracts are negotiated and paid directly between vendors and hosts — not through this site.</p>
       </div>
     </>
   );
@@ -4737,7 +4737,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                 <div style={{padding:'20px',borderTop:'1px solid #f0e8dc'}}>
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px 24px',marginBottom:16}}>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Time:</span> {fmtTime(evt.startTime)} – {fmtTime(evt.endTime)}</div>
-                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Booth Fee:</span> {evt.boothFee || '—'}</div>
+                    <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Event Fee:</span> {evt.boothFee || '—'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Spots:</span> {evt.spots}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Deadline:</span> {evt.deadline ? fmtDate(evt.deadline) : '—'}</div>
                     <div><span style={{fontSize:11,color:'#a89a8a',fontWeight:600}}>Phone:</span> {evt.contactPhone || '—'}</div>
@@ -4948,7 +4948,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Response Time:</span> {v.responseTime||'—'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Booking Lead:</span> {v.bookingLeadTime||'—'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Event Frequency:</span> {v.eventFrequency||'—'}</div>
-                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Max Booth Fee:</span> {v.price||'—'}</div>
+                      <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Max Event Fee:</span> {v.price||'—'}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Categories:</span> {(v.allCategories||[v.category]).join(', ')}</div>
                       <div><span style={{color:'#a89a8a',fontWeight:600,fontSize:11}}>Subcategories:</span> {(v.subcategories||[]).join(', ')||'—'}</div>
                     </div>
@@ -5122,7 +5122,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                 <div className="form-group"><label>Event Type</label><select value={adminEditForm.event_type||''} onChange={e=>setAdminEditForm(f=>({...f,event_type:e.target.value}))}>{EVENT_TYPES.map(t=><option key={t}>{t}</option>)}</select></div>
                 <div className="form-group"><label>Date</label><input type="date" value={adminEditForm.date||''} onChange={e=>setAdminEditForm(f=>({...f,date:e.target.value}))} /></div>
                 <div className="form-group"><label>Zip Code</label><input value={adminEditForm.zip||''} onChange={e=>setAdminEditForm(f=>({...f,zip:e.target.value}))} maxLength={5} /></div>
-                <div className="form-group full"><label>Booth Fee</label><input value={adminEditForm.booth_fee||''} onChange={e=>setAdminEditForm(f=>({...f,booth_fee:e.target.value}))} placeholder="e.g. $50/vendor" /></div>
+                <div className="form-group full"><label>Event Fee</label><input value={adminEditForm.booth_fee||''} onChange={e=>setAdminEditForm(f=>({...f,booth_fee:e.target.value}))} placeholder="e.g. $50/vendor" /></div>
               </>)}
             </div>
             <div style={{display:'flex',gap:10}}>
@@ -5699,7 +5699,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14}}>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Date</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtDate(opp.date)}</div></div>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Time</div><div style={{ fontSize:14, fontWeight:500 }}>{fmtTime(opp.startTime)}{opp.endTime ? ' – '+fmtTime(opp.endTime) : ''}</div></div>
-                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Booth Fee</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.boothFee || 'Not specified'}</div></div>
+                    <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Event Fee</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.boothFee || 'Not specified'}</div></div>
                     <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Admission</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.isTicketed ? '🎟️ '+(opp.ticketPrice||'Ticketed') : 'Free'}</div></div>
                     {opp.deadline && <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Apply By</div><div style={{ fontSize:14, fontWeight:500, color:isUrgent(opp.deadline)?'#8b0000':'#1a1410' }}>{isUrgent(opp.deadline)?'🔥 ':''}{fmtDate(opp.deadline)}</div></div>}
                   </div>
@@ -5807,7 +5807,7 @@ function AdminPostForm({ onPost }) {
         <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} onChange={e=>set("date",e.target.value)} /></div>
         <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set("startTime",e.target.value)} /></div>
         <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set("endTime",e.target.value)} /></div>
-        <div className="form-group"><label>Booth Fee</label><input placeholder="e.g. $50/vendor or Free" value={form.boothFee} onChange={e=>set("boothFee",e.target.value)} /></div>
+        <div className="form-group"><label>Event Fee</label><input placeholder="e.g. $50/vendor or Free" value={form.boothFee} onChange={e=>set("boothFee",e.target.value)} /></div>
         <div className="form-group"><label>Spots Available</label><input type="number" placeholder="e.g. 20" value={form.spots} onChange={e=>set("spots",e.target.value)} /></div>
         <div className="form-group"><label>Application Deadline</label><input type="date" value={form.deadline} onChange={e=>set("deadline",e.target.value)} /></div>
         <div className="form-group"><label>Facebook / Event Link</label><input placeholder="https://facebook.com/events/..." value={form.fbLink} onChange={e=>set("fbLink",e.target.value)} /></div>
@@ -7028,7 +7028,7 @@ function AppInner() {
                   ))}
                 </div>
                 <p style={{textAlign:'center',fontSize:12,color:'#a89a8a',lineHeight:1.6,maxWidth:600,margin:'16px auto 0'}}>
-                  <strong style={{color:'#c8a850'}}>No event fees through our platform.</strong> South Jersey Vendor Market is a matching service — all booth fees, service rates, and contracts are handled directly between vendors and hosts. We connect you; you handle the rest.
+                  <strong style={{color:'#c8a850'}}>No event fees through our platform.</strong> South Jersey Vendor Market is a matching service — all event fees, service rates, and contracts are handled directly between vendors and hosts. We connect you; you handle the rest.
                 </p>
               </div>
             )}
