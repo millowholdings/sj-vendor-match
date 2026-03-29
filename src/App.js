@@ -723,6 +723,8 @@ const DEFAULT_VENDOR_FORM = {
 };
 
 function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
+  const [formStep, setFormStep] = useState(1);
+  const STEPS = [{n:1,label:'Business Info'},{n:2,label:'Categories'},{n:3,label:'Photos & Links'},{n:4,label:'Review & Submit'}];
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -749,14 +751,32 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
     setOtherSubcategories({});
   };
   const set = (k,v) => setForm(f => ({...f,[k]:v}));
+  const nextStep = () => setFormStep(s => Math.min(s+1, 4));
+  const prevStep = () => setFormStep(s => Math.max(s-1, 1));
   return (
     <div className="form-card">
+      {/* Step progress bar */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:0,marginBottom:24}}>
+        {STEPS.map((s,i) => (
+          <div key={s.n} style={{display:'flex',alignItems:'center'}}>
+            <div onClick={()=>setFormStep(s.n)} style={{display:'flex',flexDirection:'column',alignItems:'center',cursor:'pointer',minWidth:70}}>
+              <div style={{width:28,height:28,borderRadius:'50%',display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,fontWeight:700,
+                background:formStep===s.n?'#c8a84b':formStep>s.n?'#1a6b3a':'#e8ddd0',
+                color:formStep===s.n?'#1a1410':formStep>s.n?'#fff':'#a89a8a'}}>{formStep>s.n?'✓':s.n}</div>
+              <div style={{fontSize:10,color:formStep===s.n?'#1a1410':'#a89a8a',fontWeight:formStep===s.n?700:400,marginTop:4}}>{s.label}</div>
+            </div>
+            {i<STEPS.length-1 && <div style={{width:40,height:2,background:formStep>s.n?'#1a6b3a':'#e8ddd0',margin:'0 4px 16px'}}/>}
+          </div>
+        ))}
+      </div>
       {hasDraft && (
         <div style={{ background:'#fdf4dc', border:'1px solid #ffd966', borderRadius:8, padding:'12px 16px', marginBottom:24, display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
           <div style={{ fontSize:14, color:'#7a5a10' }}>📋 <strong>Draft restored</strong> — your previously entered information has been loaded.</div>
           <button onClick={clearDraft} style={{ background:'none', border:'1px solid #c8a84b', color:'#7a5a10', borderRadius:6, padding:'5px 14px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'DM Sans,sans-serif', whiteSpace:'nowrap' }}>Clear &amp; Start Over</button>
         </div>
       )}
+      {/* ── STEP 1: Business Info ── */}
+      {formStep === 1 && (<>
       {!authUser && (
         <>
           <h2 className="form-section-title"><span className="dot" />Create Your Account</h2>
@@ -818,7 +838,13 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </div>
       </div>
 
-      <hr className="form-divider" />
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Categories →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 2: Categories ── */}
+      {formStep === 2 && (<>
       <h3 className="form-section-title"><span className="dot" />What Type of Vendor Are You?</h3>
       <p style={{color:'#7a6a5a',fontSize:14,marginBottom:16}}>Select all that apply — you can be both!</p>
       <div style={{display:'flex',gap:12,marginBottom:24,flexWrap:'wrap'}}>
@@ -992,7 +1018,14 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </>
       )}
 
-      <hr className="form-divider" />
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Photos & Links →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 3: Photos & Links ── */}
+      {formStep === 3 && (<>
       <h3 className="form-section-title"><span className="dot" />Communication & Availability</h3>
       <div className="form-grid">
 
@@ -1089,7 +1122,28 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <div className="form-group"><label>Other Link</label><input placeholder="Etsy, Pinterest, Yelp, etc." value={form.otherSocial} onChange={e=>set('otherSocial',e.target.value)} /></div>
       </div>
 
-      
+      <div style={{display:'flex',gap:10,marginTop:20}}>
+        <button onClick={prevStep} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 24px',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back</button>
+        <button onClick={nextStep} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Next: Review & Submit →</button>
+      </div>
+      </>)}
+
+      {/* ── STEP 4: Review & Submit ── */}
+      {formStep === 4 && (<>
+      <h3 className="form-section-title"><span className="dot" />Review & Submit</h3>
+      <div style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:16,marginBottom:20}}>
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 16px',fontSize:13}}>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Business:</span> {form.businessName || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Contact:</span> {form.ownerName || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Email:</span> {form.email || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Location:</span> Zip {form.homeZip || '—'} ({form.radius}mi)</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Type:</span> {form.vendorType?.market&&form.vendorType?.service?'Market + Service':form.vendorType?.service?'Service Provider':'Market Vendor'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Categories:</span> {[...(form.categories||[]),...(form.serviceCategories||[])].join(', ') || '—'}</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Photos:</span> {photoFiles.length} uploaded</div>
+          <div><span style={{color:'#a89a8a',fontWeight:600}}>Insurance:</span> {form.insurance ? 'Yes' : 'No'}</div>
+        </div>
+        <button onClick={()=>setFormStep(1)} style={{marginTop:10,background:'none',border:'none',color:'#c8a84b',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Edit any section</button>
+      </div>
 
       {showTos && <TosModal onClose={()=>setShowTos(false)} />}
       <div className="form-submit">
@@ -1099,7 +1153,9 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         </label>
         <button className="btn-submit" disabled={submitting} onClick={async ()=>{ if(!tosAgreed){alert("Please agree to the Terms of Service to continue.");return;} localStorage.removeItem(VENDOR_DRAFT_KEY); localStorage.removeItem(VENDOR_DRAFT_SUBS_KEY); setSubmitting(true); await onSubmit(form, { photoFiles, coiFile, lookbookFile }); setSubmitting(false); }} style={{ opacity: tosAgreed&&!submitting?1:0.5 }}>{submitting ? 'Submitting…' : 'Submit Vendor Profile →'}</button>
         <p style={{ fontSize:13, color:'#a89a8a', marginTop:12 }}>Your profile will be reviewed within 24 hours. Free during beta — <strong style={{ color:'#e8c97a' }}>$15/month</strong> once billing activates.</p>
+        <button onClick={prevStep} style={{marginTop:10,background:'none',border:'1px solid #e0d5c5',color:'#7a6a5a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>← Back to Photos</button>
       </div>
+      </>)}
     </div>
   );
 }
@@ -2103,6 +2159,7 @@ function UnifiedDashboardCalendar({ authUser, vendorProfile, userEvents, setTab 
 // ─── Vendor Dashboard ─────────────────────────────────────────────────────────
 function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShowContactModal, setShowFeedbackModal, setVendorProfile }) {
   const [requests, setRequests] = useState([]);
+  const [myApplications, setMyApplications] = useState([]);
   const [loadingReqs, setLoadingReqs] = useState(true);
   const [subscribing, setSubscribing] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -2231,9 +2288,30 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
 
   useEffect(() => {
     if (!vendorProfile?.id) { setLoadingReqs(false); return; }
+    // Load host-initiated invitations (where vendor is the target)
     supabase.from('booking_requests').select('*')
-      .eq('vendor_id', vendorProfile.id).order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setRequests(data); setLoadingReqs(false); });
+      .eq('vendor_id', vendorProfile.id).neq('session_id', 'vendor-application').order('created_at', { ascending: false })
+      .then(({ data }) => { if (data) setRequests(data); });
+    // Load vendor-initiated applications
+    const loadApps = async () => {
+      let apps = [];
+      const { data: byId } = await supabase.from('booking_requests').select('*')
+        .eq('vendor_id', vendorProfile.id).eq('session_id', 'vendor-application').order('created_at', { ascending: false });
+      if (byId) apps = byId;
+      if (apps.length === 0 && vendorProfile.contact_email) {
+        const { data: byEmail } = await supabase.from('booking_requests').select('*')
+          .ilike('host_email', vendorProfile.contact_email).eq('session_id', 'vendor-application').order('created_at', { ascending: false });
+        if (byEmail) apps = byEmail;
+      }
+      if (apps.length === 0 && vendorProfile.name) {
+        const { data: byName } = await supabase.from('booking_requests').select('*')
+          .ilike('vendor_name', vendorProfile.name).eq('session_id', 'vendor-application').order('created_at', { ascending: false });
+        if (byName) apps = byName;
+      }
+      setMyApplications(apps);
+      setLoadingReqs(false);
+    };
+    loadApps();
   }, [vendorProfile?.id]);
 
   const respond = async (reqId, status) => {
@@ -2569,10 +2647,39 @@ function VendorDashboard({ user, vendorProfile, bookingRequests, setTab, setShow
         </div>
       </div>
 
-      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Booking Requests</h3>
+      {/* ── My Event Applications ── */}
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Event Applications</h3>
+      {loadingReqs ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
+      : myApplications.length === 0 ? (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',marginBottom:24,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a',marginBottom:8}}>You haven't applied to any events yet.</div>
+          <button onClick={()=>setTab('opportunities')} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
+          {myApplications.map(a => (
+            <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+              <div>
+                <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
+                <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+              </div>
+              <span style={{
+                background: a.status==='accepted'?'#d4f4e0':a.status==='declined'?'#fdecea':'#fdf4dc',
+                color: a.status==='accepted'?'#1a6b3a':a.status==='declined'?'#8b1a1a':'#7a5a10',
+                padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700,whiteSpace:'nowrap'
+              }}>{a.status==='accepted'?'Accepted':a.status==='declined'?'Not Selected':'Pending Review'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ── Host Invitations ── */}
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>Host Invitations</h3>
       {loadingReqs ? <div style={{color:'#a89a8a',padding:20}}>Loading...</div>
       : requests.length === 0 ? (
-        <div className="empty-state"><div className="big">📭</div><p>No booking requests yet. Browse <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('opportunities')}>Opportunities</button> and apply to events!</p></div>
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'20px',marginBottom:24,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a'}}>No invitations from hosts yet. Hosts will find you in the vendor directory and send invitations.</div>
+        </div>
       ) : (
         <div style={{display:'flex',flexDirection:'column',gap:12}}>
           {requests.map(r => (
@@ -2735,19 +2842,22 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
     if (status === 'accepted' || status === 'declined') {
       setShowDeclinePrompt(null); setDeclineReason('');
       // Send email notification to vendor
+      let vendorEmail = app?.host_email; // In vendor applications, host_email is actually the vendor's email
+      let vendorContactName = app?.vendor_name;
       if (app && app.vendor_id) {
         const { data: vendor } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', app.vendor_id).single();
-        if (vendor && vendor.contact_email) {
-          fetch('/api/send-booking-response', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              hostEmail: vendor.contact_email, hostName: vendor.contact_name || app.vendor_name,
-              vendorName: user.email, vendorCategory: app.vendor_category,
-              eventName: app.event_name, eventDate: app.event_date,
-              status, vendorMessage: reason || '',
-            }),
-          }).catch(() => {});
-        }
+        if (vendor?.contact_email) { vendorEmail = vendor.contact_email; vendorContactName = vendor.contact_name || app.vendor_name; }
+      }
+      if (vendorEmail) {
+        fetch('/api/send-booking-response', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            hostEmail: vendorEmail, hostName: vendorContactName || app?.vendor_name,
+            vendorName: user.email, vendorCategory: app?.vendor_category,
+            eventName: app?.event_name, eventDate: app?.event_date,
+            status, vendorMessage: reason || '',
+          }),
+        }).catch(() => {});
       }
       // If accepted, load vendor profile to reveal contact info
       if (status === 'accepted' && app && app.vendor_id && !reviewVendor) {
@@ -4613,41 +4723,61 @@ function VendorApplyModal({ opp, onClose }) {
             </div>
           ) : (
             <>
-              {autoFilled && (
-                <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'8px 14px',marginBottom:12,fontSize:12,color:'#1a6b3a',fontWeight:600}}>
-                  ✓ Pre-filled from your vendor profile
-                </div>
+              {autoFilled ? (
+                <>
+                  <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#1a6b3a'}}>
+                    <strong>Applying as:</strong> {form.vendorName} ({form.email}){form.category ? ` · ${form.category}` : ''}
+                  </div>
+                  <div className="form-group" style={{marginBottom:16}}>
+                    <label>Message to Host (optional)</label>
+                    <textarea value={form.message} onChange={e=>set('message',e.target.value)} rows={3}
+                      placeholder="Tell the host about your products, experience, or any questions..." />
+                  </div>
+                  <div style={{display:'flex',gap:10}}>
+                    <button onClick={handleSubmit} disabled={submitting}
+                      style={{flex:2,background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:submitting?0.5:1}}>
+                      {submitting ? 'Submitting...' : 'Apply to Vend'}
+                    </button>
+                    <button onClick={onClose}
+                      style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                    <div className="form-group"><label>Business Name *</label><input value={form.vendorName} onChange={e=>set('vendorName',e.target.value)} placeholder="Your business name" /></div>
+                    <div className="form-group"><label>Contact Name *</label><input value={form.contactName} onChange={e=>set('contactName',e.target.value)} placeholder="Your name" /></div>
+                  </div>
+                  <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
+                    <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" /></div>
+                    <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="(555) 555-5555" /></div>
+                  </div>
+                  <div className="form-group" style={{marginBottom:12}}>
+                    <label>Your Category</label>
+                    <select value={form.category} onChange={e=>set('category',e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid #e0d5c5',borderRadius:6,fontSize:14,fontFamily:'DM Sans,sans-serif'}}>
+                      <option value="">Select your category</option>
+                      {CATEGORIES.map(c=><option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{marginBottom:16}}>
+                    <label>Message to Host (optional)</label>
+                    <textarea value={form.message} onChange={e=>set('message',e.target.value)} rows={3}
+                      placeholder="Tell the host about your products, experience, or any questions..." />
+                  </div>
+                  <div style={{display:'flex',gap:10}}>
+                    <button onClick={handleSubmit} disabled={submitting}
+                      style={{flex:2,background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:submitting?0.5:1}}>
+                      {submitting ? 'Submitting...' : 'Submit Application'}
+                    </button>
+                    <button onClick={onClose}
+                      style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
               )}
-              <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
-                <div className="form-group"><label>Business Name *</label><input value={form.vendorName} onChange={e=>set('vendorName',e.target.value)} placeholder="Your business name" /></div>
-                <div className="form-group"><label>Contact Name *</label><input value={form.contactName} onChange={e=>set('contactName',e.target.value)} placeholder="Your name" /></div>
-              </div>
-              <div className="modal-2col" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12}}>
-                <div className="form-group"><label>Email *</label><input type="email" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@email.com" /></div>
-                <div className="form-group"><label>Phone</label><input value={form.phone} onChange={e=>set('phone',e.target.value)} placeholder="(555) 555-5555" /></div>
-              </div>
-              <div className="form-group" style={{marginBottom:12}}>
-                <label>Your Category</label>
-                <select value={form.category} onChange={e=>set('category',e.target.value)} style={{width:'100%',padding:'8px 10px',border:'1px solid #e0d5c5',borderRadius:6,fontSize:14,fontFamily:'DM Sans,sans-serif'}}>
-                  <option value="">Select your category</option>
-                  {CATEGORIES.map(c=><option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div className="form-group" style={{marginBottom:16}}>
-                <label>Message to Host (optional)</label>
-                <textarea value={form.message} onChange={e=>set('message',e.target.value)} rows={3}
-                  placeholder="Tell the host about your products, experience, or any questions..." />
-              </div>
-              <div style={{display:'flex',gap:10}}>
-                <button onClick={handleSubmit} disabled={submitting}
-                  style={{flex:2,background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',opacity:submitting?0.5:1}}>
-                  {submitting ? 'Submitting...' : 'Submit Application'}
-                </button>
-                <button onClick={onClose}
-                  style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-                  Cancel
-                </button>
-              </div>
             </>
           )}
         </div>
@@ -4824,18 +4954,21 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
   const [filterType, setFilterType] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [filterDate, setFilterDate] = useState("");
-  const [myZip, setMyZip] = useState("");
+  const [myZip, setMyZip] = useState(vendorProfile?.home_zip || "");
   const [saved, setSaved] = useState([]);
   const [applyOpp, setApplyOpp] = useState(null);
   const [showSection, setShowSection] = useState('open');
+  const [showMatching, setShowMatching] = useState(!!vendorProfile);
   const zipOk = myZip.length===5 && isKnownZip(myZip);
 
   const todayStr = new Date().toISOString().split('T')[0];
+  const vendorCats = vendorProfile ? [...(vendorProfile.subcategories||[]), vendorProfile.category, ...(vendorProfile.metadata?.serviceCategories||[]), ...(vendorProfile.metadata?.allCategories||[])].filter(Boolean) : [];
   const future = opps
     .filter(o => o.date >= todayStr)
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
     .filter(o => !filterDate || o.date === filterDate)
+    .filter(o => !showMatching || vendorCats.length === 0 || o.categoriesNeeded.length === 0 || o.categoriesNeeded.some(c => vendorCats.includes(c)))
     .map(o => {
       const dist = zipOk ? distanceMiles(myZip, o.zip) : null;
       return {...o, dist};
@@ -4890,6 +5023,16 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, setShowAuthModal }) 
             </select>
           </div>
         </div>
+        {vendorProfile && (
+          <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+            <button onClick={()=>setShowMatching(!showMatching)} style={{
+              background:showMatching?'#1a6b3a':'#f5f0ea', color:showMatching?'#fff':'#7a6a5a',
+              border:showMatching?'none':'1px solid #e8ddd0', borderRadius:6, padding:'6px 14px',
+              fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'DM Sans,sans-serif'
+            }}>{showMatching ? '✓ Showing matching events' : 'Show all events'}</button>
+            {showMatching && <span style={{fontSize:11,color:'#1a6b3a'}}>Filtered to events matching your categories & location</span>}
+          </div>
+        )}
         <div style={{ display:'flex', gap:0, marginBottom:20, borderRadius:8, overflow:'hidden', border:'1px solid #e8ddd0' }}>
           <button onClick={()=>setShowSection('open')} style={{
             flex:1, padding:'10px 16px', fontSize:13, fontWeight:700, cursor:'pointer', border:'none',
