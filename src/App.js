@@ -2507,6 +2507,20 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
 
+      {/* ── Messages notification — always at top ── */}
+      {unreadCount > 0 && (
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <span style={{fontSize:20}}>💬</span>
+            <div style={{textAlign:'left'}}>
+              <div style={{fontWeight:700,fontSize:14,color:'#e8c97a'}}>{unreadCount} unread message{unreadCount!==1?'s':''}</div>
+              <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>
+            </div>
+          </div>
+          <span style={{fontSize:18,color:'#e8c97a'}}>→</span>
+        </button>
+      )}
+
       {/* Profile switcher for multi-listing vendors */}
       {allVendorProfiles && allVendorProfiles.length > 1 && (
         <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',marginBottom:20}}>
@@ -2854,20 +2868,6 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:8,padding:'10px 14px',marginBottom:20,fontSize:12,color:'#7a5a10',lineHeight:1.5}}>
           <strong>Tip:</strong> Hosts can filter vendors by insurance status. Adding a certificate of insurance to your profile increases your visibility and booking rate.
         </div>
-      )}
-
-      {/* ── Messages notification ── */}
-      {unreadCount > 0 && (
-        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
-          <div style={{display:'flex',alignItems:'center',gap:10}}>
-            <span style={{fontSize:20}}>💬</span>
-            <div style={{textAlign:'left'}}>
-              <div style={{fontWeight:700,fontSize:14,color:'#e8c97a'}}>{unreadCount} unread message{unreadCount!==1?'s':''}</div>
-              <div style={{fontSize:12,color:'#c8b898'}}>Tap to view and reply</div>
-            </div>
-          </div>
-          <span style={{fontSize:18,color:'#e8c97a'}}>→</span>
-        </button>
       )}
 
       {/* ── PENDING ITEMS ── */}
@@ -7369,9 +7369,21 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
 
   const activeConvo = conversations.find(c => c.id === activeConvoId);
 
+  // Scroll to bottom of messages container (not the page)
   useEffect(() => {
-    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messagesEndRef.current) messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [activeConvo?.messages?.length]);
+
+  // Mark messages as read when conversation is opened
+  useEffect(() => {
+    if (!activeConvoId || !authUser) return;
+    supabase.from('messages').update({ is_read: true })
+      .eq('conversation_id', activeConvoId)
+      .eq('recipient_id', authUser.id)
+      .eq('is_read', false)
+      .then(() => { if (loadMessages) loadMessages(); })
+      .catch(() => {});
+  }, [activeConvoId, authUser]); // eslint-disable-line
 
   const addMessage = async (text, attachments) => {
     const uid = authUser?.id || 'anon';
