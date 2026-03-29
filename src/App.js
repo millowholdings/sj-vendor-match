@@ -6353,10 +6353,12 @@ function AppInner() {
       if (m.sender_type === 'vendor') vendorIds.add(m.sender_id);
       if (m.recipient_type === 'vendor') vendorIds.add(m.recipient_id);
     });
-    // Look up vendor names by auth user_id
+    // Look up vendor names by auth user_id (filter out invalid IDs like 'unknown')
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validVendorIds = [...vendorIds].filter(id => uuidRegex.test(id));
     const vendorNames = {};
-    if (vendorIds.size > 0) {
-      const { data: vendorRows } = await supabase.from('vendors').select('user_id,name,contact_name').in('user_id', [...vendorIds]);
+    if (validVendorIds.length > 0) {
+      const { data: vendorRows } = await supabase.from('vendors').select('user_id,name,contact_name').in('user_id', validVendorIds);
       if (vendorRows) vendorRows.forEach(v => { if (v.user_id) vendorNames[v.user_id] = v.name || v.contact_name || 'Vendor'; });
     }
     const convMap = {};
