@@ -35,7 +35,6 @@ const SUBCATEGORIES = {
 const CATEGORY_MAP = {
   "Kids & Baby":"Kids, Baby & Maternity", "Baby & Maternity":"Kids, Baby & Maternity",
   "Wedding & Bridal":"Wedding & Events", "Party & Event Decor":"Wedding & Events",
-  "Photography & Media":"Art & Prints", "Entertainment":"Crafts & Handmade",
 };
 
 const EVENT_TYPES = [
@@ -56,7 +55,6 @@ const EVENT_TYPE_MAP = {
   "Girls Night Out":"Private Party",
 };
 
-const SERVICE_TYPES = ["Live Music/Band","DJ","Photography","Videography","Face Painting","Balloon Artist","Caricature Artist","Mobile Bar/Bartender","Wine Tasting/Sommelier","Food Truck","Catering","Coffee/Espresso Cart","Henna Artist","Event Decorator","Photo Booth","Other"];
 const SERVICE_DURATIONS = ["1 hour","2 hours","3 hours","4 hours","Half day","Full day","Other"];
 const SERVICE_CATEGORIES = ["Entertainment","Visual & Media","Kids & Activities","Food & Beverage Services","Wellness & Beauty Services","Decor & Setup","Other Services"];
 const SERVICE_SUBCATEGORIES = {
@@ -2945,12 +2943,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           vd = data;
         }
         if (!vd && app.host_email) {
-          const { data } = await supabase.from('vendors').select('*').ilike('contact_email', app.host_email).limit(1).single();
-          vd = data;
+          const { data } = await supabase.from('vendors').select('*').ilike('contact_email', app.host_email).limit(1);
+          vd = data?.[0] || null;
         }
         if (!vd && app.vendor_name) {
-          const { data } = await supabase.from('vendors').select('*').ilike('name', app.vendor_name).limit(1).single();
-          vd = data;
+          const { data } = await supabase.from('vendors').select('*').ilike('name', app.vendor_name).limit(1);
+          vd = data?.[0] || null;
         }
         setReviewVendor(vd);
       } catch (err) {
@@ -4358,25 +4356,37 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const bulkApproveVendors = async () => {
     if (!window.confirm(`Approve all ${pendingVendors.length} pending vendors?`)) return;
     setBulkApproving(true);
+    let succeeded = 0, failed = 0;
+    const approved = [];
     for (const v of pendingVendors) {
-      await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+      const { error } = await supabase.from('vendors').update({status:'approved'}).eq('id',v.id);
+      if (error) { failed++; continue; }
+      succeeded++;
+      approved.push(v);
       fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:v.contact_email,name:v.contact_name,type:'vendor',entityName:v.name,approved:true})}).catch(()=>{});
     }
-    setVendors(prev => [...pendingVendors.map(v=>dbVendorToApp({...v,status:'approved'})), ...prev]);
-    setPendingVendors([]);
+    setVendors(prev => [...approved.map(v=>dbVendorToApp({...v,status:'approved'})), ...prev]);
+    setPendingVendors(prev => prev.filter(v => !approved.some(a=>a.id===v.id)));
     setBulkApproving(false);
+    if (failed > 0) alert(`Approved ${succeeded}/${succeeded+failed} — ${failed} failed. Check and retry.`);
   };
 
   const bulkApproveEvents = async () => {
     if (!window.confirm(`Approve all ${pendingEvents.length} pending events?`)) return;
     setBulkApproving(true);
+    let succeeded = 0, failed = 0;
+    const approvedIds = [];
     for (const evt of pendingEvents) {
-      await supabase.from('events').update({status:'approved'}).eq('id',evt.id);
+      const { error } = await supabase.from('events').update({status:'approved'}).eq('id',evt.id);
+      if (error) { failed++; continue; }
+      succeeded++;
+      approvedIds.push(evt.id);
       fetch('/api/send-approval-email',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({to:evt.contactEmail,name:evt.contactName,type:'event',entityName:evt.eventName,approved:true})}).catch(()=>{});
     }
-    setAllEvents(prev => prev.map(e => pendingEvents.some(p=>p.id===e.id) ? {...e, status:'approved'} : e));
-    setOpps(prev => [...pendingEvents.map(e=>({...e,status:'approved'})), ...prev]);
+    setAllEvents(prev => prev.map(e => approvedIds.includes(e.id) ? {...e, status:'approved'} : e));
+    setOpps(prev => [...pendingEvents.filter(e=>approvedIds.includes(e.id)).map(e=>({...e,status:'approved'})), ...prev]);
     setBulkApproving(false);
+    if (failed > 0) alert(`Approved ${succeeded}/${succeeded+failed} — ${failed} failed. Check and retry.`);
   };
 
   const saveAdminEdit = async () => {
@@ -5822,11 +5832,13 @@ function AppInner() {
   // Load vendor profile and host events for logged-in user
   useEffect(() => {
     if (!authUser) { setVendorProfile(null); setAllVendorProfiles([]); setUserEvents([]); setEventGoerProfile(null); return; }
-    // Check if user is an event guest
-    supabase.from('event_goers').select('*').eq('email', authUser.email).limit(1).single()
-      .then(({ data }) => { if (data) setEventGoerProfile(data); });
-    // Find ALL vendor profiles linked to this user (by user_id or email)
+    // Load all user data sequentially to avoid race conditions
     (async () => {
+      // Event guest profile
+      const { data: goerData } = await supabase.from('event_goers').select('*').eq('email', authUser.email).limit(1);
+      if (goerData?.[0]) setEventGoerProfile(goerData[0]);
+
+      // Vendor profiles — by user_id first, then by email, deduplicate
       const profiles = [];
       const { data: byId } = await supabase.from('vendors').select('*').eq('user_id', authUser.id);
       if (byId) profiles.push(...byId);
@@ -5834,31 +5846,29 @@ function AppInner() {
       if (byEmail) {
         for (const v of byEmail) {
           if (!profiles.some(p => p.id === v.id)) {
-            if (!v.user_id) { supabase.from('vendors').update({ user_id: authUser.id }).eq('id', v.id).then(() => {}); }
+            if (!v.user_id) supabase.from('vendors').update({ user_id: authUser.id }).eq('id', v.id).then(() => {});
             profiles.push(v);
           }
         }
       }
       setAllVendorProfiles(profiles);
       if (profiles.length > 0) setVendorProfile(p => p || profiles[0]);
-    })();
-    // Find events linked to this user
-    supabase.from('events').select('*').eq('user_id', authUser.id).order('date', { ascending: false })
-      .then(({ data }) => { if (data) setUserEvents(data); });
-    // Also link by email (case-insensitive for iCloud/etc)
-    supabase.from('events').select('*').ilike('contact_email', authUser.email).order('date', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          const unlinked = data.filter(e => !e.user_id);
-          if (unlinked.length > 0) {
-            Promise.all(unlinked.map(e => supabase.from('events').update({ user_id: authUser.id }).eq('id', e.id)));
+
+      // Events — by user_id first, then by email, deduplicate
+      const allEvts = [];
+      const { data: evtsById } = await supabase.from('events').select('*').eq('user_id', authUser.id).order('date', { ascending: false });
+      if (evtsById) allEvts.push(...evtsById);
+      const { data: evtsByEmail } = await supabase.from('events').select('*').ilike('contact_email', authUser.email).order('date', { ascending: false });
+      if (evtsByEmail) {
+        for (const e of evtsByEmail) {
+          if (!allEvts.some(x => x.id === e.id)) {
+            if (!e.user_id) supabase.from('events').update({ user_id: authUser.id }).eq('id', e.id).then(() => {});
+            allEvts.push(e);
           }
-          setUserEvents(prev => {
-            const ids = new Set(prev.map(e => e.id));
-            return [...prev, ...data.filter(e => !ids.has(e.id))];
-          });
         }
-      });
+      }
+      setUserEvents(allEvts);
+    })();
   }, [authUser]);
 
   const clearAllDrafts = () => {
@@ -6487,7 +6497,7 @@ function AppInner() {
       contact_name: form.contactName,
       contact_email: form.email,
       contact_phone: form.phone || null,
-      notes: form.vendorNotes || form.notes || null,
+      notes: form.vendorNotes || form.eventGoerNotes || form.notes || null,
       vendor_notes: form.vendorNotes || form.notes || null,
       event_goer_notes: form.eventGoerNotes || null,
       share_with_event_goers: form.shareWithEventGoers !== false,
