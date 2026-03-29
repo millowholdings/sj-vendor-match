@@ -3043,11 +3043,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
       // Try optional columns one at a time — silently skip if they don't exist
       const tryUpdate = async (fields) => { try { await supabase.from('events').update(fields).eq('id', evt.id); } catch {} };
-      tryUpdate({ ticket_price: eventForm.ticket_price || null });
-      tryUpdate({ is_ticketed: eventForm.is_ticketed || false });
-      tryUpdate({ event_link: eventForm.event_link || null });
+      await tryUpdate({ ticket_price: eventForm.ticket_price || null });
+      await tryUpdate({ is_ticketed: eventForm.is_ticketed || false });
+      await tryUpdate({ event_link: eventForm.event_link || null });
 
-      // Upload photos if any new ones
+      // Handle photos: upload new, keep existing, update photo_url
+      let finalPhotoUrl = editExistingPhotos.length > 0 ? editExistingPhotos[0] : null;
       if (editNewPhotos.length > 0) {
         try {
           const bucket = 'vendor-files';
@@ -3056,12 +3057,15 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
             const path = `events/${evt.id}/photos/${Date.now()}-${safeName(f.name)}`;
             const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
             if (!upErr) {
-              const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-              tryUpdate({ photo_url: url });
+              finalPhotoUrl = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+            } else {
+              console.error('Photo upload failed:', upErr.message);
             }
           }
         } catch (photoErr) { console.error('Photo upload error:', photoErr); }
       }
+      // Always update photo_url — set to new photo, existing photo, or null if removed
+      await tryUpdate({ photo_url: finalPhotoUrl });
 
       // Notify admin
       fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
