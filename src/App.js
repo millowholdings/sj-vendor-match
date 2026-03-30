@@ -7306,7 +7306,7 @@ function AppInner() {
           : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} allVendorProfiles={allVendorProfiles} setVendorProfile={setVendorProfile} setShowAuthModal={setShowAuthModal} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} setEventGoers={setEventGoers} />}
-        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} />}
+        {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} setTab={setTab} />}
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} opps={opps} />}
@@ -7434,7 +7434,7 @@ function AttachmentBubble({ att, isHost }) {
 }
 
 // ─── Messages Page ────────────────────────────────────────────────────────────
-function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, vendorProfile, loadMessages }) {
+function MessagesPage({ conversations, setConversations, activeConvoId, setActiveConvoId, bookingRequests, setBookingRequests, authUser, vendorProfile, loadMessages, setTab }) {
   const [draft, setDraft] = useState('');
   const senderName = vendorProfile?.contact_name || vendorProfile?.name || authUser?.email || 'User';
   const [uploading, setUploading] = useState(false);
@@ -7680,16 +7680,16 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontSize:28 }}>{activeConvo.vendorEmoji}</span>
               <div>
-                <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410' }}>{activeConvo.vendorName}</div>
+                <button onClick={()=>{if(setTab){setTab('matches');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontFamily:'Playfair Display,serif',fontSize:18,color:'#1a1410',textDecoration:'underline',textDecorationColor:'#e8ddd0',textAlign:'left'}}>{activeConvo.vendorName}</button>
                 <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
-                {activeConvo.eventName && <div style={{ fontSize:12, color:'#c8a850', fontWeight:600, marginTop:2 }}>📋 {activeConvo.eventName}</div>}
+                {activeConvo.eventName && <button onClick={()=>{if(setTab){setTab('opportunities');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:12,color:'#c8a850',fontWeight:600,marginTop:2,textAlign:'left'}}>📋 {activeConvo.eventName} →</button>}
               </div>
             </div>
           </div>
 
           {/* Platform protection notice */}
           <div style={{ background:'#fdf9f5', borderBottom:'1px solid #e8ddd0', padding:'7px 24px', fontSize:12, color:'#7a6a5a', display:'flex', alignItems:'center', gap:8, flexShrink:0 }}>
-            🔒 <strong>Secure platform messaging.</strong> Contact info is shared only after a booking is confirmed. All interactions are covered by our <a href="#tos" style={{color:'#c8a84b',textDecoration:'none',fontWeight:600}} onClick={e=>{e.preventDefault();}}>Terms of Service</a>.
+            🔒 <strong>Secure platform messaging.</strong> Contact info is shared only after a booking is confirmed. All interactions are covered by our <button onClick={()=>{if(setTab){setTab('tos');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,color:'#c8a84b',textDecoration:'underline',fontWeight:600,cursor:'pointer',fontSize:12,fontFamily:'inherit'}}>Terms of Service</button>.
           </div>
 
           {/* Messages */}
@@ -7767,7 +7767,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
               </button>
             </div>
             <div style={{ fontSize:11, color:'#a89a8a', marginTop:6, lineHeight:1.5 }}>
-              📎 Share documents, images, or links<br/>This conversation is protected under the <strong>South Jersey Vendor Market Non-Circumvention Agreement</strong>. Vendor contact info is shared only after an accepted booking on a posted event.
+              📎 Share documents, images, or links<br/>This conversation is protected under the <button onClick={()=>{if(setTab){setTab('tos');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,color:'#c8a84b',fontWeight:700,cursor:'pointer',fontSize:11,fontFamily:'inherit',textDecoration:'underline'}}>South Jersey Vendor Market Non-Circumvention Agreement</button>. Vendor contact info is shared only after an accepted booking on a posted event.
             </div>
           </div>
         </div>
