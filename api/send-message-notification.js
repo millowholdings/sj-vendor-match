@@ -10,7 +10,7 @@ module.exports = async function handler(req, res) {
   const resendKey = process.env.RESEND_API_KEY;
   if (!resendKey) return res.status(500).json({ error: 'Email service not configured' });
 
-  const { recipientEmail, recipientName, senderName, senderType, eventName, messagePreview } = req.body;
+  const { recipientEmail, recipientName, senderName, senderType, eventName, messagePreview, recipientType } = req.body;
   if (!recipientEmail) return res.status(400).json({ error: 'Missing recipientEmail' });
 
   // 5-minute debounce per recipient — only send one email per 5 minutes
@@ -37,7 +37,7 @@ module.exports = async function handler(req, res) {
     const { error } = await resend.emails.send({
       from: `South Jersey Vendor Market <${fromAddr}>`,
       to: [recipientEmail],
-      subject: `New message from ${senderName || ('a ' + roleLabel)} — ${eventName || 'South Jersey Vendor Market'}`,
+      subject: `New message from ${senderName || ('a ' + roleLabel)}${eventName ? ' — ' + eventName : ''}`,
       html: `
 <div style="font-family:'DM Sans',Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;background:#ffffff">
   <div style="background:#1a1410;padding:24px 32px;border-radius:12px 12px 0 0">
@@ -49,18 +49,23 @@ module.exports = async function handler(req, res) {
       Hi ${recipientName || 'there'},
     </p>
     <p style="font-size:15px;color:#1a1410;margin:0 0 16px;line-height:1.6">
-      You have a new message from <strong>${senderName || ('a ' + roleLabel)}</strong>${eventName ? ' about <strong>' + eventName + '</strong>' : ''}.
+      You have a new message from <strong>${senderName || ('a ' + roleLabel)}</strong>.
     </p>
+    ${eventName ? `
+    <div style="background:#1a1410;border-radius:8px;padding:12px 16px;margin:0 0 16px">
+      <div style="font-size:11px;color:#a89a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Regarding Event</div>
+      <div style="font-size:16px;font-weight:700;color:#e8c97a">${eventName}</div>
+    </div>` : ''}
     ${messagePreview ? `
     <div style="background:#fdf9f5;border-left:3px solid #e8c97a;padding:12px 16px;border-radius:0 8px 8px 0;margin:0 0 20px;font-size:14px;color:#4a3a28;line-height:1.5">
       "${messagePreview.length > 200 ? messagePreview.slice(0, 200) + '...' : messagePreview}"
     </div>` : ''}
     <a href="${siteUrl}" style="display:inline-block;background:#c8a84b;color:#1a1410;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">
-      Log In & Reply
+      Log In to Your Dashboard
     </a>
     <p style="font-size:12px;color:#a89a8a;margin:20px 0 0;line-height:1.5">
-      This conversation is protected under the South Jersey Vendor Market Non-Circumvention Agreement.
-      All contact info is shared only after an accepted booking on a posted event.
+      Log in to review and reply to this message. This conversation is protected under the South Jersey Vendor Market Non-Circumvention Agreement.
+      Contact info is shared only after an accepted booking on a posted event.
     </p>
   </div>
 </div>`,

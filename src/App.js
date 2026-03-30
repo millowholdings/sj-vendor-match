@@ -6649,8 +6649,8 @@ function AppInner() {
     // Send vendor email notification for all new conversations
     const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
     if (vendorRow?.contact_email) {
-      fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ name:'South Jersey Vendor Market', email:'noreply@southjerseyvendormarket.com', to: vendorRow.contact_email, subject:`New message from a host — ${evtName}`, message:`Hi ${vendorRow.contact_name || vendor.name},\n\nA host has sent you a message on South Jersey Vendor Market.\n\n${hasEvent ? 'Event: '+evtName : 'Inquiry: '+contextLabel}${inquiryMessage ? '\nMessage: '+inquiryMessage : ''}\n\nLog in to your vendor dashboard to view and reply.\n\n— South Jersey Vendor Market` }),
+      fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ recipientEmail: vendorRow.contact_email, recipientName: vendorRow.contact_name || vendor.name, senderName: authUser?.email || 'A host', senderType: 'host', recipientType: 'vendor', eventName: evtName, messagePreview: inquiryMessage || '' }),
       }).catch(e=>console.error('API call failed:',e));
     }
   };
@@ -7521,7 +7521,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
           }
           if (recipientEmail) {
             fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ recipientEmail, recipientName, senderName, senderType: isVendor ? 'vendor' : 'host', eventName: conv.eventName || '', messagePreview: text || '' }),
+              body: JSON.stringify({ recipientEmail, recipientName, senderName, senderType: isVendor ? 'vendor' : 'host', recipientType: isVendor ? 'host' : 'vendor', eventName: conv.eventName || '', messagePreview: text || '' }),
             }).catch(e=>console.error('Message notification failed:',e));
           }
         } catch (e) { console.error('Email lookup error:', e); }
@@ -7656,11 +7656,9 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                   <div style={{ fontSize:11, color:'#7a6a5a', textTransform:'uppercase', letterSpacing:1 }}>{c.vendorCategory}</div>
                 </div>
               </div>
+              {c.eventName && <div style={{ fontSize:11, color:'#c8a850', marginBottom:2, fontWeight:600 }}>📋 {c.eventName}</div>}
               <div style={{ fontSize:12, color:'#a89a8a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {c.messages[c.messages.length - 1]?.text?.slice(0, 50)}...
-              </div>
-              <div style={{ fontSize:11, color:'#4a3a28', marginTop:4 }}>
-                {c.status === 'active' ? '🟢 Active' : c.status === 'booked' ? '✅ Booked' : '⏸ Pending'}
+                {c.messages[c.messages.length - 1]?.text?.slice(0, 50)}
               </div>
             </div>
           ))}
@@ -7684,6 +7682,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
               <div>
                 <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#1a1410' }}>{activeConvo.vendorName}</div>
                 <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
+                {activeConvo.eventName && <div style={{ fontSize:12, color:'#c8a850', fontWeight:600, marginTop:2 }}>📋 {activeConvo.eventName}</div>}
               </div>
             </div>
           </div>
