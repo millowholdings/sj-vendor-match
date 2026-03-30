@@ -7476,57 +7476,49 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       if (c.id !== activeConvoId) return c;
       return { ...c, messages: [...c.messages, { id: Date.now(), from: myFrom, senderName, text: text || '', ts, ...(attachments && attachments.length > 0 ? { attachments } : {}) }] };
     }));
-    // Save to Supabase
-    const { error: msgErr } = await supabase.from('messages').insert({
+    // Save to Supabase — try with attachments, fall back without
+    const msgPayload = {
       conversation_id: activeConvoId,
       sender_id: uid, sender_type: isVendor ? 'vendor' : 'host',
       recipient_id: recipientId, recipient_type: isVendor ? 'host' : 'vendor',
       event_name: conv.eventName || '',
       message_text: text || '(file attachment)',
-      attachments: attachments && attachments.length > 0 ? attachments : null,
       is_read: false,
-    });
-    if (msgErr) {
-      console.error('Message save error:', msgErr);
-      // Retry without attachments column if schema issue
-      if (msgErr.code === '42703') {
-        await supabase.from('messages').insert({
-          conversation_id: activeConvoId,
-          sender_id: uid, sender_type: isVendor ? 'vendor' : 'host',
-          recipient_id: recipientId, recipient_type: isVendor ? 'host' : 'vendor',
-          event_name: conv.eventName || '',
-          message_text: text || '(file attachment)',
-          is_read: false,
-        }).catch(e => console.error('Message retry error:', e));
-      }
+    };
+    let saved = false;
+    if (attachments && attachments.length > 0) {
+      const { error } = await supabase.from('messages').insert({ ...msgPayload, attachments });
+      if (error) {
+        console.error('Message with attachments failed, retrying without:', error.message);
+        const { error: e2 } = await supabase.from('messages').insert(msgPayload);
+        saved = !e2;
+        if (e2) console.error('Message save failed:', e2.message);
+      } else { saved = true; }
+    } else {
+      const { error } = await supabase.from('messages').insert(msgPayload);
+      saved = !error;
+      if (error) console.error('Message save failed:', error.message);
     }
-    // Send email notification to recipient via Resend (5-min debounce on server)
-    if (!msgErr) {
-      (async () => {
-        try {
-          // Look up recipient email
-          let recipientEmail = null, recipientName = null;
-          if (isVendor) {
-            // Vendor sending to host — look up host email from events
-            const { data: evtRow } = await supabase.from('events').select('contact_email,contact_name').ilike('contact_email', recipientId).limit(1);
-            if (!evtRow?.[0]) {
-              // Try by user_id
-              const { data: evts } = await supabase.from('events').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
-              if (evts?.[0]) { recipientEmail = evts[0].contact_email; recipientName = evts[0].contact_name; }
-            } else { recipientEmail = evtRow[0].contact_email; recipientName = evtRow[0].contact_name; }
-          } else {
-            // Host sending to vendor — look up vendor email
-            const { data: vRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
-            if (vRow?.[0]) { recipientEmail = vRow[0].contact_email; recipientName = vRow[0].contact_name; }
-          }
-          if (recipientEmail) {
-            fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-              body: JSON.stringify({ recipientEmail, recipientName, senderName, senderType: isVendor ? 'vendor' : 'host', recipientType: isVendor ? 'host' : 'vendor', eventName: conv.eventName || '', messagePreview: text || '' }),
-            }).catch(e=>console.error('Message notification failed:',e));
-          }
-        } catch (e) { console.error('Email lookup error:', e); }
-      })();
-    }
+    // Send email notification to recipient — always try regardless of save status
+    (async () => {
+      try {
+        let recipientEmail = null, recipientName = null;
+        if (isVendor) {
+          // Vendor sending to host — look up by user_id in events table
+          const { data } = await supabase.from('events').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
+          if (data?.[0]) { recipientEmail = data[0].contact_email; recipientName = data[0].contact_name; }
+        } else {
+          // Host sending to vendor — look up by user_id in vendors table
+          const { data } = await supabase.from('vendors').select('contact_email,contact_name').eq('user_id', recipientId).limit(1);
+          if (data?.[0]) { recipientEmail = data[0].contact_email; recipientName = data[0].contact_name; }
+        }
+        if (recipientEmail) {
+          fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+            body: JSON.stringify({ recipientEmail, recipientName, senderName, senderType: isVendor ? 'vendor' : 'host', recipientType: isVendor ? 'host' : 'vendor', eventName: conv.eventName || '', messagePreview: text || '' }),
+          }).catch(e=>console.error('Message notification failed:',e));
+        }
+      } catch (e) { console.error('Email lookup error:', e); }
+    })();
   };
 
   const sendMessage = () => {
