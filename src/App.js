@@ -216,6 +216,7 @@ function dbEventToApp(e) {
     allowDuplicateCategories: e.allow_duplicate_categories !== false,
     allowDuplicateSubcategories: e.allow_duplicate_subcategories !== false,
     status:           e.status            || "approved",
+    vendorStatus:     e.vendor_status     || "open",
     eventLink:        e.event_link        || "",
     isTicketed:       e.is_ticketed       || false,
     ticketPrice:      e.ticket_price      || "",
@@ -3180,6 +3181,31 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         const { data } = await supabase.from('vendors').select('*').eq('id', app.vendor_id).single();
         if (data) { setReviewVendor(data); setReviewingApp(reqId); }
       }
+      // Auto-close: check if all spots are now filled
+      if (status === 'accepted' && app) {
+        const evt = userEvents.find(e => e.event_name === app.event_name);
+        if (evt && evt.spots) {
+          const acceptedCount = applications.filter(a => a.event_name === app.event_name && (a.status === 'accepted' || (a.id === reqId && status === 'accepted'))).length;
+          if (acceptedCount >= evt.spots) {
+            // Mark event as fully booked
+            await supabase.from('events').update({ vendor_status: 'fully_booked' }).eq('id', evt.id).catch(()=>{});
+            if (setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? { ...e, vendor_status: 'fully_booked' } : e));
+            if (setAllEvents) setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, vendorStatus: 'fully_booked' } : e));
+            // Notify unaccepted vendors that event is full
+            const unaccepted = applications.filter(a => a.event_name === app.event_name && a.status === 'pending' && a.id !== reqId);
+            for (const ua of unaccepted) {
+              if (ua.vendor_id) {
+                const { data: vr } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', ua.vendor_id).limit(1);
+                if (vr?.[0]?.contact_email) {
+                  fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({ recipientEmail: vr[0].contact_email, recipientName: vr[0].contact_name, senderName: 'South Jersey Vendor Market', senderType: 'host', eventName: app.event_name, messagePreview: `${app.event_name} is now fully booked. All vendor spots have been filled. Keep browsing events on South Jersey Vendor Market — new opportunities are posted regularly!` }),
+                  }).catch(()=>{});
+                }
+              }
+            }
+          }
+        }
+      }
     }
   };
 
@@ -3247,6 +3273,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   }}>
                     {e.status==='approved' || e.status==='concierge_active' ? 'Live' : e.status==='rejected' ? 'Not Approved' : e.status==='pending_review' || e.status==='concierge_pending' ? 'Pending Review' : 'Live'}
                   </span>
+                  {e.vendor_status === 'fully_booked' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#1a1410',color:'#e8c97a',whiteSpace:'nowrap'}}>Fully Booked</span>}
+                  {e.vendor_status === 'closed' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#f5f0ea',color:'#7a6a5a',whiteSpace:'nowrap'}}>Applications Closed</span>}
+                  {e.status==='approved' && (!e.vendor_status || e.vendor_status === 'open') && (
+                    <button onClick={async()=>{if(!window.confirm('Close applications for this event? Vendors will no longer be able to apply.'))return;await supabase.from('events').update({vendor_status:'closed'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_status:'closed'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorStatus:'closed'}:x));}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close Applications</button>
+                  )}
+                  {e.status==='approved' && (e.vendor_status === 'closed' || e.vendor_status === 'fully_booked') && (
+                    <button onClick={async()=>{await supabase.from('events').update({vendor_status:'open'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_status:'open'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorStatus:'open'}:x));}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
+                  )}
                 </div>
               </div>
               {e.status==='rejected' && e.rejection_reason && (
@@ -4697,7 +4731,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
     setOpps(prev => [{ ...evt, status: 'concierge_active' }, ...prev]);
   };
 
-  const eventStatusPill = (status) => {
+  const eventStatusPill = (status, vendorStatus) => {
     const styles = {
       pending_review:    { bg:'#fdf4dc', color:'#7a5a10', label:'Pending Review' },
       approved:          { bg:'#d4f4e0', color:'#1a6b3a', label:'Live' },
@@ -4706,7 +4740,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       concierge_active:  { bg:'#d4f4e0', color:'#1a6b3a', label:'Live' },
     };
     const s = styles[status] || styles.approved;
-    return <span style={{background:s.bg,color:s.color,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{s.label}</span>;
+    const vendorStyles = { fully_booked: { bg:'#1a1410', color:'#e8c97a', label:'Fully Booked' }, closed: { bg:'#f5f0ea', color:'#7a6a5a', label:'Apps Closed' } };
+    const vs = vendorStatus ? vendorStyles[vendorStatus] : null;
+    return <>{<span style={{background:s.bg,color:s.color,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap'}}>{s.label}</span>}{vs && <span style={{background:vs.bg,color:vs.color,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,whiteSpace:'nowrap',marginLeft:4}}>{vs.label}</span>}</>;
   };
 
   return (
@@ -4767,7 +4803,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <div style={{fontSize:12,color:'#a89a8a',marginTop:2}}>Host: {evt.contactName} ({evt.contactEmail})</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8}}>
-                  {eventStatusPill(evt.status)}
+                  {eventStatusPill(evt.status, evt.vendorStatus)}
                   <span style={{fontSize:18,color:'#a89a8a'}}>{expandedEvent===evt.id ? '▲' : '▼'}</span>
                 </div>
               </div>
@@ -4932,7 +4968,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td style={{fontSize:12}}>{o.contactName}<br/><span style={{color:'#a89a8a',fontSize:10}}>{o.contactEmail}</span></td>
                   <td>{o.spots||'—'}</td>
                   <td style={{fontSize:12}}>{o.boothFee||'Free'}</td>
-                  <td>{eventStatusPill(o.status)}</td>
+                  <td>{eventStatusPill(o.status, o.vendorStatus)}</td>
                   <td style={{display:'flex',gap:4,flexWrap:'wrap'}}>
                     <button onClick={()=>{setAdminEditForm({event_name:o.eventName,date:o.date,zip:o.zip,event_type:o.eventType,booth_fee:o.boothFee||''});setEditingAdminEntity({type:'event',id:o.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
                     {o.contactEmail && <button onClick={()=>{setAdminMessageModal({to:o.contactEmail,name:o.contactName||o.eventName,type:'host'});setAdminMessageSubject('');setAdminMessageText('');}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Msg</button>}
@@ -5509,6 +5545,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                 <div style={{ background:"linear-gradient(135deg,#1a1410,#2d2118)", padding:"18px 24px" }}>
                   <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, color:"#fff", marginBottom:2, lineHeight:1.3 }}>{opp.eventName}</div>
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
+                  {opp.vendorStatus === 'fully_booked' && <span style={{display:'inline-block',marginTop:6,background:'#e8c97a',color:'#1a1410',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>Fully Booked</span>}
                 </div>
                 {/* Event details — always visible */}
                 <div style={{ padding:"16px 24px" }}>
@@ -5730,6 +5767,9 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                   {canSeeFullDetails && !opp.photoUrl && <div style={{ display:"inline-block", background:"#e8c97a", color:"#1a1410", fontSize:10, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase", padding:"3px 10px", borderRadius:20, marginBottom:10 }}>{opp.source}</div>}
                   <div style={{ fontFamily:"Playfair Display,serif", fontSize:20, color:"#fff", marginBottom:4, lineHeight:1.3 }}>{canSeeFullDetails ? opp.eventName : opp.eventType}</div>
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
+                  {opp.vendorStatus === 'fully_booked' && <span style={{display:'inline-block',marginTop:8,background:'#e8c97a',color:'#1a1410',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>Fully Booked</span>}
+                  {opp.vendorStatus === 'closed' && <span style={{display:'inline-block',marginTop:8,background:'#f5f0ea',color:'#7a6a5a',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>Applications Closed</span>}
+                  {(!opp.vendorStatus || opp.vendorStatus === 'open') && opp.deadline && (() => { const d = new Date(opp.deadline); const now = new Date(); const hrs = (d - now)/(1000*60*60); return hrs > 0 && hrs <= 48 ? <span style={{display:'inline-block',marginTop:8,background:'#fdecea',color:'#8b1a1a',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>Closing Soon</span> : null; })()}
                 </div>
                 <div style={{ padding:"20px 24px" }}>
                   {/* Preview fields — visible to everyone */}
@@ -5773,16 +5813,17 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                         </div>
                       )}
                       <div style={{ display:"flex", gap:10, flexWrap:'wrap' }}>
-                        {showSection==='open' && (opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') && (
+                        {opp.vendorStatus === 'fully_booked' ? (
+                          <div style={{ flex:2, minWidth:140, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, textAlign:'center', background:'#1a1410', color:'#e8c97a' }}>Fully Booked</div>
+                        ) : opp.vendorStatus === 'closed' ? (
+                          <div style={{ flex:2, minWidth:140, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>Applications Closed</div>
+                        ) : showSection==='closed' ? (
+                          <div style={{ flex:2, minWidth:140, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>Past Deadline</div>
+                        ) : (opp.vendorDiscovery === 'apply' || opp.vendorDiscovery === 'both') ? (
                           <button onClick={()=>setApplyOpp(opp)} style={{ flex:2, minWidth:140, background:"#c8a84b", color:"#1a1410", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                             Apply to Vend
                           </button>
-                        )}
-                        {showSection==='closed' && (
-                          <div style={{ flex:2, minWidth:140, padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, textAlign:'center', background:'#f5f0ea', color:'#a89a8a', border:'1px solid #e8ddd0' }}>
-                            Applications Closed
-                          </div>
-                        )}
+                        ) : null}
                         {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:100, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
                         <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                           {saved.includes(opp.id)?"\u2713 Saved":"Save"}
