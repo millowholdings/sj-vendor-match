@@ -5616,7 +5616,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   );
 }
 
-function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, setVendorProfile, setShowAuthModal }) {
+function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, setVendorProfile, setShowAuthModal, messageEventHost }) {
   const isVendor = !!vendorProfile;
   const canSeeFullDetails = authUser && isVendor;
   const [filterType, setFilterType] = useState("");
@@ -5824,6 +5824,11 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                             Apply to Vend
                           </button>
                         ) : null}
+                        {messageEventHost && authUser && vendorProfile && (
+                          <button onClick={()=>messageEventHost(opp)} style={{ flex:1, minWidth:100, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
+                            💬 Message Host
+                          </button>
+                        )}
                         {opp.fbLink && <a href={opp.fbLink} target="_blank" rel="noopener noreferrer" style={{ flex:1, minWidth:100, background:"#1a1410", color:"#e8c97a", border:"none", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", textAlign:"center", textDecoration:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>View on Facebook</a>}
                         <button onClick={()=>setSaved(s=>s.includes(opp.id)?s.filter(x=>x!==opp.id):[...s,opp.id])} style={{ background:saved.includes(opp.id)?"#fdf4dc":"#f5f0ea", color:"#1a1410", border:"1px solid #e0d5c5", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:600, cursor:"pointer", fontFamily:"DM Sans,sans-serif" }}>
                           {saved.includes(opp.id)?"\u2713 Saved":"Save"}
@@ -6635,8 +6640,10 @@ function AppInner() {
       : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
     const evtName = hasEvent ? hostEvent.eventName : contextLabel;
     // Create messages visible to both parties using auth user IDs
-    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true });
-    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false });
+    const { error: e1 } = await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true });
+    if (e1) console.error('openMessage insert 1 failed:', e1.message);
+    const { error: e2 } = await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false });
+    if (e2) console.error('openMessage insert 2 failed:', e2.message);
     const newConvo = {
       id: convoId, vendorId: vendorAuthId, vendorName: vendor.name,
       vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
@@ -6651,6 +6658,45 @@ function AppInner() {
     if (vendorRow?.contact_email) {
       fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ recipientEmail: vendorRow.contact_email, recipientName: vendorRow.contact_name || vendor.name, senderName: authUser?.email || 'A host', senderType: 'host', recipientType: 'vendor', eventName: evtName, messagePreview: inquiryMessage || '' }),
+      }).catch(e=>console.error('API call failed:',e));
+    }
+  };
+
+  // Vendor messages an event host from Opportunities page
+  const messageEventHost = async (opp) => {
+    if (!authUser) return;
+    const uid = authUser.id;
+    // Look up host's auth user_id from the event
+    let hostUserId = null;
+    if (opp.userId) { hostUserId = opp.userId; }
+    else {
+      const { data } = await supabase.from('events').select('user_id').eq('id', opp.id).limit(1);
+      hostUserId = data?.[0]?.user_id;
+    }
+    if (!hostUserId) {
+      const { data } = await supabase.from('events').select('user_id').eq('event_name', opp.eventName).limit(1);
+      hostUserId = data?.[0]?.user_id;
+    }
+    if (!hostUserId) { alert('Unable to message this host. Please try again later.'); return; }
+    const convoId = getConvoId(uid, hostUserId);
+    const existing = conversations.find(c => c.id === convoId);
+    if (existing) { setActiveConvoId(convoId); setTab('messages'); return; }
+    const sysText = `Conversation started by ${vendorProfile?.name || 'a vendor'} about ${opp.eventName}. Contact info is shared only after a booking is confirmed.`;
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'vendor', event_name: opp.eventName || '', message_text: sysText, is_read: true });
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: hostUserId, recipient_type: 'host', event_name: opp.eventName || '', message_text: sysText, is_read: false });
+    const newConvo = {
+      id: convoId, vendorId: uid, vendorName: vendorProfile?.name || '',
+      vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
+      hostName: opp.contactName || 'Host', eventName: opp.eventName || '', status: 'active',
+      messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
+    };
+    setConversations(c => [newConvo, ...c]);
+    setActiveConvoId(convoId);
+    setTab('messages');
+    // Email the host
+    if (opp.contactEmail) {
+      fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ recipientEmail: opp.contactEmail, recipientName: opp.contactName, senderName: vendorProfile?.name || 'A vendor', senderType: 'vendor', recipientType: 'host', eventName: opp.eventName || '', messagePreview: '' }),
       }).catch(e=>console.error('API call failed:',e));
     }
   };
@@ -7303,7 +7349,7 @@ function AppInner() {
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
         {tab==="opportunities" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
-          : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} allVendorProfiles={allVendorProfiles} setVendorProfile={setVendorProfile} setShowAuthModal={setShowAuthModal} />)}
+          : <OpportunitiesPage opps={opps} authUser={authUser} vendorProfile={vendorProfile} allVendorProfiles={allVendorProfiles} setVendorProfile={setVendorProfile} setShowAuthModal={setShowAuthModal} messageEventHost={messageEventHost} />)}
         {tab==="pricing"       && <PricingPage setTab={setTab} authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setShowAuthModal={setShowAuthModal} setShowContactModal={setShowContactModal} />}
         {tab==="admin"         && <AdminPage opps={opps} setOpps={setOpps} allEvents={allEvents} setAllEvents={setAllEvents} vendorSubs={vendorSubs} vendors={vendors} setVendors={setVendors} pendingVendors={pendingVendors} setPendingVendors={setPendingVendors} isAdmin={isAdmin} eventGoers={eventGoers} setEventGoers={setEventGoers} />}
         {tab==="messages"      && <MessagesPage conversations={conversations} setConversations={setConversations} activeConvoId={activeConvoId} setActiveConvoId={setActiveConvoId} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} authUser={authUser} vendorProfile={vendorProfile} loadMessages={loadMessages} setTab={setTab} />}
@@ -7676,6 +7722,10 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
                 <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
                 {activeConvo.eventName && <button onClick={()=>{if(setTab){setTab('opportunities');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:12,color:'#c8a850',fontWeight:600,marginTop:2,textAlign:'left'}}>📋 {activeConvo.eventName} →</button>}
               </div>
+            </div>
+            <div style={{display:'flex',gap:6}}>
+              <button onClick={async()=>{if(!window.confirm('Archive this conversation? It will be hidden from your messages.'))return;await supabase.from('messages').update({is_read:true}).eq('conversation_id',activeConvoId).eq('recipient_id',authUser?.id);setConversations(cs=>cs.filter(c=>c.id!==activeConvoId));setActiveConvoId(null);}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Archive</button>
+              <button onClick={async()=>{if(!window.confirm('Delete this conversation permanently? This cannot be undone.'))return;await supabase.from('messages').delete().eq('conversation_id',activeConvoId);setConversations(cs=>cs.filter(c=>c.id!==activeConvoId));setActiveConvoId(null);if(loadMessages)loadMessages();}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete</button>
             </div>
           </div>
 
