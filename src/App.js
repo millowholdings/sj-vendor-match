@@ -6696,7 +6696,7 @@ function AppInner() {
       const { data } = await supabase.from('vendors').select('user_id').eq('id', vendor.id).limit(1);
       vendorAuthId = data?.[0]?.user_id;
     }
-    if (!vendorAuthId) { console.error('Cannot message vendor: no auth user_id found'); setTab('messages'); return; }
+    if (!vendorAuthId) { alert('Unable to message this vendor — their account may not be linked. Please try again later.'); return; }
     const hasEvent = !!hostEvent?.eventName;
     const eventId = hasEvent ? (hostEvent.eventId || null) : null;
     const convoId = getConvoId(uid, vendorAuthId, eventId);
@@ -6707,20 +6707,19 @@ function AppInner() {
       ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
       : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
     const evtName = hasEvent ? hostEvent.eventName : contextLabel;
-    // Create messages visible to both parties using auth user IDs
-    const { error: e1 } = await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true });
-    if (e1) console.error('openMessage insert 1 failed:', e1.message);
-    const { error: e2 } = await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false });
-    if (e2) console.error('openMessage insert 2 failed:', e2.message);
+    // Create conversation in UI first so user sees it immediately
     const newConvo = {
       id: convoId, vendorId: vendorAuthId, vendorName: vendor.name,
-      vendorEmoji: vendor.emoji, vendorCategory: vendor.category,
+      vendorEmoji: vendor.emoji || '', vendorCategory: vendor.category || '',
       hostName: authUser?.email || 'Host', eventName: evtName, status: 'active',
       messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
     };
-    setConversations(c => [newConvo, ...c]);
+    setConversations(c => [newConvo, ...c.filter(x=>x.id!==convoId)]);
     setActiveConvoId(convoId);
     setTab("messages");
+    // Save to Supabase in background
+    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true }).then(({error})=>{if(error)console.error('openMessage insert 1:',error.message);});
+    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false }).then(({error})=>{if(error)console.error('openMessage insert 2:',error.message);});
     // Send vendor email notification for all new conversations
     const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
     if (vendorRow?.contact_email) {
