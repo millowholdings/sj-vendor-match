@@ -3953,7 +3953,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal, setEventMessageModal }) {
   const [showProfile, setShowProfile] = useState(false);
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
@@ -4061,7 +4061,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             )
           )}
           {openMessage && authUser && (
-            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? openMessage(v) : (setInquiryModal && setInquiryModal({vendor:v}))}>
+            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? (setEventMessageModal && setEventMessageModal({vendor:v, eventName:hostEvent.eventName})) : (setInquiryModal && setInquiryModal({vendor:v}))}>
               💬 Message Vendor
             </button>
           )}
@@ -4161,7 +4161,7 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 }
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
-function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, setInquiryModal }) {
+function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, setInquiryModal, setEventMessageModal }) {
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterVendorType, setFilterVendorType] = useState('');
@@ -4288,7 +4288,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} setInquiryModal={setInquiryModal} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} setInquiryModal={setInquiryModal} setEventMessageModal={setEventMessageModal} />)}</div>
       }
 
       {hasZip && outRange.length>0 && (
@@ -6328,6 +6328,7 @@ function AppInner() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [inquiryModal, setInquiryModal] = useState(null); // { vendor } — for messaging without an event
+  const [eventMessageModal, setEventMessageModal] = useState(null); // { vendor, eventName } — for messaging with an event
   const navTo = (t) => { setTab(t); setMobileMenuOpen(false); window.scrollTo({top:0}); };
   const [vendorSubs, setVendorSubs] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
@@ -6367,7 +6368,7 @@ function AppInner() {
       if (e.key === 'Escape') {
         setShowAuthModal(false); setShowContactModal(false);
         setShowFeedbackModal(false); setShowEventGoerSignup(false);
-        setMobileMenuOpen(false); setInquiryModal(null);
+        setMobileMenuOpen(false); setInquiryModal(null); setEventMessageModal(null);
       }
     };
     window.addEventListener('keydown', onEsc);
@@ -6721,19 +6722,29 @@ function AppInner() {
       ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
       : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
     const evtName = hasEvent ? hostEvent.eventName : contextLabel;
-    // Create conversation in UI first so user sees it immediately
+    // Build conversation messages
+    const ts = new Date().toISOString();
+    const msgs = [{ id: Date.now(), from: 'system', text: sysText, ts }];
+    // If there's an actual user message, add it
+    if (inquiryMessage && inquiryMessage.trim()) {
+      msgs.push({ id: Date.now()+1, from: 'host', senderName: authUser?.email || 'Host', text: inquiryMessage.trim(), ts });
+    }
     const newConvo = {
       id: convoId, vendorId: vendorAuthId, vendorName: vendor.name,
       vendorEmoji: vendor.emoji || '', vendorCategory: vendor.category || '',
       hostName: authUser?.email || 'Host', eventName: evtName, status: 'active',
-      messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
+      messages: msgs,
     };
     setConversations(c => [newConvo, ...c.filter(x=>x.id!==convoId)]);
     setActiveConvoId(convoId);
     setTab("messages");
-    // Save to Supabase in background
-    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true }).then(({error})=>{if(error)console.error('openMessage insert 1:',error.message);});
-    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false }).then(({error})=>{if(error)console.error('openMessage insert 2:',error.message);});
+    // Save to Supabase in background — system messages for both parties
+    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'host', event_name: evtName, message_text: sysText, is_read: true }).then(({error})=>{if(error)console.error('openMessage sys1:',error.message);});
+    supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: sysText, is_read: false }).then(({error})=>{if(error)console.error('openMessage sys2:',error.message);});
+    // Save user message if provided
+    if (inquiryMessage && inquiryMessage.trim()) {
+      supabase.from('messages').insert({ conversation_id: convoId, sender_id: uid, sender_type: 'host', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: inquiryMessage.trim(), is_read: false }).then(({error})=>{if(error)console.error('openMessage userMsg:',error.message);});
+    }
     // Send vendor email notification for all new conversations
     const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
     if (vendorRow?.contact_email) {
@@ -7477,7 +7488,7 @@ function AppInner() {
           ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">Log in to browse and message vendors. <button onClick={()=>setShowAuthModal(true)} style={{background:'none',border:'none',color:'#e8c97a',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}}>Log in or sign up</button></p></div>
           : loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
-            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} setInquiryModal={setInquiryModal} />)}
+            : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} setInquiryModal={setInquiryModal} setEventMessageModal={setEventMessageModal} />)}
         {tab==="upcoming-markets" && (loading
           ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading events…</div>
           : <UpcomingMarketsPage opps={opps} setTab={setTab} setShowAuthModal={setShowAuthModal} setShowEventGoerSignup={setShowEventGoerSignup} />)}
@@ -7510,6 +7521,7 @@ function AppInner() {
       {showFeedbackModal && <FeedbackModal onClose={()=>setShowFeedbackModal(false)} userEmail={authUser?.email||''} />}
       {showEventGoerSignup && <EventGoerSignupModal onClose={()=>setShowEventGoerSignup(false)} defaultEmail={authUser?.email||''} defaultName={vendorProfile?.contact_name||''} onSuccess={()=>{ supabase.from('event_goers').select('*').eq('active',true).then(({data})=>{if(data)setEventGoers(data);}); if(authUser) supabase.from('event_goers').select('*').eq('email',authUser.email).limit(1).single().then(({data})=>{if(data)setEventGoerProfile(data);}); }} />}
       {inquiryModal && <InquiryModal vendor={inquiryModal.vendor} onClose={()=>setInquiryModal(null)} onSend={(type,msg)=>{openMessage(inquiryModal.vendor,type,msg);setInquiryModal(null);}} />}
+      {eventMessageModal && <EventMessageModal vendor={eventMessageModal.vendor} eventName={eventMessageModal.eventName} onClose={()=>setEventMessageModal(null)} onSend={async(msg)=>{await openMessage(eventMessageModal.vendor,null,msg);setEventMessageModal(null);}} />}
     </>
   );
 }
@@ -7541,6 +7553,35 @@ function InquiryModal({ vendor, onClose, onSend }) {
           </div>
           <div style={{display:'flex',gap:10}}>
             <button disabled={!inquiryType} onClick={()=>onSend(inquiryType,message)} style={{flex:2,background:inquiryType?'#1a1410':'#e8ddd0',color:inquiryType?'#e8c97a':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:inquiryType?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>Send Message</button>
+            <button onClick={onClose} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventMessageModal({ vendor, eventName, onClose, onSend }) {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:480,width:'100%',overflow:'hidden'}}>
+        <div style={{background:'#1a1410',padding:'20px 24px'}}>
+          <div style={{fontSize:14,color:'#a89a8a'}}>Message Vendor</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{vendor?.name}</div>
+          {eventName && <div style={{fontSize:13,color:'#c8a850',marginTop:4}}>📋 Regarding: {eventName}</div>}
+        </div>
+        <div style={{padding:'24px'}}>
+          <div className="form-group" style={{marginBottom:16}}>
+            <label>Your Message *</label>
+            <textarea value={message} onChange={e=>setMessage(e.target.value)} rows={4} placeholder="Introduce yourself, ask about availability, discuss event details..." style={{width:'100%',border:'1.5px solid #e0d5c5',borderRadius:8,padding:'10px 14px',fontSize:14,fontFamily:'DM Sans,sans-serif',resize:'vertical',outline:'none',boxSizing:'border-box'}} />
+          </div>
+          <div style={{fontSize:11,color:'#a89a8a',marginBottom:16,lineHeight:1.5}}>
+            Vendor contact info is not shared through messaging. Contact details are only revealed after an accepted booking on a posted event.
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button disabled={!message.trim()||sending} onClick={async()=>{setSending(true);await onSend(message.trim());setSending(false);}} style={{flex:2,background:message.trim()?'#1a1410':'#e8ddd0',color:message.trim()?'#e8c97a':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:message.trim()?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>{sending?'Sending...':'Send Message'}</button>
             <button onClick={onClose} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
           </div>
         </div>
