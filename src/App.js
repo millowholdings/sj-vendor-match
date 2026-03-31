@@ -6517,14 +6517,15 @@ function AppInner() {
       const senderLabel = m.sender_type === 'system' ? 'System' : m.sender_type === 'vendor' ? (vendorNames[m.sender_id] || 'Vendor') : (m.sender_id === uid ? 'You' : 'Host');
       conv.messages.push({ id: m.id, from: m.sender_id === uid ? 'host' : (m.sender_type === 'system' ? 'system' : 'vendor'), text: m.message_text, ts: m.created_at, senderName: senderLabel, attachments: m.attachments || undefined });
     });
-    // Filter out broken conversations (non-canonical IDs, 'unknown' recipients, no messages)
+    // Filter out broken conversations (must contain current user's ID and have messages)
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}/i;
     const validConvos = Object.values(convMap).filter(c => {
       // Must have the current user's ID in the conversation_id
       if (!c.id.includes(uid)) return false;
-      // Both parts of conversation_id must look like UUIDs
+      // First two segments of conversation_id must look like UUIDs
+      // Format: uuid1_uuid2 or uuid1_uuid2_evt_eventId
       const parts = c.id.split('_');
-      if (parts.length !== 2 || !uuidPattern.test(parts[0]) || !uuidPattern.test(parts[1])) return false;
+      if (parts.length < 2 || !uuidPattern.test(parts[0]) || !uuidPattern.test(parts[1])) return false;
       // Must have at least one message
       if (c.messages.length === 0) return false;
       return true;
