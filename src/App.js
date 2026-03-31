@@ -5351,6 +5351,7 @@ function VendorApplyModal({ opp, onClose }) {
     setSubmitting(true);
     const responseToken = crypto.randomUUID();
     const payload = {
+      id: Date.now(),
       session_id: 'vendor-application',
       vendor_id: form.vendorId || null, vendor_name: form.vendorName,
       vendor_emoji: '', vendor_category: form.category || '',
