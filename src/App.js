@@ -7606,12 +7606,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
   const senderName = vendorProfile?.contact_name || vendorProfile?.name || authUser?.email || 'User';
   const [uploading, setUploading] = useState(false);
   const [stagedAttachments, setStagedAttachments] = useState([]);
-  const [archivedIds, setArchivedIds] = useState(() => { try { return JSON.parse(localStorage.getItem('sjvm_archived_convos')||'[]'); } catch { return []; } });
-  const [showArchived, setShowArchived] = useState(false);
-  const archiveConvo = (id) => { const next = [...archivedIds, id]; setArchivedIds(next); localStorage.setItem('sjvm_archived_convos', JSON.stringify(next)); setActiveConvoId(null); };
-  const unarchiveConvo = (id) => { const next = archivedIds.filter(x=>x!==id); setArchivedIds(next); localStorage.setItem('sjvm_archived_convos', JSON.stringify(next)); };
-  const activeConvos = conversations.filter(c => !archivedIds.includes(c.id));
-  const archivedConvos = conversations.filter(c => archivedIds.includes(c.id));
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -7800,15 +7794,15 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       <div className="msg-sidebar" style={{ width:280, minWidth:220, background:'#1a1410', display:'flex', flexDirection:'column', borderRight:'1px solid #2d2118', flexShrink:0 }}>
         <div style={{ padding:'20px 16px 12px', borderBottom:'1px solid #2d2118' }}>
           <div style={{ fontFamily:'Playfair Display,serif', fontSize:18, color:'#e8c97a', marginBottom:4 }}>Messages</div>
-          <div style={{ fontSize:12, color:'#7a6a5a' }}>{activeConvos.length} conversation{activeConvos.length!==1?'s':''}</div>
+          <div style={{ fontSize:12, color:'#7a6a5a' }}>{conversations.length} conversation{conversations.length!==1?'s':''}</div>
         </div>
         <div className="msg-sidebar-list" style={{ flex:1, overflowY:'auto' }}>
-          {activeConvos.length === 0 && !showArchived && (
+          {conversations.length === 0 && (
             <div style={{ padding:24, color:'#7a6a5a', fontSize:13, textAlign:'center', lineHeight:1.6 }}>
               No conversations yet.<br/>Browse vendors and click<br/>"Message Vendor" to start.
             </div>
           )}
-          {(showArchived ? archivedConvos : activeConvos).map(c => (
+          {conversations.map(c => (
             <div key={c.id}
               onClick={() => setActiveConvoId(c.id)}
               style={{ padding:'14px 16px', cursor:'pointer', borderBottom:'1px solid #2d2118',
@@ -7827,18 +7821,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
               </div>
             </div>
           ))}
-          {showArchived && archivedConvos.map(c => (
-            <div key={c.id} style={{padding:'10px 16px',borderBottom:'1px solid #2d2118',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-              <div style={{fontSize:13,color:'#7a6a5a'}}>{c.vendorName}</div>
-              <button onClick={()=>unarchiveConvo(c.id)} style={{background:'#2d2118',color:'#c8a850',border:'none',borderRadius:4,padding:'3px 8px',fontSize:10,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Restore</button>
-            </div>
-          ))}
         </div>
-        {archivedConvos.length > 0 && (
-          <button onClick={()=>setShowArchived(!showArchived)} style={{width:'100%',background:'#2d2118',color:'#7a6a5a',border:'none',borderTop:'1px solid #3d3020',padding:'10px',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>
-            {showArchived ? 'Show Active Messages' : `Archived (${archivedConvos.length})`}
-          </button>
-        )}
       </div>
 
       {/* Chat area */}
@@ -7862,7 +7845,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
               </div>
             </div>
             <div style={{display:'flex',gap:6}}>
-              <button onClick={()=>archiveConvo(activeConvoId)} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Archive</button>
               <button onClick={async()=>{if(!window.confirm('Delete this conversation permanently? This cannot be undone.'))return;const cid=activeConvoId;const uid=authUser?.id;const{error}=await supabase.from('messages').delete().eq('conversation_id',cid);if(error){console.error('Delete failed:',error.message);const{error:e2}=await supabase.from('messages').delete().eq('conversation_id',cid).or(`sender_id.eq.${uid},recipient_id.eq.${uid}`);if(e2)console.error('Filtered delete also failed:',e2.message);}setConversations(cs=>cs.filter(c=>c.id!==cid));setActiveConvoId(null);if(loadMessages)setTimeout(loadMessages,300);}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete</button>
             </div>
           </div>
