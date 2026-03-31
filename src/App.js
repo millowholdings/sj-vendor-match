@@ -131,7 +131,7 @@ function isValidZip(zip) { return /^\d{5}$/.test(zip); }
 function isKnownZip(zip) { return !!ZIP_COORDS[zip]; }
 function generateRef() { return 'SJVM-' + Date.now().toString(36).toUpperCase().slice(-4) + Math.random().toString(36).slice(2,5).toUpperCase(); }
 // Canonical conversation ID — always the same for any two users regardless of who initiates
-function getConvoId(id1, id2) { return [id1, id2].sort().join('_'); }
+function getConvoId(id1, id2, eventId) { return [id1, id2].sort().join('_') + (eventId ? '_evt_' + eventId : ''); }
 
 // ─── Supabase row → app shape converters ─────────────────────────────────────
 function dbVendorToApp(v) {
@@ -2322,7 +2322,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       }
       if (!hostUserId) { setTab('messages'); window.scrollTo({top:0}); return; }
       const vendorAuthId = user.id; // always use auth user_id for conversations
-      const convoId = getConvoId(hostUserId, vendorAuthId);
+      const convoId = getConvoId(hostUserId, vendorAuthId, request.event_id || null);
       // Check if conversation already exists
       const existing = conversations?.find(c => c.id === convoId);
       if (existing) { if (setActiveConvoId) setActiveConvoId(convoId); setTab('messages'); window.scrollTo({top:0}); return; }
@@ -6630,10 +6630,11 @@ function AppInner() {
       vendorAuthId = data?.[0]?.user_id;
     }
     if (!vendorAuthId) { console.error('Cannot message vendor: no auth user_id found'); setTab('messages'); return; }
-    const convoId = getConvoId(uid, vendorAuthId);
+    const hasEvent = !!hostEvent?.eventName;
+    const eventId = hasEvent ? (hostEvent.eventId || null) : null;
+    const convoId = getConvoId(uid, vendorAuthId, eventId);
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
-    const hasEvent = !!hostEvent?.eventName;
     const contextLabel = hasEvent ? hostEvent.eventName : (inquiryType || 'General Inquiry');
     const sysText = hasEvent
       ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
@@ -6678,7 +6679,7 @@ function AppInner() {
       hostUserId = data?.[0]?.user_id;
     }
     if (!hostUserId) { alert('Unable to message this host. Please try again later.'); return; }
-    const convoId = getConvoId(uid, hostUserId);
+    const convoId = getConvoId(uid, hostUserId, opp.id || null);
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab('messages'); return; }
     const sysText = `Conversation started by ${vendorProfile?.name || 'a vendor'} about ${opp.eventName}. Contact info is shared only after a booking is confirmed.`;
@@ -7029,12 +7030,65 @@ function AppInner() {
       body: JSON.stringify({ eventName: form.eventName||form.eventType, hostName: form.contactName, hostEmail: form.email, eventDate: form.date, eventType: form.eventType, eventZip: form.eventZip }),
     }).catch(e=>console.error('API call failed:',e));
 
-    // Pending events don't appear in public feed — they go through admin approval
-    // Only add to user's own events list for their dashboard
-    if (newEvent) {
-      const mapped = dbEventToApp(newEvent);
-      setUserEvents(prev => { if (prev.some(e=>e.id===mapped.id)) return prev; return [mapped, ...prev]; });
-      setAllEvents(prev => { if (prev.some(e=>e.id===mapped.id)) return prev; return [mapped, ...prev]; });
+    // Generate individual event rows for recurring events
+    const allNewEvents = newEvent ? [newEvent] : [];
+    if (newEvent && form.isRecurring) {
+      try {
+        const baseDate = new Date(form.date + 'T12:00:00');
+        const dates = [];
+        const maxOccurrences = form.recurrenceEndType === 'after' ? (form.recurrenceCount || 4) : 26; // default max 26 weeks
+        const endDate = form.recurrenceEndType === 'ondate' && form.recurrenceEndDate ? new Date(form.recurrenceEndDate + 'T12:00:00') : new Date(baseDate.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+        if (form.recurrenceFrequency === 'daily') {
+          for (let i = 1; i < maxOccurrences; i++) {
+            const d = new Date(baseDate.getTime() + i * 24 * 60 * 60 * 1000);
+            if (d > endDate) break;
+            dates.push(d);
+          }
+        } else if (form.recurrenceFrequency === 'weekly') {
+          for (let i = 1; i < maxOccurrences; i++) {
+            const d = new Date(baseDate.getTime() + i * 7 * 24 * 60 * 60 * 1000);
+            if (d > endDate) break;
+            dates.push(d);
+          }
+        } else if (form.recurrenceFrequency === 'biweekly') {
+          for (let i = 1; i < maxOccurrences; i++) {
+            const d = new Date(baseDate.getTime() + i * 14 * 24 * 60 * 60 * 1000);
+            if (d > endDate) break;
+            dates.push(d);
+          }
+        } else if (form.recurrenceFrequency === 'monthly') {
+          for (let i = 1; i < maxOccurrences; i++) {
+            const d = new Date(baseDate);
+            d.setMonth(d.getMonth() + i);
+            if (d > endDate) break;
+            dates.push(d);
+          }
+        } else if (form.recurrenceFrequency === 'custom' && form.recurrenceWeekInterval) {
+          for (let i = 1; i < maxOccurrences; i++) {
+            const d = new Date(baseDate.getTime() + i * form.recurrenceWeekInterval * 7 * 24 * 60 * 60 * 1000);
+            if (d > endDate) break;
+            dates.push(d);
+          }
+        }
+
+        // Insert each occurrence as a separate event row
+        for (const d of dates) {
+          const dateStr = d.toISOString().split('T')[0];
+          const recurPayload = { ...eventPayload, date: dateStr };
+          // Remove columns that might not exist
+          const { vendor_discovery: _vd, event_link: _el, vendor_notes: _vn, event_goer_notes: _egn, share_with_event_goers: _sweg, allow_duplicate_categories: _adc, allow_duplicate_subcategories: _ads, ...safePayload } = recurPayload;
+          const { data: recurEvent } = await supabase.from('events').insert(safePayload).select().single();
+          if (recurEvent) allNewEvents.push(recurEvent);
+        }
+      } catch (recurErr) { console.error('Recurring event generation error:', recurErr); }
+    }
+
+    // Add all events to state (original + recurring instances)
+    if (allNewEvents.length > 0) {
+      const mapped = allNewEvents.map(dbEventToApp);
+      setUserEvents(prev => { const ids = new Set(prev.map(e=>e.id)); return [...mapped.filter(e=>!ids.has(e.id)), ...prev]; });
+      setAllEvents(prev => { const ids = new Set(prev.map(e=>e.id)); return [...mapped.filter(e=>!ids.has(e.id)), ...prev]; });
     }
     setHostEvent(form);
     setHostConfirm({ ref: generateRef(), email: form.email, eventName: form.eventName || form.eventType, isPending: true });
