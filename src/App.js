@@ -3285,10 +3285,35 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   {e.status==='approved' && (e.vendor_status === 'closed' || e.vendor_status === 'fully_booked') && (
                     <button onClick={async()=>{await supabase.from('events').update({vendor_status:'open'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_status:'open'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorStatus:'open'}:x));}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
                   )}
-                  {e.status!=='cancelled' && (
-                    <button onClick={async()=>{const reason=window.prompt('Are you sure you want to cancel this event? Enter a reason (sent to all vendors):');if(reason===null)return;await supabase.from('events').update({status:'cancelled'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,status:'cancelled'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,status:'cancelled'}:x));if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));const confirmed=applications.filter(a=>a.event_name===e.event_name&&(a.status==='accepted'||a.status==='pending'));for(const a of confirmed){if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:e.event_name,messagePreview:`${e.event_name} on ${fmtDate(e.date)} has been cancelled by the host.${reason?' Reason: '+reason:''}`})}).catch(()=>{});}}}}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Event</button>
-                  )}
-                  {e.status==='cancelled' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#fdecea',color:'#8b1a1a',whiteSpace:'nowrap'}}>Cancelled</span>}
+                  <button onClick={async()=>{
+                    const bookedVendors = applications.filter(a=>a.event_name===e.event_name&&(a.status==='accepted'||a.status==='pending'));
+                    if (bookedVendors.length > 0) {
+                      const reason = window.prompt(`This event has ${bookedVendors.length} vendor(s). Enter a reason for cancellation (sent to all vendors):`);
+                      if (reason === null) return;
+                      // Notify all vendors
+                      for (const a of bookedVendors) {
+                        if (a.vendor_id) {
+                          const {data:vr} = await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);
+                          if (vr?.[0]?.contact_email) {
+                            fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:e.contact_name||user.email,senderType:'host',eventName:e.event_name,messagePreview:`${e.event_name} on ${fmtDate(e.date)} has been cancelled.${reason?' Reason: '+reason:''}`})}).catch(()=>{});
+                          }
+                        }
+                      }
+                    } else {
+                      if (!window.confirm('Delete this event? This cannot be undone.')) return;
+                    }
+                    // Delete booking requests for this event
+                    await supabase.from('booking_requests').delete().eq('event_name',e.event_name).catch(()=>{});
+                    // Delete messages related to this event
+                    await supabase.from('messages').delete().eq('event_name',e.event_name).catch(()=>{});
+                    // Delete the event
+                    await supabase.from('events').delete().eq('id',e.id).catch(()=>{});
+                    // Remove from all state
+                    if(setUserEvents)setUserEvents(prev=>prev.filter(x=>x.id!==e.id));
+                    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==e.id));
+                    if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));
+                    setApplications(prev=>prev.filter(a=>a.event_name!==e.event_name));
+                  }} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Event</button>
                 </div>
               </div>
               {e.status==='rejected' && e.rejection_reason && (
