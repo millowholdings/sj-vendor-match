@@ -3238,6 +3238,31 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </button>
       )}
 
+      {/* ── Pending Vendor Applications — top of dashboard ── */}
+      {applications.filter(a=>a.status==='pending').length > 0 && (
+        <div style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'16px 20px',marginBottom:20}}>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:4}}>Vendors Requesting to Join Your Event</div>
+          <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12}}>{applications.filter(a=>a.status==='pending').length} pending — accept or decline below</div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {applications.filter(a=>a.status==='pending').map(a=>(
+              <div key={a.id} style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>For: {a.event_name} · {fmtDate(a.event_date)}</div>
+                  <div style={{fontSize:11,color:'#a89a8a'}}>{a.vendor_category}</div>
+                  {a.notes && <div style={{fontSize:12,color:'#7a6a5a',marginTop:2,fontStyle:'italic'}}>"{a.notes}"</div>}
+                </div>
+                <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                  <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                  <button onClick={()=>{setShowDeclinePrompt(a.id);setDeclineReason('');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                  {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Pending review banner — shown when ALL events are still pending */}
       {userEvents.length > 0 && !userEvents.some(e => e.status === 'approved' || e.status === 'concierge_active') && userEvents.some(e => e.status === 'pending_review' || e.status === 'concierge_pending') && (
         <div style={{background:'#fdf4dc',border:'1px solid #ffd966',borderRadius:10,padding:'20px 24px',marginBottom:16}}>
