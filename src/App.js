@@ -3285,18 +3285,20 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   </span>
                   {e.vendor_status === 'fully_booked' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#1a1410',color:'#e8c97a',whiteSpace:'nowrap'}}>Fully Booked</span>}
                   {e.vendor_status === 'closed' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#f5f0ea',color:'#7a6a5a',whiteSpace:'nowrap'}}>Applications Closed</span>}
-                  {e.status==='approved' && (!e.vendor_status || e.vendor_status === 'open') && (
-                    <button onClick={async()=>{if(!window.confirm('Close applications for this event? Vendors will no longer be able to apply.'))return;await supabase.from('events').update({vendor_status:'closed'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_status:'closed'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorStatus:'closed'}:x));}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close Applications</button>
+                  {e.status==='approved' && e.vendor_discovery !== 'closed' && (
+                    <button onClick={async()=>{if(!window.confirm('Close applications? Vendors will no longer see or apply to this event.'))return;const{error}=await supabase.from('events').update({vendor_discovery:'closed'}).eq('id',e.id);if(error)console.error('Close failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'closed'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'closed'}:x));if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close Applications</button>
                   )}
-                  {e.status==='approved' && (e.vendor_status === 'closed' || e.vendor_status === 'fully_booked') && (
-                    <button onClick={async()=>{await supabase.from('events').update({vendor_status:'open'}).eq('id',e.id).catch(()=>{});if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_status:'open'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorStatus:'open'}:x));}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
+                  {e.status==='approved' && e.vendor_discovery === 'closed' && (
+                    <>
+                      <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#f5f0ea',color:'#7a6a5a',whiteSpace:'nowrap'}}>Applications Closed</span>
+                      <button onClick={async()=>{const{error}=await supabase.from('events').update({vendor_discovery:'both'}).eq('id',e.id);if(error)console.error('Reopen failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'both'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'both'}:x));if(setOpps)setOpps(prev=>[dbEventToApp({...e,vendor_discovery:'both'}),...prev]);}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
+                    </>
                   )}
                   <button onClick={async()=>{
                     const bookedVendors = applications.filter(a=>a.event_name===e.event_name&&(a.status==='accepted'||a.status==='pending'));
                     if (bookedVendors.length > 0) {
                       const reason = window.prompt(`This event has ${bookedVendors.length} vendor(s). Enter a reason for cancellation (sent to all vendors):`);
                       if (reason === null) return;
-                      // Notify all vendors
                       for (const a of bookedVendors) {
                         if (a.vendor_id) {
                           const {data:vr} = await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);
@@ -3308,13 +3310,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     } else {
                       if (!window.confirm('Delete this event? This cannot be undone.')) return;
                     }
-                    // Delete booking requests for this event
-                    await supabase.from('booking_requests').delete().eq('event_name',e.event_name).catch(()=>{});
-                    // Delete messages related to this event
-                    await supabase.from('messages').delete().eq('event_name',e.event_name).catch(()=>{});
-                    // Delete the event
-                    await supabase.from('events').delete().eq('id',e.id).catch(()=>{});
-                    // Remove from all state
+                    const {error:delBr} = await supabase.from('booking_requests').delete().eq('event_name',e.event_name);
+                    if(delBr)console.error('Delete bookings failed:',delBr.message);
+                    const {error:delMsg} = await supabase.from('messages').delete().eq('event_name',e.event_name);
+                    if(delMsg)console.error('Delete messages failed:',delMsg.message);
+                    const {error:delEvt} = await supabase.from('events').delete().eq('id',e.id);
+                    if(delEvt){console.error('Delete event failed:',delEvt.message);alert('Failed to delete event: '+delEvt.message);return;}
                     if(setUserEvents)setUserEvents(prev=>prev.filter(x=>x.id!==e.id));
                     if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==e.id));
                     if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));
@@ -5697,6 +5698,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
   const vendorCats = vendorProfile ? [...(vendorProfile.subcategories||[]), vendorProfile.category, ...(vendorProfile.metadata?.serviceCategories||[]), ...(vendorProfile.metadata?.allCategories||[])].filter(Boolean) : [];
   const future = opps
     .filter(o => o.date >= todayStr)
+    .filter(o => o.vendorDiscovery !== 'closed')
     .filter(o => !filterType || o.eventType===filterType)
     .filter(o => !filterCat  || o.categoriesNeeded.includes(filterCat))
     .filter(o => !filterDateFrom || o.date >= filterDateFrom)
