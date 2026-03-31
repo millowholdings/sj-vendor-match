@@ -6530,17 +6530,7 @@ function AppInner() {
       if (c.messages.length === 0) return false;
       return true;
     });
-    // Deduplicate — if multiple conversations exist for the same vendor, keep the newest
-    const seen = {};
-    const deduped = [];
-    for (const c of validConvos) {
-      const key = c.vendorId || c.id;
-      if (!seen[key] || c.messages.length > (seen[key].messages?.length || 0)) {
-        seen[key] = c;
-      }
-    }
-    deduped.push(...Object.values(seen));
-    setConversations(deduped);
+    setConversations(validConvos);
     setUnreadCount(msgs.filter(m => m.recipient_id === uid && !m.is_read).length);
     } catch (e) { console.error('loadMessages error:', e); }
   }, [authUser]);
@@ -6720,9 +6710,16 @@ function AppInner() {
     if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
     const eventLabel = hasEvent ? (hostEvent.eventName + (hostEvent.date ? ' — ' + fmtDate(hostEvent.date) : '')) : null;
     const contextLabel = eventLabel || inquiryType || 'General Inquiry';
+    const eventDetails = hasEvent ? [
+      hostEvent.eventName,
+      hostEvent.date ? fmtDate(hostEvent.date) : null,
+      hostEvent.startTime ? fmtTime(hostEvent.startTime) + (hostEvent.endTime ? ' – ' + fmtTime(hostEvent.endTime) : '') : null,
+      hostEvent.eventZip ? (getCityFromZip(hostEvent.eventZip) || 'Zip ' + hostEvent.eventZip) : null,
+      hostEvent.notes ? 'Notes: ' + hostEvent.notes : null,
+    ].filter(Boolean).join(' · ') : null;
     const sysText = hasEvent
-      ? `Conversation started with ${vendor.name} about ${eventLabel}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
-      : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
+      ? `Conversation about ${eventLabel}.\n${eventDetails}\nContact info is shared only after a booking is confirmed.`
+      : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''}\nContact info is shared only after a booking is confirmed.`;
     const evtName = eventLabel || contextLabel;
     // Build conversation messages
     const ts = new Date().toISOString();
@@ -6747,11 +6744,12 @@ function AppInner() {
     if (inquiryMessage && inquiryMessage.trim()) {
       supabase.from('messages').insert({ conversation_id: convoId, sender_id: uid, sender_type: 'host', recipient_id: vendorAuthId, recipient_type: 'vendor', event_name: evtName, message_text: inquiryMessage.trim(), is_read: false }).then(({error})=>{if(error)console.error('openMessage userMsg:',error.message);});
     }
-    // Send vendor email notification for all new conversations
+    // Send vendor email notification with event details
     const { data: vendorRow } = await supabase.from('vendors').select('contact_email,contact_name').eq('id', vendor.id).single();
     if (vendorRow?.contact_email) {
+      const emailPreview = inquiryMessage ? inquiryMessage.trim() : (eventDetails ? 'Event: ' + eventDetails : '');
       fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ recipientEmail: vendorRow.contact_email, recipientName: vendorRow.contact_name || vendor.name, senderName: authUser?.email || 'A host', senderType: 'host', recipientType: 'vendor', eventName: evtName, messagePreview: inquiryMessage || '' }),
+        body: JSON.stringify({ recipientEmail: vendorRow.contact_email, recipientName: vendorRow.contact_name || vendor.name, senderName: authUser?.email || 'A host', senderType: 'host', recipientType: 'vendor', eventName: evtName, messagePreview: emailPreview }),
       }).catch(e=>console.error('API call failed:',e));
     }
   };
