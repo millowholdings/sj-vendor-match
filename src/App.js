@@ -3270,7 +3270,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                 <div>
                   <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{e.event_name}</div>
                   <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
-                  <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots · {e.source}</div>
+                  <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots{e.source==='Recurring Series' ? ' · 🔄 Recurring Series' : ''}</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                   <button onClick={()=>setViewingEvent(viewingEvent===e.id?null:e.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{viewingEvent===e.id?'Hide':'View'}</button>
@@ -5612,6 +5612,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
                   <div style={{ fontFamily:"Playfair Display,serif", fontSize:22, color:"#fff", marginBottom:2, lineHeight:1.3 }}>{opp.eventName}</div>
                   <div style={{ fontSize:12, color:"#a89a8a", letterSpacing:"1px", textTransform:"uppercase" }}>{opp.eventType}</div>
                   {opp.vendorStatus === 'fully_booked' && <span style={{display:'inline-block',marginTop:6,background:'#e8c97a',color:'#1a1410',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>Fully Booked</span>}
+                  {opp.source === 'Recurring Series' && <span style={{display:'inline-block',marginTop:6,marginLeft:4,background:'#e8f4fd',color:'#1a4a6b',padding:'3px 12px',borderRadius:12,fontSize:11,fontWeight:700}}>🔄 Recurring Series</span>}
                 </div>
                 {/* Event details — always visible */}
                 <div style={{ padding:"16px 24px" }}>
@@ -6360,6 +6361,19 @@ function AppInner() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
+  // Escape key closes any open modal
+  useEffect(() => {
+    const onEsc = (e) => {
+      if (e.key === 'Escape') {
+        setShowAuthModal(false); setShowContactModal(false);
+        setShowFeedbackModal(false); setShowEventGoerSignup(false);
+        setMobileMenuOpen(false); setInquiryModal(null);
+      }
+    };
+    window.addEventListener('keydown', onEsc);
+    return () => window.removeEventListener('keydown', onEsc);
+  }, []);
+
   useEffect(() => {
     async function fetchData() {
       try {
@@ -7029,7 +7043,7 @@ function AppInner() {
       event_goer_notes: form.eventGoerNotes || null,
       share_with_event_goers: form.shareWithEventGoers !== false,
       deadline: form.applyByDate || null,
-      source: 'Host Submitted',
+      source: form.isRecurring ? 'Recurring Series' : 'Host Submitted',
       status: 'pending_review',
       event_link: form.eventLink || null,
       is_ticketed: form.isTicketedEvent || false,
@@ -7141,7 +7155,7 @@ function AppInner() {
         // Insert each occurrence as a separate event row
         for (const d of dates) {
           const dateStr = d.toISOString().split('T')[0];
-          const recurPayload = { ...eventPayload, date: dateStr };
+          const recurPayload = { ...eventPayload, date: dateStr, source: 'Recurring Series' };
           // Remove columns that might not exist
           const { vendor_discovery: _vd, event_link: _el, vendor_notes: _vn, event_goer_notes: _egn, share_with_event_goers: _sweg, allow_duplicate_categories: _adc, allow_duplicate_subcategories: _ads, ...safePayload } = recurPayload;
           const { data: recurEvent } = await supabase.from('events').insert(safePayload).select().single();
