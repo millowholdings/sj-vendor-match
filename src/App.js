@@ -3310,16 +3310,17 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     } else {
                       if (!window.confirm('Delete this event? This cannot be undone.')) return;
                     }
-                    const {error:delBr} = await supabase.from('booking_requests').delete().eq('event_name',e.event_name);
-                    if(delBr)console.error('Delete bookings failed:',delBr.message);
-                    const {error:delMsg} = await supabase.from('messages').delete().eq('event_name',e.event_name);
-                    if(delMsg)console.error('Delete messages failed:',delMsg.message);
-                    const {error:delEvt} = await supabase.from('events').delete().eq('id',e.id);
-                    if(delEvt){console.error('Delete event failed:',delEvt.message);alert('Failed to delete event: '+delEvt.message);return;}
-                    if(setUserEvents)setUserEvents(prev=>prev.filter(x=>x.id!==e.id));
-                    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==e.id));
-                    if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));
-                    setApplications(prev=>prev.filter(a=>a.event_name!==e.event_name));
+                    // Remove from UI immediately
+                    const eid = e.id;
+                    const ename = e.event_name;
+                    setUserEvents(prev=>prev.filter(x=>x.id!==eid));
+                    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==eid));
+                    if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==eid));
+                    setApplications(prev=>prev.filter(a=>a.event_name!==ename));
+                    // Delete from DB (async, non-blocking)
+                    supabase.from('booking_requests').delete().eq('event_name',ename).then(({error})=>{if(error)console.error('Delete bookings:',error.message);});
+                    supabase.from('messages').delete().eq('event_name',ename).then(({error})=>{if(error)console.error('Delete messages:',error.message);});
+                    supabase.from('events').delete().eq('id',eid).then(({error})=>{if(error)console.error('Delete event:',error.message);});
                   }} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Event</button>
                 </div>
               </div>
