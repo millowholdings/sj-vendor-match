@@ -19,6 +19,17 @@ When prompted with "Compound commands with cd and git require approval to preven
 
 Use a clear, descriptive commit message summarizing what was changed and why.
 
+## Pre-Deployment Verification
+**Before every commit and push, fully review the change to confirm everything works properly.** This includes:
+- Build must pass (`npx react-scripts build`) with no errors
+- Verify the changed code path works end-to-end (trace the logic, check all related functions)
+- Check that no existing functionality is broken by the change
+- Verify all props are passed correctly through component chains
+- Check that Supabase queries use correct column names and table structures
+- Confirm email notifications fire correctly for relevant actions
+- Test that state updates propagate to all views (vendor dashboard, host dashboard, admin panel, public pages)
+- Do NOT deploy code that has silent failures (.catch(()=>{})) without at least console.error logging
+
 ## Tech Stack
 - React 18 (Create React App, single `src/App.js` file)
 - `@supabase/supabase-js` for all database reads and writes
