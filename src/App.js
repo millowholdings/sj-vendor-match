@@ -3313,14 +3313,18 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     // Remove from UI immediately
                     const eid = e.id;
                     const ename = e.event_name;
+                    const edate = e.date;
                     setUserEvents(prev=>prev.filter(x=>x.id!==eid));
                     if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==eid));
                     if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==eid));
-                    setApplications(prev=>prev.filter(a=>a.event_name!==ename));
-                    // Delete from DB (async, non-blocking)
-                    supabase.from('booking_requests').delete().eq('event_name',ename).then(({error})=>{if(error)console.error('Delete bookings:',error.message);});
-                    supabase.from('messages').delete().eq('event_name',ename).then(({error})=>{if(error)console.error('Delete messages:',error.message);});
-                    supabase.from('events').delete().eq('id',eid).then(({error})=>{if(error)console.error('Delete event:',error.message);});
+                    setApplications(prev=>prev.filter(a=>a.event_name!==ename || a.event_date!==edate));
+                    // Delete from DB — await each to ensure completion
+                    const {error:e1} = await supabase.from('booking_requests').delete().eq('event_name',ename);
+                    if(e1) console.error('Delete bookings failed:',e1.message);
+                    const {error:e2} = await supabase.from('messages').delete().ilike('event_name','%'+ename+'%');
+                    if(e2) console.error('Delete messages failed:',e2.message);
+                    const {error:e3} = await supabase.from('events').delete().eq('id',eid);
+                    if(e3) { console.error('Delete event failed:',e3.message); alert('Failed to delete event: '+e3.message); }
                     // Email confirmation to host
                     fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:ename,messagePreview:`Your event "${ename}" has been cancelled and removed from South Jersey Vendor Market. All vendor applications and messages for this event have been deleted.`})}).catch(()=>{});
                   }} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Event</button>
