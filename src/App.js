@@ -3019,9 +3019,15 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         </div>
       </div>
 
-      {/* Account deletion */}
-      <div style={{textAlign:'center',marginBottom:24}}>
-        <button onClick={async()=>{if(!window.confirm('Are you sure you want to delete your account? This will remove all your vendor profiles and cannot be undone.'))return;await supabase.from('vendors').delete().eq('user_id',user.id);await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'none',color:'#a89a8a',fontSize:12,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textDecoration:'underline'}}>Delete My Account</button>
+      {/* Account management */}
+      <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          {allVendorProfiles && allVendorProfiles.length > 1 && (
+            <button onClick={async()=>{if(!window.confirm(`Remove "${vendorProfile?.name}" listing? This deletes this vendor profile only, not your account.`))return;await supabase.from('vendors').delete().eq('id',vendorProfile?.id);setVendorProfile(allVendorProfiles.find(p=>p.id!==vendorProfile?.id)||null);window.location.reload();}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove This Listing</button>
+          )}
+          <button onClick={async()=>{if(!window.confirm('Delete your entire account? This removes ALL vendor profiles, messages, bookings, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;await supabase.from('booking_requests').delete().or(`vendor_id.eq.${vendorProfile?.id},host_email.eq.${user.email}`).catch(()=>{});await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('vendors').delete().eq('user_id',user.id).catch(()=>{});await supabase.from('events').delete().eq('user_id',user.id).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+        </div>
       </div>
     </div>
   );
@@ -3426,6 +3432,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </div>
       </div>
 
+      {/* Account management */}
+      <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button onClick={async()=>{if(!window.confirm('Delete your host account? This removes ALL events, vendor applications, messages, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;for(const evt of userEvents){await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).catch(()=>{});await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});}await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+        </div>
+      </div>
+
       {/* ── Confirmed Vendor Lineup ── */}
       {applications.filter(a=>a.status==='accepted').length > 0 && (
         <div style={{background:'#fff',border:'2px solid #b8e8c8',borderRadius:10,padding:'16px 20px',marginBottom:24}}>
@@ -3717,6 +3731,15 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
         <div style={{display:'flex',gap:8}}>
           <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
           <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        </div>
+      </div>
+
+      {/* Account management */}
+      <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button onClick={async()=>{if(!window.confirm('Stop receiving event alerts? You can always sign up again later.'))return;await supabase.from('event_goers').update({active:false,email_frequency:'none'}).eq('id',profile.id);alert('Event alerts cancelled. You will no longer receive emails.');window.location.reload();}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Stop Event Alerts</button>
+          <button onClick={async()=>{if(!window.confirm('Delete your account and all data? This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure?'))return;await supabase.from('event_goers').delete().eq('id',profile.id).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
         </div>
       </div>
     </div>
