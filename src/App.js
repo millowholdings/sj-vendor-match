@@ -4061,7 +4061,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             )
           )}
           {openMessage && authUser && (
-            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? (setEventMessageModal && setEventMessageModal({vendor:v, eventName:hostEvent.eventName})) : (setInquiryModal && setInquiryModal({vendor:v}))}>
+            <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? (setEventMessageModal && setEventMessageModal({vendor:v, eventName: hostEvent.eventName + (hostEvent.date ? ' — ' + fmtDate(hostEvent.date) : '')})) : (setInquiryModal && setInquiryModal({vendor:v}))}>
               💬 Message Vendor
             </button>
           )}
@@ -6718,11 +6718,12 @@ function AppInner() {
     const convoId = getConvoId(uid, vendorAuthId, eventId);
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab("messages"); return; }
-    const contextLabel = hasEvent ? hostEvent.eventName : (inquiryType || 'General Inquiry');
+    const eventLabel = hasEvent ? (hostEvent.eventName + (hostEvent.date ? ' — ' + fmtDate(hostEvent.date) : '')) : null;
+    const contextLabel = eventLabel || inquiryType || 'General Inquiry';
     const sysText = hasEvent
-      ? `Conversation started with ${vendor.name} about ${hostEvent.eventName}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
+      ? `Conversation started with ${vendor.name} about ${eventLabel}. Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`
       : `${authUser?.email || 'A host'} started a conversation with ${vendor.name}. Inquiry: ${contextLabel}.${inquiryMessage ? ' "'+inquiryMessage+'"' : ''} Contact info is shared only after a booking is confirmed through South Jersey Vendor Market.`;
-    const evtName = hasEvent ? hostEvent.eventName : contextLabel;
+    const evtName = eventLabel || contextLabel;
     // Build conversation messages
     const ts = new Date().toISOString();
     const msgs = [{ id: Date.now(), from: 'system', text: sysText, ts }];
@@ -6774,13 +6775,14 @@ function AppInner() {
     const convoId = getConvoId(uid, hostUserId, opp.id || null);
     const existing = conversations.find(c => c.id === convoId);
     if (existing) { setActiveConvoId(convoId); setTab('messages'); return; }
-    const sysText = `Conversation started by ${vendorProfile?.name || 'a vendor'} about ${opp.eventName}. Contact info is shared only after a booking is confirmed.`;
-    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'vendor', event_name: opp.eventName || '', message_text: sysText, is_read: true });
-    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: hostUserId, recipient_type: 'host', event_name: opp.eventName || '', message_text: sysText, is_read: false });
+    const eventLabel = (opp.eventName || '') + (opp.date ? ' — ' + fmtDate(opp.date) : '');
+    const sysText = `Conversation started by ${vendorProfile?.name || 'a vendor'} about ${eventLabel}. Contact info is shared only after a booking is confirmed.`;
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: uid, recipient_type: 'vendor', event_name: eventLabel, message_text: sysText, is_read: true });
+    await supabase.from('messages').insert({ conversation_id: convoId, sender_id: 'system', sender_type: 'system', recipient_id: hostUserId, recipient_type: 'host', event_name: eventLabel, message_text: sysText, is_read: false });
     const newConvo = {
       id: convoId, vendorId: uid, vendorName: vendorProfile?.name || '',
       vendorEmoji: vendorProfile?.emoji || '', vendorCategory: vendorProfile?.category || '',
-      hostName: opp.contactName || 'Host', eventName: opp.eventName || '', status: 'active',
+      hostName: opp.contactName || 'Host', eventName: eventLabel, status: 'active',
       messages: [{ id: Date.now(), from: 'system', text: sysText, ts: new Date().toISOString() }],
     };
     setConversations(c => [newConvo, ...c]);
@@ -6789,7 +6791,7 @@ function AppInner() {
     // Email the host
     if (opp.contactEmail) {
       fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ recipientEmail: opp.contactEmail, recipientName: opp.contactName, senderName: vendorProfile?.name || 'A vendor', senderType: 'vendor', recipientType: 'host', eventName: opp.eventName || '', messagePreview: '' }),
+        body: JSON.stringify({ recipientEmail: opp.contactEmail, recipientName: opp.contactName, senderName: vendorProfile?.name || 'A vendor', senderType: 'vendor', recipientType: 'host', eventName: eventLabel, messagePreview: '' }),
       }).catch(e=>console.error('API call failed:',e));
     }
   };
