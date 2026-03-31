@@ -7898,9 +7898,18 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
             <div style={{ display:'flex', alignItems:'center', gap:12 }}>
               <span style={{ fontSize:28 }}>{activeConvo.vendorEmoji}</span>
               <div>
-                <button onClick={()=>{if(setTab){setTab('matches');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontFamily:'Playfair Display,serif',fontSize:18,color:'#1a1410',textDecoration:'underline',textDecorationColor:'#e8ddd0',textAlign:'left'}}>{activeConvo.vendorName}</button>
+                <button onClick={()=>{if(setTab){setTab(vendorProfile ? 'vendor-dashboard' : 'matches');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontFamily:'Playfair Display,serif',fontSize:18,color:'#1a1410',textDecoration:'underline',textDecorationColor:'#e8ddd0',textAlign:'left'}}>{activeConvo.vendorName}</button>
                 <div style={{ fontSize:12, color:'#a89a8a', textTransform:'uppercase', letterSpacing:1 }}>{activeConvo.vendorCategory}</div>
-                {activeConvo.eventName && <button onClick={()=>{if(setTab){setTab('opportunities');window.scrollTo({top:0});}}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:12,color:'#c8a850',fontWeight:600,marginTop:2,textAlign:'left'}}>📋 {activeConvo.eventName} →</button>}
+                {activeConvo.eventName && <button onClick={()=>{if(setTab){
+                  const isVendorUser = !!vendorProfile;
+                  if (!isVendorUser) { setTab('host-dashboard'); }
+                  else {
+                    // Check if vendor is booked for this event
+                    const bookedForEvent = (bookingRequests||[]).some(r=>r.status==='accepted'&&activeConvo.eventName.includes(r.eventName||r.event_name));
+                    setTab(bookedForEvent ? 'vendor-dashboard' : 'opportunities');
+                  }
+                  window.scrollTo({top:0});
+                }}} style={{background:'none',border:'none',padding:0,cursor:'pointer',fontSize:12,color:'#c8a850',fontWeight:600,marginTop:2,textAlign:'left'}}>📋 {activeConvo.eventName} →</button>}
               </div>
             </div>
             <div style={{display:'flex',gap:6}}>
