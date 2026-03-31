@@ -7237,6 +7237,12 @@ function AppInner() {
               Admin{(pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length) > 0 ? ` (${pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length})` : ''}
             </button>
           )}
+          {authUser && vendorProfile && tab !== 'vendor-dashboard' && (
+            <button onClick={()=>{setTab('vendor-dashboard');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>My Vendor Dashboard</button>
+          )}
+          {authUser && userEvents.length > 0 && tab !== 'host-dashboard' && (
+            <button onClick={()=>{setTab('host-dashboard');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>My Host Dashboard</button>
+          )}
           {authUser ? (
             <button onClick={handleLogout} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>Log Out</button>
           ) : (
