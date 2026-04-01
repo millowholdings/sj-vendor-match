@@ -7540,9 +7540,7 @@ function AppInner() {
           </div>
         )}
 
-        {tab==="matches"      && (!authUser
-          ? <div className="section" style={{maxWidth:600,textAlign:'center'}}><div className="section-title">Browse Vendors</div><p className="section-sub">Log in to browse and message vendors. <button onClick={()=>setShowAuthModal(true)} style={{background:'none',border:'none',color:'#e8c97a',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}}>Log in or sign up</button></p></div>
-          : loading
+        {tab==="matches"      && (loading
             ? <div style={{textAlign:'center',padding:'80px 20px',color:'#a89a8a',fontSize:16}}>Loading vendors…</div>
             : <MatchesPage vendors={vendors} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setHostEvent={setHostEvent} userEvents={userEvents} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} setInquiryModal={setInquiryModal} setEventMessageModal={setEventMessageModal} />)}
         {tab==="upcoming-markets" && (loading
