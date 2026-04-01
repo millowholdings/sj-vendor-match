@@ -11,7 +11,7 @@ module.exports = async function handler(req, res) {
 
   const resend = new Resend(resendKey);
   const fromAddr = 'hello@southjerseyvendormarket.com';
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
 
   const typesStr = (eventTypes || []).join(', ') || 'All event types';
   const freqStr = frequency === 'none' ? 'No email alerts' : frequency === 'biweekly' ? 'Every 2 weeks' : 'Weekly';

@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
   const resend = new Resend(resendKey);
   const fromAddr = 'hello@southjerseyvendormarket.com';
   const roleLabel = senderType === 'vendor' ? 'vendor' : 'host';
@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
     <div style="background:#fdf9f5;border-left:3px solid #e8c97a;padding:12px 16px;border-radius:0 8px 8px 0;margin:0 0 20px;font-size:14px;color:#4a3a28;line-height:1.5">
       "${messagePreview.length > 200 ? messagePreview.slice(0, 200) + '...' : messagePreview}"
     </div>` : ''}
-    <a href="${siteUrl}" style="display:inline-block;background:#c8a84b;color:#1a1410;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">
+    <a href="${siteUrl}/${recipientType === 'vendor' ? 'vendor-dashboard' : 'host-dashboard'}" style="display:inline-block;background:#c8a84b;color:#1a1410;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">
       Log In to Your Dashboard
     </a>
     <p style="font-size:12px;color:#a89a8a;margin:20px 0 0;line-height:1.5">
