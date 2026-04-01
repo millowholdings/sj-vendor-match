@@ -3295,7 +3295,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                 <div>
                   <div style={{fontWeight:700,fontSize:15,color:'#1a1410'}}>{e.event_name}</div>
                   <div style={{fontSize:13,color:'#7a6a5a'}}>{e.event_type} · {fmtDate(e.date)} · Zip {e.zip}</div>
-                  <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{e.spots || 0} spots{e.source==='Recurring Series' ? ' · 🔄 Recurring Series' : ''}</div>
+                  <div style={{fontSize:12,color:'#a89a8a',marginTop:4}}>{(() => { const accepted = applications.filter(a=>a.event_name===e.event_name&&a.status==='accepted').length; const total = e.spots||0; return `${total-accepted} of ${total} spots open`; })()}{e.source==='Recurring Series' ? ' · 🔄 Recurring Series' : ''}</div>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
                   <button onClick={()=>setViewingEvent(viewingEvent===e.id?null:e.id)} style={{background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:6,padding:'4px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{viewingEvent===e.id?'Hide':'View'}</button>
@@ -5886,7 +5886,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 20px',marginBottom:14,paddingTop:14,borderTop:'1px solid #e8ddd0'}}>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Host</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.contactName}</div></div>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Location</div><div style={{ fontSize:14, fontWeight:500 }}>{getCityFromZip(opp.zip) || 'Zip '+opp.zip}{opp.dist!==null ? ` · ${opp.dist.toFixed(1)}mi away` : ""}</div></div>
-                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots} available</div></div>
+                        <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Spots Open</div><div style={{ fontSize:14, fontWeight:500 }}>{opp.spots || '—'} total</div></div>
                         <div><div style={{ fontSize:10, textTransform:"uppercase", letterSpacing:1, color:"#a89a8a", fontWeight:600 }}>Contact</div><div style={{ fontSize:13, color:'#a89a8a' }}>🔒 Available after booking</div></div>
                       </div>
                       {opp.categoriesNeeded.length > 0 && (
