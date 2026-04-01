@@ -1,5 +1,27 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "./supabase";
+
+// Error boundary to catch crashes and show reload button
+class ErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error('App crash:', error, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#1a1208',padding:20}}>
+          <div style={{textAlign:'center',maxWidth:400}}>
+            <div style={{fontSize:48,marginBottom:16}}>⚠️</div>
+            <h2 style={{fontFamily:'Playfair Display,serif',color:'#fff',fontSize:24,marginBottom:12}}>Something went wrong</h2>
+            <p style={{color:'#a89a8a',fontSize:14,marginBottom:24,lineHeight:1.6}}>The page encountered an error. Please refresh to continue.</p>
+            <button onClick={()=>window.location.reload()} style={{background:'#c8a84b',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 32px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Refresh Page</button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 const ADMIN_EMAILS = ['tiffany@southjerseyvendormarket.com'];
@@ -7646,8 +7668,8 @@ function EventMessageModal({ vendor, eventName, onClose, onSend }) {
 
 export default function App() {
   const respondToken = new URLSearchParams(window.location.search).get('respond');
-  if (respondToken) return <VendorResponsePage token={respondToken} />;
-  return <AppInner />;
+  if (respondToken) return <ErrorBoundary><VendorResponsePage token={respondToken} /></ErrorBoundary>;
+  return <ErrorBoundary><AppInner /></ErrorBoundary>;
 }
 
 // ─── Message Helpers ──────────────────────────────────────────────────────────
