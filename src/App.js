@@ -3162,6 +3162,11 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
   const respond = async (reqId, status, reason) => {
     const app = applications.find(a => a.id === reqId);
+    // Prevent accepting the same vendor to the same event twice
+    if (status === 'accepted' && app) {
+      const alreadyAccepted = applications.some(a2 => a2.id !== reqId && a2.vendor_id === app.vendor_id && a2.event_name === app.event_name && a2.status === 'accepted');
+      if (alreadyAccepted) { alert(`${app.vendor_name} is already accepted for ${app.event_name}.`); return; }
+    }
     const { error } = await supabase.from('booking_requests')
       .update({ status, responded_at: new Date().toISOString(), ...(reason ? { vendor_message: reason } : {}) }).eq('id', reqId);
     if (error) { alert('Failed to update. Try again.'); return; }
@@ -5373,6 +5378,14 @@ function VendorApplyModal({ opp, onClose }) {
   const handleSubmit = async () => {
     if (!form.vendorName || !form.email || !form.contactName) { alert('Please fill in your business name, contact name, and email.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) { alert('Please enter a valid email.'); return; }
+    // Check if already applied to this event
+    if (form.vendorId) {
+      const { data: existing } = await supabase.from('booking_requests').select('id,status').eq('vendor_id', form.vendorId).eq('event_name', opp.eventName).limit(1);
+      if (existing?.[0]) {
+        alert(`You have already applied to ${opp.eventName}. Status: ${existing[0].status}`);
+        return;
+      }
+    }
     setSubmitting(true);
     const responseToken = crypto.randomUUID();
     const payload = {
@@ -6632,6 +6645,12 @@ function AppInner() {
   }, [vendorCalendars]);
 
   const sendBookingRequest = async (vendor, eventDetails) => {
+    // Check if vendor already has a booking for this event
+    const { data: existingBooking } = await supabase.from('booking_requests').select('id,status').eq('vendor_id', vendor.id).eq('event_name', eventDetails.eventName).limit(1);
+    if (existingBooking?.[0]) {
+      alert(`${vendor.name} already has a ${existingBooking[0].status} application for ${eventDetails.eventName}.`);
+      return;
+    }
     const responseToken = crypto.randomUUID();
     const req = {
       id: Date.now(),
