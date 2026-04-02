@@ -3387,21 +3387,23 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <strong>Reason:</strong> {e.rejection_reason}
                 </div>
               )}
-              {/* Pending applications and invites for this event */}
-              {(() => {
-                const eventApps = applications.filter(a=>a.event_name===e.event_name);
-                const pending = eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application');
-                const invitesPending = eventApps.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application');
-                const accepted = eventApps.filter(a=>a.status==='accepted');
-                if (pending.length === 0 && invitesPending.length === 0 && accepted.length === 0) return null;
-                return (
-                  <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:6}}>
-                    {pending.length > 0 && <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{pending.length} vendor application{pending.length!==1?'s':''} pending</span>}
-                    {invitesPending.length > 0 && <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{invitesPending.length} invite{invitesPending.length!==1?'s':''} sent</span>}
-                    {accepted.length > 0 && <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{accepted.length} confirmed</span>}
-                  </div>
-                );
-              })()}
+              {/* Vendor activity for this event */}
+              {e.status === 'approved' && (
+                <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:6}}>
+                  {(() => {
+                    const eventApps = applications.filter(a=>a.event_name===e.event_name);
+                    const pending = eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application');
+                    const invitesPending = eventApps.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application');
+                    const accepted = eventApps.filter(a=>a.status==='accepted');
+                    return (<>
+                      {pending.length > 0 && <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{pending.length} application{pending.length!==1?'s':''} pending</span>}
+                      {invitesPending.length > 0 && <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{invitesPending.length} invite{invitesPending.length!==1?'s':''} sent</span>}
+                      {accepted.length > 0 && <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{accepted.length} confirmed</span>}
+                      {pending.length === 0 && invitesPending.length === 0 && accepted.length === 0 && <span style={{background:'#f5f0ea',color:'#a89a8a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>No vendor activity yet</span>}
+                    </>);
+                  })()}
+                </div>
+              )}
               {viewingEvent===e.id && !editingEvent && (
                 <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
                   {(e.event_photos||[]).length > 0 && (
@@ -4126,9 +4128,26 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 {req.status==='cancelled' && '↩ Request Cancelled'}
               </div>
             ) : (
-              <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
-                📋 Invite to {hostEvent?.eventName || 'My Event'}
-              </button>
+              <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
+                  📋 Invite to {hostEvent?.eventName || 'My Event'}{hostEvent?.date ? ' — '+fmtDate(hostEvent.date) : ''}
+                </button>
+                {hostEvent?.source === 'Recurring Series' && userEvents && (
+                  <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:12}} onClick={async()=>{
+                    const seriesEvents = userEvents.filter(ue=>ue.event_name===hostEvent.eventName && ue.status==='approved');
+                    if(seriesEvents.length<=1){alert('No other dates in this series.');return;}
+                    if(!window.confirm(`Invite ${v.name} to all ${seriesEvents.length} dates of ${hostEvent.eventName}?`))return;
+                    for(const se of seriesEvents){
+                      const {data:existing}=await supabase.from('booking_requests').select('id').eq('vendor_id',v.id).eq('event_name',se.event_name).eq('event_date',se.date).limit(1);
+                      if(existing?.[0])continue;
+                      await sendBookingRequest(v,{...hostEvent,date:se.date,eventId:se.id});
+                    }
+                    alert(`Invited ${v.name} to all dates of ${hostEvent.eventName}.`);
+                  }}>
+                    📋 Invite to Entire Series ({userEvents.filter(ue=>ue.event_name===hostEvent.eventName&&ue.status==='approved').length} dates)
+                  </button>
+                )}
+              </div>
             )
           )}
           {openMessage && authUser && (
