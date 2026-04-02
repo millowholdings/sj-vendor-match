@@ -3265,13 +3265,13 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </button>
       )}
 
-      {/* ── Pending Vendor Applications — top of dashboard ── */}
-      {applications.filter(a=>a.status==='pending').length > 0 && (
+      {/* ── Vendor Applications (vendor-initiated) — need host action ── */}
+      {applications.filter(a=>a.status==='pending'&&a.session_id==='vendor-application').length > 0 && (
         <div style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'16px 20px',marginBottom:20}}>
           <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:4}}>Vendors Requesting to Join Your Event</div>
-          <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12}}>{applications.filter(a=>a.status==='pending').length} pending — accept or decline below</div>
+          <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12}}>{applications.filter(a=>a.status==='pending'&&a.session_id==='vendor-application').length} pending — accept or decline below</div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {applications.filter(a=>a.status==='pending').map(a=>(
+            {applications.filter(a=>a.status==='pending'&&a.session_id==='vendor-application').map(a=>(
               <div key={a.id} style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
@@ -3283,6 +3283,28 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
                   <button onClick={async()=>{const reason=window.prompt(`Decline ${a.vendor_name}? Enter an optional message (sent to vendor):`);if(reason===null)return;await supabase.from('booking_requests').update({status:'declined',vendor_message:reason||'Declined by host',responded_at:new Date().toISOString()}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'declined'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`Your application for ${a.event_name} was declined.${reason?' Message from host: '+reason:''} Keep browsing events on South Jersey Vendor Market!`})}).catch(()=>{});}}}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
                   {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Host-Sent Invites (host-initiated) — awaiting vendor response ── */}
+      {applications.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application').length > 0 && (
+        <div style={{background:'#fff',border:'2px solid #b8d8f0',borderRadius:10,padding:'16px 20px',marginBottom:20}}>
+          <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a4a6b',marginBottom:4}}>Your Invites — Awaiting Vendor Response</div>
+          <div style={{fontSize:12,color:'#7a6a5a',marginBottom:12}}>{applications.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application').length} invite{applications.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application').length!==1?'s':''} sent — waiting for vendors to respond</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {applications.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application').map(a=>(
+              <div key={a.id} style={{background:'#f0f7fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'10px 14px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>Invited to: {a.event_name} · {fmtDate(a.event_date)}</div>
+                </div>
+                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                  <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Awaiting Response</span>
+                  {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
                 </div>
               </div>
             ))}
