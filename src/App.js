@@ -3302,9 +3302,10 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.vendor_name || 'Vendor'}</div>
                   <div style={{fontSize:12,color:'#7a6a5a'}}>Invited to: {a.event_name} · {fmtDate(a.event_date)}</div>
                 </div>
-                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                   <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Awaiting Response</span>
                   {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
+                  <button onClick={async()=>{if(!window.confirm(`Remove invite for ${a.vendor_name}?`))return;await supabase.from('booking_requests').delete().eq('id',a.id);setApplications(prev=>prev.filter(x=>x.id!==a.id));}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove Invite</button>
                 </div>
               </div>
             ))}
