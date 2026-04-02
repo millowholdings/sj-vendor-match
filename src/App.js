@@ -6765,7 +6765,13 @@ function AppInner() {
       response_token: responseToken,
     };
     let { error: brErr } = await supabase.from('booking_requests').insert(brPayload);
-    if (brErr) console.error('Failed to persist booking request:', brErr);
+    if (brErr) {
+      console.error('Booking insert failed, retrying without optional columns:', brErr.message);
+      const { response_token:_rt, recurrence_frequency:_rf, recurrence_day:_rd, recurrence_end_type:_ret, recurrence_end_date:_red, recurrence_count:_rc, recurrence_notes:_rn, categories_needed:_cn, subcategories_needed:_sn, is_recurring:_ir, event_id:_ei, ...safePayload } = brPayload;
+      const { error: brErr2 } = await supabase.from('booking_requests').insert(safePayload);
+      if (brErr2) console.error('Booking insert retry also failed:', brErr2.message);
+      else brErr = null;
+    }
 
     // Look up vendor email and send notification
     if (!brErr) {
