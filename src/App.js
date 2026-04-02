@@ -2930,27 +2930,51 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       {/* ── PENDING ITEMS ── */}
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Pending</h3>
 
-      {/* Pending host invitations */}
+      {/* Pending host invitations — grouped by event name for recurring */}
       {requests.filter(r=>r.status==='pending').length > 0 && (
         <div style={{marginBottom:16}}>
           <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Host Requests</div>
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {requests.filter(r=>r.status==='pending').map(r => (
-              <div key={r.id} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'14px 16px'}}>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',flexWrap:'wrap',gap:8}}>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{r.event_name || r.event_type}</div>
-                    <div style={{fontSize:12,color:'#7a6a5a'}}>{r.host_name} · {fmtDate(r.event_date)} · Zip {r.event_zip}</div>
-                    {r.notes && <div style={{fontSize:12,color:'#a89a8a',marginTop:4,fontStyle:'italic'}}>"{r.notes}"</div>}
+            {(() => {
+              const pending = requests.filter(r=>r.status==='pending');
+              // Group by event name to detect recurring series
+              const groups = {};
+              pending.forEach(r => { const key = r.event_name; if (!groups[key]) groups[key] = []; groups[key].push(r); });
+              return Object.entries(groups).map(([eventName, dateRequests]) => {
+                const isSeries = dateRequests.length > 1;
+                const first = dateRequests[0];
+                return (
+                  <div key={eventName} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'14px 16px'}}>
+                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>{eventName}</div>
+                    <div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>{first.host_name} · Zip {first.event_zip}</div>
+                    {isSeries && <div style={{fontSize:11,color:'#c8a850',fontWeight:700,marginBottom:8}}>🔄 Recurring Series — {dateRequests.length} dates</div>}
+                    {first.notes && <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,fontStyle:'italic'}}>"{first.notes}"</div>}
+                    {/* Individual dates with accept/decline per date */}
+                    <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:10}}>
+                      {dateRequests.sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||'')).map(r => (
+                        <div key={r.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 12px',flexWrap:'wrap',gap:6}}>
+                          <div style={{fontSize:13,fontWeight:600,color:'#1a1410'}}>{fmtDate(r.event_date)}</div>
+                          <div style={{display:'flex',gap:4}}>
+                            <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                            <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Bulk actions for series */}
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {isSeries && (
+                        <>
+                          <button onClick={async()=>{if(!window.confirm(`Accept all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'accepted');}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept All Dates</button>
+                          <button onClick={async()=>{if(!window.confirm(`Decline all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'declined');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline All</button>
+                        </>
+                      )}
+                      <button onClick={()=>messageHost(first)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message Host</button>
+                    </div>
                   </div>
-                  <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                    <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
-                    <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                    <button onClick={()=>messageHost(r)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
-                  </div>
-                </div>
-              </div>
-            ))}
+                );
+              });
+            })()}
           </div>
         </div>
       )}
@@ -5410,7 +5434,11 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
 
 // ─── Opportunities Page ───────────────────────────────────────────────────────
 // ─── Vendor Application Modal ─────────────────────────────────────────────────
-function VendorApplyModal({ opp, onClose }) {
+function VendorApplyModal({ opp, allOpps, onClose }) {
+  const seriesDates = (allOpps||[]).filter(o=>o.eventName===opp.eventName&&o.source==='Recurring Series'&&o.id!==opp.id).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const isSeries = seriesDates.length > 0;
+  const [selectedDates, setSelectedDates] = useState([opp.id]);
+  const toggleDate = (id) => setSelectedDates(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
   const [form, setForm] = useState({ vendorName:'', contactName:'', email:'', phone:'', category:'', message:'', vendorId:null });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -5457,36 +5485,40 @@ function VendorApplyModal({ opp, onClose }) {
   const handleSubmit = async () => {
     if (!form.vendorName || !form.email || !form.contactName) { alert('Please fill in your business name, contact name, and email.'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(form.email)) { alert('Please enter a valid email.'); return; }
-    // Check if already applied to this event
-    if (form.vendorId) {
-      const { data: existing } = await supabase.from('booking_requests').select('id,status').eq('vendor_id', form.vendorId).eq('event_name', opp.eventName).limit(1);
-      if (existing?.[0]) {
-        alert(`You have already applied to ${opp.eventName}. Status: ${existing[0].status}`);
-        return;
-      }
-    }
     setSubmitting(true);
-    const responseToken = crypto.randomUUID();
-    const payload = {
-      id: Date.now(),
-      session_id: 'vendor-application',
-      vendor_id: form.vendorId || null, vendor_name: form.vendorName,
-      vendor_emoji: '', vendor_category: form.category || '',
-      host_name: opp.contactName, host_email: opp.contactEmail,
-      event_name: opp.eventName, event_type: opp.eventType,
-      event_zip: opp.zip, event_date: opp.date,
-      start_time: opp.startTime || null, end_time: opp.endTime || null,
-      address: '', attendance: '', vendor_count: String(opp.spots || ''),
-      budget: opp.boothFee || '', notes: form.message || null,
-      status: 'pending', sent_at: new Date().toISOString(),
-      response_token: responseToken,
-    };
-    // Try insert; retry without columns that may not exist in older schemas
-    let { error } = await supabase.from('booking_requests').insert(payload);
-    if (error && (error.code === '42703' || error.message?.includes('column'))) {
-      const { response_token: _rt, ...fallback } = payload;
-      ({ error } = await supabase.from('booking_requests').insert(fallback));
+    // Build list of events to apply to (current + selected recurring dates)
+    const eventsToApply = [opp];
+    if (isSeries) {
+      seriesDates.forEach(s => { if (selectedDates.includes(s.id)) eventsToApply.push(s); });
     }
+    let anyError = false;
+    for (const evt of eventsToApply) {
+      // Check if already applied
+      if (form.vendorId) {
+        const { data: existing } = await supabase.from('booking_requests').select('id').eq('vendor_id', form.vendorId).eq('event_name', evt.eventName).eq('event_date', evt.date).limit(1);
+        if (existing?.[0]) continue; // skip already applied dates
+      }
+      const payload = {
+        id: Date.now() + Math.random(),
+        session_id: 'vendor-application',
+        vendor_id: form.vendorId || null, vendor_name: form.vendorName,
+        vendor_emoji: '', vendor_category: form.category || '',
+        host_name: evt.contactName || opp.contactName, host_email: evt.contactEmail || opp.contactEmail,
+        event_name: evt.eventName, event_type: evt.eventType,
+        event_zip: evt.zip, event_date: evt.date,
+        start_time: evt.startTime || null, end_time: evt.endTime || null,
+        address: '', attendance: '', vendor_count: String(evt.spots || ''),
+        budget: evt.boothFee || '', notes: form.message || null,
+        status: 'pending', sent_at: new Date().toISOString(),
+      };
+      let { error } = await supabase.from('booking_requests').insert(payload);
+      if (error && (error.code === '42703' || error.message?.includes('column'))) {
+        const { response_token: _rt, ...fallback } = payload;
+        ({ error } = await supabase.from('booking_requests').insert(fallback));
+      }
+      if (error) { console.error('Application error for', evt.date, ':', error.message); anyError = true; }
+    }
+    const error = anyError;
     if (error) {
       console.error('Application error:', error);
       alert('Failed to submit application. Please try again.');
@@ -5546,6 +5578,28 @@ function VendorApplyModal({ opp, onClose }) {
                   <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:8,padding:'10px 14px',marginBottom:12,fontSize:13,color:'#1a6b3a'}}>
                     <strong>Applying as:</strong> {form.vendorName} ({form.email}){form.category ? ` · ${form.category}` : ''}
                   </div>
+                  {isSeries && (
+                    <div style={{background:'#e8f4fd',border:'1px solid #b8d8f0',borderRadius:8,padding:'12px 14px',marginBottom:12}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'#1a4a6b',marginBottom:6}}>🔄 This is a recurring event series</div>
+                      <div style={{fontSize:12,color:'#1a4a6b',marginBottom:8}}>Select the dates you'd like to apply for:</div>
+                      <div style={{display:'flex',flexDirection:'column',gap:4}}>
+                        <label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'4px 0',fontWeight:600,color:'#1a1410',textTransform:'none',letterSpacing:0}}>
+                          <input type="checkbox" checked={true} disabled style={{width:16,height:16}} />
+                          {fmtDate(opp.date)} (this event)
+                        </label>
+                        {seriesDates.map(s=>(
+                          <label key={s.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'4px 0',textTransform:'none',letterSpacing:0,fontWeight:400,color:'#1a1410'}}>
+                            <input type="checkbox" checked={selectedDates.includes(s.id)} onChange={()=>toggleDate(s.id)} style={{width:16,height:16}} />
+                            {fmtDate(s.date)}
+                          </label>
+                        ))}
+                      </div>
+                      <div style={{display:'flex',gap:8,marginTop:8}}>
+                        <button type="button" onClick={()=>setSelectedDates([opp.id,...seriesDates.map(s=>s.id)])} style={{background:'#1a4a6b',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Select All</button>
+                        <button type="button" onClick={()=>setSelectedDates([opp.id])} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>This Date Only</button>
+                      </div>
+                    </div>
+                  )}
                   <div className="form-group" style={{marginBottom:16}}>
                     <label>Message to Host (optional)</label>
                     <textarea value={form.message} onChange={e=>set('message',e.target.value)} rows={3}
@@ -6041,7 +6095,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
           </div>
         )}
       </div>
-      {applyOpp && <VendorApplyModal opp={applyOpp} onClose={()=>setApplyOpp(null)} />}
+      {applyOpp && <VendorApplyModal opp={applyOpp} allOpps={opps} onClose={()=>setApplyOpp(null)} />}
     </>
   );
 }
