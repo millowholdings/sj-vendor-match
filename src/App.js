@@ -3387,6 +3387,21 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <strong>Reason:</strong> {e.rejection_reason}
                 </div>
               )}
+              {/* Pending applications and invites for this event */}
+              {(() => {
+                const eventApps = applications.filter(a=>a.event_name===e.event_name);
+                const pending = eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application');
+                const invitesPending = eventApps.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application');
+                const accepted = eventApps.filter(a=>a.status==='accepted');
+                if (pending.length === 0 && invitesPending.length === 0 && accepted.length === 0) return null;
+                return (
+                  <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:6}}>
+                    {pending.length > 0 && <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{pending.length} vendor application{pending.length!==1?'s':''} pending</span>}
+                    {invitesPending.length > 0 && <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{invitesPending.length} invite{invitesPending.length!==1?'s':''} sent</span>}
+                    {accepted.length > 0 && <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{accepted.length} confirmed</span>}
+                  </div>
+                );
+              })()}
               {viewingEvent===e.id && !editingEvent && (
                 <div style={{marginTop:12,paddingTop:12,borderTop:'1px solid #e8ddd0'}}>
                   {(e.event_photos||[]).length > 0 && (
