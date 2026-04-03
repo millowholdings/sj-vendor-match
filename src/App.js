@@ -6533,6 +6533,7 @@ function AppInner() {
   const [vendorProfile, setVendorProfile] = useState(null); // active vendor profile (raw DB row)
   const [allVendorProfiles, setAllVendorProfiles] = useState([]); // all vendor profiles for this user
   const [userEvents, setUserEvents] = useState([]); // raw DB rows for logged-in host
+  const [hasBeenHost, setHasBeenHost] = useState(false); // sticky flag: true once user has/had events
   const isAdmin = authUser && ADMIN_EMAILS.includes(authUser.email?.toLowerCase());
 
   // Listen for auth state changes — clear drafts when no session
@@ -6624,6 +6625,7 @@ function AppInner() {
         }
       }
       setUserEvents(allEvts);
+      if (allEvts.length > 0) setHasBeenHost(true);
     })();
   }, [authUser]);
 
@@ -6638,7 +6640,7 @@ function AppInner() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     clearAllDrafts();
-    setAuthUser(null); setVendorProfile(null); setUserEvents([]);
+    setAuthUser(null); setVendorProfile(null); setUserEvents([]); setHasBeenHost(false);
     setTab('home');
   };
 
@@ -7553,7 +7555,7 @@ function AppInner() {
           {authUser && vendorProfile && tab !== 'vendor-dashboard' && (
             <button onClick={()=>{setTab('vendor-dashboard');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>My Vendor Dashboard</button>
           )}
-          {authUser && userEvents.length > 0 && tab !== 'host-dashboard' && (
+          {authUser && hasBeenHost && tab !== 'host-dashboard' && (
             <button onClick={()=>{setTab('host-dashboard');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 12px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif"}}>My Host Dashboard</button>
           )}
           {authUser ? (
@@ -7581,7 +7583,7 @@ function AppInner() {
                 {authUser ? (
                   <>
                     {vendorProfile && <button className={`mobile-menu-item${tab==='vendor-dashboard'?' active':''}`} onClick={()=>navTo('vendor-dashboard')}>Vendor Dashboard</button>}
-                    {userEvents.length > 0 && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
+                    {hasBeenHost && <button className={`mobile-menu-item${tab==='host-dashboard'?' active':''}`} onClick={()=>navTo('host-dashboard')}>Host Dashboard</button>}
                     {eventGoerProfile && <button className={`mobile-menu-item${tab==='event-goer-dashboard'?' active':''}`} onClick={()=>navTo('event-goer-dashboard')}>Event Guest Dashboard</button>}
                     {isAdmin && <button className={`mobile-menu-item${tab==='admin'?' active':''}`} onClick={()=>navTo('admin')} style={{color:'#e8c97a'}}>Admin Panel</button>}
                     <button className="mobile-menu-item" style={{color:'#c8a850'}} onClick={()=>{handleLogout();setMobileMenuOpen(false);}}>Log Out</button>
@@ -7645,12 +7647,12 @@ function AppInner() {
             {isAdmin && <button className={`nav-tab${tab==="admin"?" active":""}`} onClick={()=>{setTab("admin");window.scrollTo({top:0});}}>Admin</button>}
             {authUser ? (
               <div className="nav-group">
-                <div className="nav-group-label">&#128100; Account{vendorProfile && userEvents.length > 0 ? ' (Vendor + Host)' : vendorProfile ? ' (Vendor)' : userEvents.length > 0 ? ' (Host)' : ''}</div>
+                <div className="nav-group-label">&#128100; Account{vendorProfile && hasBeenHost ? ' (Vendor + Host)' : vendorProfile ? ' (Vendor)' : hasBeenHost ? ' (Host)' : ''}</div>
                 <div className="nav-group-items">
                   {vendorProfile && <button className={`nav-tab${tab==="vendor-dashboard"?" active":""}`} onClick={()=>{setTab("vendor-dashboard");window.scrollTo({top:0});}}>Vendor Dashboard</button>}
-                  {userEvents.length > 0 && <button className={`nav-tab${tab==="host-dashboard"?" active":""}`} onClick={()=>{setTab("host-dashboard");window.scrollTo({top:0});}}>Host Dashboard</button>}
-                  {vendorProfile && userEvents.length === 0 && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>+ Add Host Role</button>}
-                  {!vendorProfile && userEvents.length > 0 && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>+ Add Vendor Role</button>}
+                  {hasBeenHost && <button className={`nav-tab${tab==="host-dashboard"?" active":""}`} onClick={()=>{setTab("host-dashboard");window.scrollTo({top:0});}}>Host Dashboard</button>}
+                  {vendorProfile && !hasBeenHost && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("host");window.scrollTo({top:0});}}>+ Add Host Role</button>}
+                  {!vendorProfile && hasBeenHost && <button className="nav-tab" style={{fontSize:12,color:'#a89a8a'}} onClick={()=>{setTab("vendor");window.scrollTo({top:0});}}>+ Add Vendor Role</button>}
                   <button className={`nav-tab${tab==="my-calendar"?" active":""}`} onClick={()=>{setTab("my-calendar");window.scrollTo({top:0});}}>My Calendar</button>
                   <button className="nav-tab" onClick={handleLogout} style={{color:'#c8a84b'}}>Log Out</button>
                 </div>
