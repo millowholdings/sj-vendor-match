@@ -2491,10 +2491,17 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
   }, [vendorProfile?.id]);
 
   const respond = async (reqId, status) => {
+    const req = requests.find(r => r.id === reqId);
     const { error } = await supabase.from('booking_requests')
       .update({ status, responded_at: new Date().toISOString() }).eq('id', reqId);
     if (error) { alert('Failed to update. Try again.'); return; }
     setRequests(r => r.map(x => x.id === reqId ? { ...x, status } : x));
+    // Notify host
+    if (req?.host_email) {
+      fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ recipientEmail: req.host_email, recipientName: req.host_name, senderName: vendorProfile?.name || 'A vendor', senderType: 'vendor', recipientType: 'host', eventName: req.event_name, messagePreview: `${vendorProfile?.name || 'A vendor'} has ${status} your invite for ${req.event_name} on ${fmtDate(req.event_date)}.` }),
+      }).catch(() => {});
+    }
   };
 
   const handleSubscribe = async () => {
@@ -4057,7 +4064,12 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
                 {req.status==='pending' && `⏳ Invite Pending for ${req.eventName || hostEvent?.eventName || 'Event'}`}
                 {req.status==='accepted' && `✅ Accepted for ${req.eventName || hostEvent?.eventName || 'Event'}`}
                 {req.status==='declined' && `❌ Declined for ${req.eventName || hostEvent?.eventName || 'Event'}`}
+                {req.status==='withdrawn' && '↩ Withdrawn'}
               </div>
+            )}
+            {req && req.status==='pending' && (
+              <button onClick={async()=>{if(!window.confirm('Withdraw this invite?'))return;await supabase.from('booking_requests').delete().eq('id',req.id);onClose();}}
+                style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw Invite</button>
             )}
             {openMessage && (
               <button onClick={()=>{openMessage(v); onClose();}}
@@ -4220,6 +4232,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 {req.status==='accepted' && `✅ Accepted for ${req.eventName || hostEvent?.eventName || 'Event'}`}
                 {req.status==='declined' && `❌ Declined for ${req.eventName || hostEvent?.eventName || 'Event'}`}
                 {req.status==='cancelled' && '↩ Request Cancelled'}
+                {req.status==='withdrawn' && '↩ Withdrawn'}
               </div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',gap:4}}>
@@ -4235,6 +4248,9 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
                 </button>
               </div>
             )
+          )}
+          {req && req.status==='pending' && (
+            <button className="contact-btn" style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',fontSize:11,fontWeight:600}} onClick={async(e)=>{e.stopPropagation();if(!window.confirm('Withdraw this invite?'))return;await supabase.from('booking_requests').delete().eq('id',req.id);setBookingRequests(prev=>prev.filter(x=>x.id!==req.id));}}>Withdraw Invite</button>
           )}
           {openMessage && authUser && (
             <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? (setEventMessageModal && setEventMessageModal({vendor:v, eventName: hostEvent.eventName + (hostEvent.date ? ' — ' + fmtDate(hostEvent.date) : '')})) : (setInquiryModal && setInquiryModal({vendor:v}))}>
