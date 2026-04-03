@@ -3116,24 +3116,31 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         }
       }
     }
-    // Remove from UI
+    // Delete from DB first, then update UI only on success
     const deleteIds = new Set(eventsToDelete.map(e=>e.id));
     const deleteNames = new Set(eventsToDelete.map(e=>e.event_name));
-    setUserEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
-    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
-    if(setOpps)setOpps(prev=>prev.filter(x=>!deleteIds.has(x.id)));
-    setApplications(prev=>prev.filter(a=>!eventsToDelete.some(e=>e.event_name===a.event_name&&e.date===a.event_date)));
-    // Delete from DB
-    for (const evt of eventsToDelete) {
-      await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).eq('event_date',evt.date).catch(()=>{});
-      await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});
+    try {
+      for (const evt of eventsToDelete) {
+        const {error:brErr} = await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).eq('event_date',evt.date);
+        if (brErr) console.error('Failed to delete booking requests for', evt.event_name, evt.date, brErr);
+        const {error:evtErr} = await supabase.from('events').delete().eq('id',evt.id);
+        if (evtErr) throw new Error(`Failed to delete event ${evt.event_name}: ${evtErr.message}`);
+      }
+      for (const name of deleteNames) {
+        const {error:msgErr} = await supabase.from('messages').delete().ilike('event_name','%'+name+'%');
+        if (msgErr) console.error('Failed to clean up messages for', name, msgErr);
+      }
+      // DB deletes succeeded — now update UI
+      setUserEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+      if(setAllEvents)setAllEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+      if(setOpps)setOpps(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+      setApplications(prev=>prev.filter(a=>!eventsToDelete.some(e=>e.event_name===a.event_name&&e.date===a.event_date)));
+      // Email host
+      fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:eventsToDelete[0]?.contact_email||user.email,recipientName:eventsToDelete[0]?.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:eventsToDelete[0]?.event_name,messagePreview:`${eventsToDelete.length} event date${eventsToDelete.length!==1?'s':''} cancelled and removed.`})}).catch(()=>{});
+    } catch (err) {
+      console.error('Event cancellation failed:', err);
+      alert('Something went wrong cancelling this event. Please try again.');
     }
-    // Clean up messages for the series name
-    for (const name of deleteNames) {
-      await supabase.from('messages').delete().ilike('event_name','%'+name+'%').catch(()=>{});
-    }
-    // Email host
-    fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:eventsToDelete[0]?.contact_email||user.email,recipientName:eventsToDelete[0]?.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:eventsToDelete[0]?.event_name,messagePreview:`${eventsToDelete.length} event date${eventsToDelete.length!==1?'s':''} cancelled and removed.`})}).catch(()=>{});
   };
   const [showDeclinePrompt, setShowDeclinePrompt] = useState(null);
   const SIG_EVENT_FIELDS = ['date','zip','event_name'];
