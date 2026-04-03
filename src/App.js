@@ -3774,68 +3774,68 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       )}
 
       {/* Cancel Recurring Event Modal */}
-      {cancelEventModal && (() => {
-        const { event: cancelEvt, seriesEvents } = cancelEventModal;
-        const CancelEventModalInner = () => {
-          const [selectedIds, setSelectedIds] = useState(seriesEvents.map(s=>s.id));
-          const [reason, setReason] = useState('');
-          const [deleting, setDeleting] = useState(false);
-          const toggle = (id) => setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
-          const hasVendors = seriesEvents.some(s=>applications.some(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending')));
+      {cancelEventModal && <CancelSeriesModal cancelEventModal={cancelEventModal} setCancelEventModal={setCancelEventModal} applications={applications} deleteEvents={deleteEvents} />}
+    </div>
+  );
+}
 
-          const handleCancel = async (ids) => {
-            setDeleting(true);
-            const eventsToDelete = seriesEvents.filter(s=>ids.includes(s.id));
-            await deleteEvents(eventsToDelete, reason||undefined);
-            setDeleting(false);
-            setCancelEventModal(null);
-          };
+// ─── Cancel Recurring Series Modal ──────────────────────────────────────────────
+function CancelSeriesModal({ cancelEventModal, setCancelEventModal, applications, deleteEvents }) {
+  const { event: cancelEvt, seriesEvents } = cancelEventModal;
+  const [selectedIds, setSelectedIds] = useState(seriesEvents.map(s=>s.id));
+  const [reason, setReason] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const toggle = (id) => setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  const hasVendors = seriesEvents.some(s=>applications.some(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending')));
 
-          return (
-            <div onClick={()=>setCancelEventModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
-              <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:480,width:'100%',maxHeight:'90vh',overflowY:'auto'}}>
-                <div style={{background:'#1a1410',padding:'20px 24px',borderRadius:'16px 16px 0 0'}}>
-                  <div style={{fontSize:14,color:'#a89a8a'}}>Cancel Recurring Event</div>
-                  <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{cancelEvt.event_name}</div>
-                  <div style={{fontSize:13,color:'#c8a850',marginTop:4}}>{seriesEvents.length} dates in this series</div>
-                </div>
-                <div style={{padding:'20px 24px'}}>
-                  <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:10}}>Select dates to cancel:</div>
-                  <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:16}}>
-                    {seriesEvents.map(s=>{
-                      const evtApps = applications.filter(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending'));
-                      return (
-                        <label key={s.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'6px 0',fontWeight:selectedIds.includes(s.id)?600:400,color:'#1a1410'}}>
-                          <input type="checkbox" checked={selectedIds.includes(s.id)} onChange={()=>toggle(s.id)} style={{width:16,height:16}} />
-                          <span>{fmtDate(s.date)}</span>
-                          {evtApps.length>0 && <span style={{fontSize:11,color:'#8b1a1a',fontWeight:600}}>({evtApps.length} vendor{evtApps.length!==1?'s':''})</span>}
-                        </label>
-                      );
-                    })}
-                  </div>
-                  <div style={{display:'flex',gap:6,marginBottom:16}}>
-                    <button onClick={()=>setSelectedIds(seriesEvents.map(s=>s.id))} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Select All</button>
-                    <button onClick={()=>setSelectedIds([])} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Clear All</button>
-                  </div>
-                  {hasVendors && (
-                    <div style={{marginBottom:16}}>
-                      <label style={{fontSize:12,fontWeight:600,color:'#8b1a1a',display:'block',marginBottom:4}}>Reason for cancellation (vendors will be notified)</label>
-                      <textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Optional: let vendors know why..." rows={2} style={{width:'100%',borderRadius:8,border:'1px solid #e0d5c5',padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical'}} />
-                    </div>
-                  )}
-                  <div style={{display:'flex',gap:10}}>
-                    <button disabled={selectedIds.length===0||deleting} onClick={()=>handleCancel(selectedIds)} style={{flex:2,background:selectedIds.length>0?'#8b1a1a':'#e8ddd0',color:selectedIds.length>0?'#fff':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:selectedIds.length>0?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>
-                      {deleting ? 'Cancelling...' : selectedIds.length===seriesEvents.length ? `Cancel Entire Series (${seriesEvents.length} dates)` : `Cancel ${selectedIds.length} Date${selectedIds.length!==1?'s':''}`}
-                    </button>
-                    <button onClick={()=>setCancelEventModal(null)} disabled={deleting} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Keep Events</button>
-                  </div>
-                </div>
-              </div>
+  const handleCancel = async (ids) => {
+    setDeleting(true);
+    const eventsToDelete = seriesEvents.filter(s=>ids.includes(s.id));
+    await deleteEvents(eventsToDelete, reason||undefined);
+    setDeleting(false);
+    setCancelEventModal(null);
+  };
+
+  return (
+    <div onClick={()=>setCancelEventModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:480,width:'100%',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{background:'#1a1410',padding:'20px 24px',borderRadius:'16px 16px 0 0'}}>
+          <div style={{fontSize:14,color:'#a89a8a'}}>Cancel Recurring Event</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{cancelEvt.event_name}</div>
+          <div style={{fontSize:13,color:'#c8a850',marginTop:4}}>{seriesEvents.length} dates in this series</div>
+        </div>
+        <div style={{padding:'20px 24px'}}>
+          <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:10}}>Select dates to cancel:</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:16}}>
+            {seriesEvents.map(s=>{
+              const evtApps = applications.filter(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending'));
+              return (
+                <label key={s.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'6px 0',fontWeight:selectedIds.includes(s.id)?600:400,color:'#1a1410'}}>
+                  <input type="checkbox" checked={selectedIds.includes(s.id)} onChange={()=>toggle(s.id)} style={{width:16,height:16}} />
+                  <span>{fmtDate(s.date)}</span>
+                  {evtApps.length>0 && <span style={{fontSize:11,color:'#8b1a1a',fontWeight:600}}>({evtApps.length} vendor{evtApps.length!==1?'s':''})</span>}
+                </label>
+              );
+            })}
+          </div>
+          <div style={{display:'flex',gap:6,marginBottom:16}}>
+            <button onClick={()=>setSelectedIds(seriesEvents.map(s=>s.id))} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Select All</button>
+            <button onClick={()=>setSelectedIds([])} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Clear All</button>
+          </div>
+          {hasVendors && (
+            <div style={{marginBottom:16}}>
+              <label style={{fontSize:12,fontWeight:600,color:'#8b1a1a',display:'block',marginBottom:4}}>Reason for cancellation (vendors will be notified)</label>
+              <textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Optional: let vendors know why..." rows={2} style={{width:'100%',borderRadius:8,border:'1px solid #e0d5c5',padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical'}} />
             </div>
-          );
-        };
-        return <CancelEventModalInner />;
-      })()}
+          )}
+          <div style={{display:'flex',gap:10}}>
+            <button disabled={selectedIds.length===0||deleting} onClick={()=>handleCancel(selectedIds)} style={{flex:2,background:selectedIds.length>0?'#8b1a1a':'#e8ddd0',color:selectedIds.length>0?'#fff':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:selectedIds.length>0?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>
+              {deleting ? 'Cancelling...' : selectedIds.length===seriesEvents.length ? `Cancel Entire Series (${seriesEvents.length} dates)` : `Cancel ${selectedIds.length} Date${selectedIds.length!==1?'s':''}`}
+            </button>
+            <button onClick={()=>setCancelEventModal(null)} disabled={deleting} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Keep Events</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
