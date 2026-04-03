@@ -7544,7 +7544,7 @@ function AppInner() {
         <nav className="nav">
           <div className="nav-logo" style={{cursor:'pointer',background:'none'}} onClick={()=>{setTab('home');setMobileMenuOpen(false);window.scrollTo({top:0});}}><img src="/Logo.png" alt="South Jersey Vendor Market" style={{height:40,width:'auto',display:'block',background:'none',border:'none'}} /></div>
           {/* Admin + Auth + Hamburger on right */}
-          <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',justifyContent:'flex-end'}}>
           {isAdmin && (
             <button onClick={()=>{setTab('admin');window.scrollTo({top:0});}} style={{background:'#c8a850',color:'#1a1410',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:"'DM Sans',sans-serif",whiteSpace:'nowrap'}}>
               Admin{(pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length) > 0 ? ` (${pendingVendors.length + allEvents.filter(e=>e.status==='pending_review').length})` : ''}
