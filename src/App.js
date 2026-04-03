@@ -4072,9 +4072,56 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
   );
 }
 
+function InviteDatePickerModal({ vendor, series, hostEvent, sendBookingRequest, onClose }) {
+  const [selected, setSelected] = useState(series.map(s=>s.id));
+  const [sending, setSending] = useState(false);
+  const toggle = (id) => setSelected(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+  return (
+    <div onClick={onClose} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+      <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:460,width:'100%',maxHeight:'90vh',overflowY:'auto'}}>
+        <div style={{background:'#1a1410',padding:'20px 24px',borderRadius:'16px 16px 0 0'}}>
+          <div style={{fontSize:14,color:'#a89a8a'}}>Invite to Recurring Series</div>
+          <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{vendor.name}</div>
+          <div style={{fontSize:13,color:'#c8a850',marginTop:4}}>{hostEvent?.eventName} — {series.length} dates</div>
+        </div>
+        <div style={{padding:'20px 24px'}}>
+          <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:10}}>Select dates to invite this vendor:</div>
+          <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:16}}>
+            {series.map(s=>(
+              <label key={s.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'6px 0',textTransform:'none',letterSpacing:0,fontWeight:selected.includes(s.id)?600:400,color:'#1a1410'}}>
+                <input type="checkbox" checked={selected.includes(s.id)} onChange={()=>toggle(s.id)} style={{width:16,height:16}} />
+                {fmtDate(s.date)}
+              </label>
+            ))}
+          </div>
+          <div style={{display:'flex',gap:6,marginBottom:16}}>
+            <button onClick={()=>setSelected(series.map(s=>s.id))} style={{background:'#1a4a6b',color:'#fff',border:'none',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Select All</button>
+            <button onClick={()=>setSelected([])} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Clear All</button>
+          </div>
+          <div style={{display:'flex',gap:10}}>
+            <button disabled={selected.length===0||sending} onClick={async()=>{
+              setSending(true);
+              for(const s of series.filter(s=>selected.includes(s.id))){
+                const {data:existing}=await supabase.from('booking_requests').select('id').eq('vendor_id',vendor.id).eq('event_name',s.event_name).eq('event_date',s.date).limit(1);
+                if(existing?.[0])continue;
+                await sendBookingRequest(vendor,{...hostEvent,date:s.date,eventId:s.id});
+              }
+              setSending(false);
+              onClose();
+              alert(`Invited ${vendor.name} to ${selected.length} date${selected.length!==1?'s':''}.`);
+            }} style={{flex:2,background:selected.length>0?'#c8a84b':'#e8ddd0',color:selected.length>0?'#1a1410':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:selected.length>0?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>{sending?'Sending...':` Invite to ${selected.length} Date${selected.length!==1?'s':''}`}</button>
+            <button onClick={onClose} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
 function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal, setEventMessageModal }) {
   const [showProfile, setShowProfile] = useState(false);
+  const [inviteDatePicker, setInviteDatePicker] = useState(null); // {vendor, series}
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const hasPhotos = v.photoUrls && v.photoUrls.length > 0;
   const isGuest = !authUser;
@@ -4176,24 +4223,16 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
               </div>
             ) : (
               <div style={{display:'flex',flexDirection:'column',gap:4}}>
-                <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>sendBookingRequest(v, hostEvent)}>
+                <button className="contact-btn" style={{background:'#c8a84b',color:'#1a1410',fontWeight:700,fontSize:13}} onClick={()=>{
+                  if (hostEvent?.source === 'Recurring Series' && userEvents) {
+                    const series = userEvents.filter(ue=>ue.event_name===hostEvent.eventName&&ue.status==='approved').sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+                    if (series.length > 1) { setInviteDatePicker({vendor:v, series}); return; }
+                  }
+                  sendBookingRequest(v, hostEvent);
+                }}>
                   📋 Invite to {hostEvent?.eventName || 'My Event'}{hostEvent?.date ? ' — '+fmtDate(hostEvent.date) : ''}
+                  {hostEvent?.source === 'Recurring Series' && userEvents && userEvents.filter(ue=>ue.event_name===hostEvent.eventName&&ue.status==='approved').length > 1 ? ' ▼' : ''}
                 </button>
-                {hostEvent?.source === 'Recurring Series' && userEvents && (
-                  <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:12}} onClick={async()=>{
-                    const seriesEvents = userEvents.filter(ue=>ue.event_name===hostEvent.eventName && ue.status==='approved');
-                    if(seriesEvents.length<=1){alert('No other dates in this series.');return;}
-                    if(!window.confirm(`Invite ${v.name} to all ${seriesEvents.length} dates of ${hostEvent.eventName}?`))return;
-                    for(const se of seriesEvents){
-                      const {data:existing}=await supabase.from('booking_requests').select('id').eq('vendor_id',v.id).eq('event_name',se.event_name).eq('event_date',se.date).limit(1);
-                      if(existing?.[0])continue;
-                      await sendBookingRequest(v,{...hostEvent,date:se.date,eventId:se.id});
-                    }
-                    alert(`Invited ${v.name} to all dates of ${hostEvent.eventName}.`);
-                  }}>
-                    📋 Invite to Entire Series ({userEvents.filter(ue=>ue.event_name===hostEvent.eventName&&ue.status==='approved').length} dates)
-                  </button>
-                )}
               </div>
             )
           )}
@@ -4222,6 +4261,15 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
       <VendorProfileModal v={v} onClose={()=>setShowProfile(false)}
         sendBookingRequest={sendBookingRequest} hostEvent={hostEvent}
         bookingRequests={bookingRequests} openMessage={openMessage} setTab={setTab} />
+    )}
+    {inviteDatePicker && (
+      <InviteDatePickerModal
+        vendor={inviteDatePicker.vendor}
+        series={inviteDatePicker.series}
+        hostEvent={hostEvent}
+        sendBookingRequest={sendBookingRequest}
+        onClose={()=>setInviteDatePicker(null)}
+      />
     )}
     </>
   );
