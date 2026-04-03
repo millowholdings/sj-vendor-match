@@ -3100,6 +3100,41 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [reviewVendor, setReviewVendor] = useState(null);
   const [loadingVendor, setLoadingVendor] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
+  const [cancelEventModal, setCancelEventModal] = useState(null); // {event, seriesEvents}
+
+  // Delete one or more events and all related data
+  const deleteEvents = async (eventsToDelete, reason) => {
+    // Notify vendors for events with bookings
+    for (const evt of eventsToDelete) {
+      const bookedVendors = applications.filter(a=>a.event_name===evt.event_name&&a.event_date===evt.date&&(a.status==='accepted'||a.status==='pending'));
+      for (const a of bookedVendors) {
+        if (a.vendor_id) {
+          const {data:vr} = await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);
+          if (vr?.[0]?.contact_email) {
+            fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:evt.contact_name||user.email,senderType:'host',eventName:evt.event_name,messagePreview:`${evt.event_name} on ${fmtDate(evt.date)} has been cancelled.${reason?' Reason: '+reason:''}`})}).catch(()=>{});
+          }
+        }
+      }
+    }
+    // Remove from UI
+    const deleteIds = new Set(eventsToDelete.map(e=>e.id));
+    const deleteNames = new Set(eventsToDelete.map(e=>e.event_name));
+    setUserEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+    if(setOpps)setOpps(prev=>prev.filter(x=>!deleteIds.has(x.id)));
+    setApplications(prev=>prev.filter(a=>!eventsToDelete.some(e=>e.event_name===a.event_name&&e.date===a.event_date)));
+    // Delete from DB
+    for (const evt of eventsToDelete) {
+      await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).eq('event_date',evt.date).catch(()=>{});
+      await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});
+    }
+    // Clean up messages for the series name
+    for (const name of deleteNames) {
+      await supabase.from('messages').delete().ilike('event_name','%'+name+'%').catch(()=>{});
+    }
+    // Email host
+    fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:eventsToDelete[0]?.contact_email||user.email,recipientName:eventsToDelete[0]?.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:eventsToDelete[0]?.event_name,messagePreview:`${eventsToDelete.length} event date${eventsToDelete.length!==1?'s':''} cancelled and removed.`})}).catch(()=>{});
+  };
   const [showDeclinePrompt, setShowDeclinePrompt] = useState(null);
   const SIG_EVENT_FIELDS = ['date','zip','event_name'];
 
@@ -3400,39 +3435,18 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                       <button onClick={async()=>{const{error}=await supabase.from('events').update({vendor_discovery:'both'}).eq('id',e.id);if(error)console.error('Reopen failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'both'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'both'}:x));if(setOpps)setOpps(prev=>[dbEventToApp({...e,vendor_discovery:'both'}),...prev]);fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:e.event_name,messagePreview:`Applications for ${e.event_name} have been reopened. Vendors can now see and apply to your event.`})}).catch(()=>{});}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
                     </>
                   )}
-                  <button onClick={async()=>{
-                    const bookedVendors = applications.filter(a=>a.event_name===e.event_name&&(a.status==='accepted'||a.status==='pending'));
-                    if (bookedVendors.length > 0) {
-                      const reason = window.prompt(`This event has ${bookedVendors.length} vendor(s). Enter a reason for cancellation (sent to all vendors):`);
-                      if (reason === null) return;
-                      for (const a of bookedVendors) {
-                        if (a.vendor_id) {
-                          const {data:vr} = await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);
-                          if (vr?.[0]?.contact_email) {
-                            fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:e.contact_name||user.email,senderType:'host',eventName:e.event_name,messagePreview:`${e.event_name} on ${fmtDate(e.date)} has been cancelled.${reason?' Reason: '+reason:''}`})}).catch(()=>{});
-                          }
-                        }
-                      }
+                  <button onClick={()=>{
+                    const seriesEvents = e.source==='Recurring Series' ? userEvents.filter(ue=>ue.event_name===e.event_name).sort((a,b)=>(a.date||'').localeCompare(b.date||'')) : null;
+                    if (seriesEvents && seriesEvents.length > 1) {
+                      setCancelEventModal({event:e, seriesEvents});
                     } else {
-                      if (!window.confirm('Delete this event? This cannot be undone.')) return;
+                      // Single event — simple confirm and delete
+                      (async()=>{
+                        const hasVendors = applications.some(a=>a.event_name===e.event_name&&(a.status==='accepted'||a.status==='pending'));
+                        if (hasVendors) { const reason=window.prompt('This event has vendors. Enter a reason for cancellation:'); if(reason===null)return; await deleteEvents([e],reason); }
+                        else { if(!window.confirm('Delete this event? This cannot be undone.'))return; await deleteEvents([e]); }
+                      })();
                     }
-                    // Remove from UI immediately
-                    const eid = e.id;
-                    const ename = e.event_name;
-                    const edate = e.date;
-                    setUserEvents(prev=>prev.filter(x=>x.id!==eid));
-                    if(setAllEvents)setAllEvents(prev=>prev.filter(x=>x.id!==eid));
-                    if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==eid));
-                    setApplications(prev=>prev.filter(a=>a.event_name!==ename || a.event_date!==edate));
-                    // Delete from DB — await each to ensure completion
-                    const {error:e1} = await supabase.from('booking_requests').delete().eq('event_name',ename);
-                    if(e1) console.error('Delete bookings failed:',e1.message);
-                    const {error:e2} = await supabase.from('messages').delete().ilike('event_name','%'+ename+'%');
-                    if(e2) console.error('Delete messages failed:',e2.message);
-                    const {error:e3} = await supabase.from('events').delete().eq('id',eid);
-                    if(e3) { console.error('Delete event failed:',e3.message); alert('Failed to delete event: '+e3.message); }
-                    // Email confirmation to host
-                    fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:ename,messagePreview:`Your event "${ename}" has been cancelled and removed from South Jersey Vendor Market. All vendor applications and messages for this event have been deleted.`})}).catch(()=>{});
                   }} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Event</button>
                 </div>
               </div>
@@ -3758,6 +3772,70 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           })}
         </div>
       )}
+
+      {/* Cancel Recurring Event Modal */}
+      {cancelEventModal && (() => {
+        const { event: cancelEvt, seriesEvents } = cancelEventModal;
+        const CancelEventModalInner = () => {
+          const [selectedIds, setSelectedIds] = useState(seriesEvents.map(s=>s.id));
+          const [reason, setReason] = useState('');
+          const [deleting, setDeleting] = useState(false);
+          const toggle = (id) => setSelectedIds(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
+          const hasVendors = seriesEvents.some(s=>applications.some(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending')));
+
+          const handleCancel = async (ids) => {
+            setDeleting(true);
+            const eventsToDelete = seriesEvents.filter(s=>ids.includes(s.id));
+            await deleteEvents(eventsToDelete, reason||undefined);
+            setDeleting(false);
+            setCancelEventModal(null);
+          };
+
+          return (
+            <div onClick={()=>setCancelEventModal(null)} style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.6)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center',padding:16}}>
+              <div onClick={e=>e.stopPropagation()} style={{background:'#fff',borderRadius:16,maxWidth:480,width:'100%',maxHeight:'90vh',overflowY:'auto'}}>
+                <div style={{background:'#1a1410',padding:'20px 24px',borderRadius:'16px 16px 0 0'}}>
+                  <div style={{fontSize:14,color:'#a89a8a'}}>Cancel Recurring Event</div>
+                  <div style={{fontSize:20,fontWeight:700,color:'#e8c97a',fontFamily:'Playfair Display,serif'}}>{cancelEvt.event_name}</div>
+                  <div style={{fontSize:13,color:'#c8a850',marginTop:4}}>{seriesEvents.length} dates in this series</div>
+                </div>
+                <div style={{padding:'20px 24px'}}>
+                  <div style={{fontSize:13,fontWeight:600,color:'#1a1410',marginBottom:10}}>Select dates to cancel:</div>
+                  <div style={{display:'flex',flexDirection:'column',gap:4,marginBottom:16}}>
+                    {seriesEvents.map(s=>{
+                      const evtApps = applications.filter(a=>a.event_name===s.event_name&&a.event_date===s.date&&(a.status==='accepted'||a.status==='pending'));
+                      return (
+                        <label key={s.id} style={{display:'flex',alignItems:'center',gap:8,fontSize:13,cursor:'pointer',padding:'6px 0',fontWeight:selectedIds.includes(s.id)?600:400,color:'#1a1410'}}>
+                          <input type="checkbox" checked={selectedIds.includes(s.id)} onChange={()=>toggle(s.id)} style={{width:16,height:16}} />
+                          <span>{fmtDate(s.date)}</span>
+                          {evtApps.length>0 && <span style={{fontSize:11,color:'#8b1a1a',fontWeight:600}}>({evtApps.length} vendor{evtApps.length!==1?'s':''})</span>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div style={{display:'flex',gap:6,marginBottom:16}}>
+                    <button onClick={()=>setSelectedIds(seriesEvents.map(s=>s.id))} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Select All</button>
+                    <button onClick={()=>setSelectedIds([])} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:4,padding:'5px 12px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Clear All</button>
+                  </div>
+                  {hasVendors && (
+                    <div style={{marginBottom:16}}>
+                      <label style={{fontSize:12,fontWeight:600,color:'#8b1a1a',display:'block',marginBottom:4}}>Reason for cancellation (vendors will be notified)</label>
+                      <textarea value={reason} onChange={e=>setReason(e.target.value)} placeholder="Optional: let vendors know why..." rows={2} style={{width:'100%',borderRadius:8,border:'1px solid #e0d5c5',padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical'}} />
+                    </div>
+                  )}
+                  <div style={{display:'flex',gap:10}}>
+                    <button disabled={selectedIds.length===0||deleting} onClick={()=>handleCancel(selectedIds)} style={{flex:2,background:selectedIds.length>0?'#8b1a1a':'#e8ddd0',color:selectedIds.length>0?'#fff':'#a89a8a',border:'none',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:700,cursor:selectedIds.length>0?'pointer':'default',fontFamily:'DM Sans,sans-serif'}}>
+                      {deleting ? 'Cancelling...' : selectedIds.length===seriesEvents.length ? `Cancel Entire Series (${seriesEvents.length} dates)` : `Cancel ${selectedIds.length} Date${selectedIds.length!==1?'s':''}`}
+                    </button>
+                    <button onClick={()=>setCancelEventModal(null)} disabled={deleting} style={{flex:1,background:'#f5f0ea',color:'#1a1410',border:'1px solid #e0d5c5',borderRadius:8,padding:'12px 0',fontSize:14,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Keep Events</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        };
+        return <CancelEventModalInner />;
+      })()}
     </div>
   );
 }
