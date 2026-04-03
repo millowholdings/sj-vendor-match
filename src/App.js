@@ -1339,10 +1339,6 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         )}
         <ZipInput label="Event Zip Code *" value={form.eventZip} onChange={v=>set('eventZip',v)} hint="Vendors whose travel radius covers this zip will be matched to your event" />
         <div className="form-group"><label>Venue Address</label><input placeholder="Street address" value={form.address} onChange={e=>set('address',e.target.value)} /></div>
-        <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
-        <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
-        <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
-        <div className="form-group full"><label>Event Website or Facebook Page <span style={{fontSize:11,color:'#a89a8a',fontWeight:400}}>(optional)</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Add a link to your event page if you have one</div></div>
         <div className="form-group full">
           <label>Recurring Event?</label>
           <select value={form.isRecurring?'yes':'no'} onChange={e=>set('isRecurring',e.target.value==='yes')}>
@@ -1350,6 +1346,13 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
             <option value="yes">Yes — this event repeats</option>
           </select>
         </div>
+        {form.isRecurring
+          ? <div className="form-group"><label>Start Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
+          : <div className="form-group"><label>Event Date *</label><input type="date" value={form.date} min={new Date().toISOString().split('T')[0]} onChange={e=>set('date',e.target.value)} /></div>
+        }
+        <div className="form-group"><label>Start Time</label><input type="time" value={form.startTime} onChange={e=>set('startTime',e.target.value)} /></div>
+        <div className="form-group"><label>End Time</label><input type="time" value={form.endTime} onChange={e=>set('endTime',e.target.value)} /></div>
+        <div className="form-group full"><label>Event Website or Facebook Page <span style={{fontSize:11,color:'#a89a8a',fontWeight:400}}>(optional)</span></label><input type="url" value={form.eventLink} onChange={e=>set('eventLink',e.target.value)} placeholder="https://facebook.com/events/... or your event website" /><div style={{fontSize:11,color:'#a89a8a',marginTop:4}}>Add a link to your event page if you have one</div></div>
         {form.isRecurring && (
           <div className="form-group full" style={{background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:10,padding:'18px 20px',marginTop:4}}>
             <div style={{fontFamily:'Playfair Display,serif',fontSize:16,color:'#1a1410',marginBottom:14}}>Recurrence Settings</div>
