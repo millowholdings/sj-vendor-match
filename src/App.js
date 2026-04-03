@@ -3443,8 +3443,11 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     </>
                   )}
                   <button onClick={()=>{
-                    const seriesEvents = e.source==='Recurring Series' ? userEvents.filter(ue=>ue.event_name===e.event_name).sort((a,b)=>(a.date||'').localeCompare(b.date||'')) : null;
-                    if (seriesEvents && seriesEvents.length > 1) {
+                    // Detect recurring series: match by event_name (multiple events with same name = series)
+                    const sameNameEvents = userEvents.filter(ue=>ue.event_name===e.event_name).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+                    const seriesEvents = sameNameEvents.length > 1 ? sameNameEvents : null;
+                    console.log('[Cancel Event] source:', e.source, '| sameNameEvents:', sameNameEvents.length, '| seriesDetected:', !!seriesEvents, '| events:', sameNameEvents.map(s=>({id:s.id,date:s.date,source:s.source})));
+                    if (seriesEvents) {
                       setCancelEventModal({event:e, seriesEvents});
                     } else {
                       // Single event — simple confirm and delete
