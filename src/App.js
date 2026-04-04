@@ -2306,6 +2306,8 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
   const [subscribing, setSubscribing] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showProfilePanel, setShowProfilePanel] = useState(false);
+  const [showSubPanel, setShowSubPanel] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editPhotos, setEditPhotos] = useState([]);       // new File objects to add
   const [existingPhotos, setExistingPhotos] = useState([]); // existing URLs
@@ -2541,6 +2543,15 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       <div className="section-title">My Vendor Dashboard</div>
       <p className="section-sub">Welcome back, {vendorProfile?.name || user.email}</p>
 
+      {/* ── Dashboard nav buttons ── */}
+      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
+        <button onClick={()=>{setShowProfilePanel(!showProfilePanel);setShowSubPanel(false);}} style={{background:showProfilePanel?'#c8a850':'#1a1410',color:showProfilePanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>My Profile</button>
+        <button onClick={()=>{setShowSubPanel(!showSubPanel);setShowProfilePanel(false);}} style={{background:showSubPanel?'#c8a850':'#1a1410',color:showSubPanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Subscription</button>
+        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Messages{unreadCount>0?` (${unreadCount})`:''}</button>
+        <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
+        <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>My Calendar</button>
+      </div>
+
       {/* ── Messages notification — always at top ── */}
       {unreadCount > 0 && (
         <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{width:'100%',background:'#1a1410',border:'2px solid #e8c97a',borderRadius:10,padding:'14px 20px',marginBottom:20,display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>
@@ -2555,7 +2566,85 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         </button>
       )}
 
-      {/* ── New Matching Events ── */}
+      {/* ── 2. REQUESTS FROM HOSTS ── */}
+      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Requests from Hosts</h3>
+
+      {/* Pending host invitations — grouped by event name for recurring */}
+      {requests.filter(r=>r.status==='pending').length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Host Invites</div>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            {(() => {
+              const pending = requests.filter(r=>r.status==='pending');
+              const groups = {};
+              pending.forEach(r => { const key = r.event_name; if (!groups[key]) groups[key] = []; groups[key].push(r); });
+              return Object.entries(groups).map(([eventName, dateRequests]) => {
+                const isSeries = dateRequests.length > 1;
+                const first = dateRequests[0];
+                return (
+                  <div key={eventName} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'14px 16px'}}>
+                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>{eventName}</div>
+                    <div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>{first.host_name} · Zip {first.event_zip}</div>
+                    {isSeries && <div style={{fontSize:11,color:'#c8a850',fontWeight:700,marginBottom:8}}>🔄 Recurring Series — {dateRequests.length} dates</div>}
+                    {first.notes && <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,fontStyle:'italic'}}>"{first.notes}"</div>}
+                    <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:10}}>
+                      {dateRequests.sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||'')).map(r => (
+                        <div key={r.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 12px',flexWrap:'wrap',gap:6}}>
+                          <div style={{fontSize:13,fontWeight:600,color:'#1a1410'}}>{fmtDate(r.event_date)}</div>
+                          <div style={{display:'flex',gap:4}}>
+                            <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
+                            <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                      {isSeries && (
+                        <>
+                          <button onClick={async()=>{if(!window.confirm(`Accept all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'accepted');}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept All Dates</button>
+                          <button onClick={async()=>{if(!window.confirm(`Decline all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'declined');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline All</button>
+                        </>
+                      )}
+                      <button onClick={()=>messageHost(first)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message Host</button>
+                    </div>
+                  </div>
+                );
+              });
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* Pending applications */}
+      {myApplications.filter(a=>a.status==='pending').length > 0 && (
+        <div style={{marginBottom:16}}>
+          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>My Applications — Awaiting Response</div>
+          <div style={{display:'flex',flexDirection:'column',gap:8}}>
+            {myApplications.filter(a=>a.status==='pending').map(a => (
+              <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
+                <div>
+                  <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
+                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · {getCityFromZip(a.event_zip) ? getCityFromZip(a.event_zip)+' · ' : ''}Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
+                  {a.sent_at && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>Applied {new Date(a.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
+                </div>
+                <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                  <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Pending Review</span>
+                  <button onClick={async()=>{if(!window.confirm('Withdraw your application for this event?'))return;await supabase.from('booking_requests').update({status:'withdrawn'}).eq('id',a.id);setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'withdrawn'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has withdrawn their application for ${a.event_name}.`})}).catch(()=>{});}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* No pending items */}
+      {requests.filter(r=>r.status==='pending').length === 0 && myApplications.filter(a=>a.status==='pending').length === 0 && !loadingReqs && (
+        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px',marginBottom:16,textAlign:'center'}}>
+          <div style={{fontSize:13,color:'#7a6a5a'}}>No pending items. <button onClick={()=>setTab('opportunities')} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:13,fontFamily:'inherit'}}>Browse events</button> to find new opportunities.</div>
+        </div>
+      )}
+
+      {/* ── 3. EVENTS THAT MATCH YOU ── */}
       {isApproved && opps && opps.length > 0 && (() => {
         const todayStr = new Date().toISOString().split('T')[0];
         const vendorCats = [...(vendorProfile?.subcategories||[]), vendorProfile?.category, ...(vendorProfile?.metadata?.serviceCategories||[]), ...(vendorProfile?.metadata?.allCategories||[])].filter(Boolean);
@@ -2654,7 +2743,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         </div>
       )}
 
-      <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
+      {showProfilePanel && <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
           <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm(initEditForm());setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
@@ -2849,10 +2938,10 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
             </div>
           </>
         )}
-      </div>
+      </div>}
 
       {/* Subscription Card */}
-      <div style={{background:'#fff',border: subStatus === 'active' ? '2px solid #b8e8c8' : '2px solid #e8c97a',borderRadius:12,padding:24,marginBottom:24}}>
+      {showSubPanel && <div style={{background:'#fff',border: subStatus === 'active' ? '2px solid #b8e8c8' : '2px solid #e8c97a',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
           <div>
             <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:'0 0 4px'}}>Subscription</h3>
@@ -2898,7 +2987,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
             <strong>Beta note:</strong> Your listing is currently free and visible to all hosts. Once billing goes live, an active subscription will be required to stay in the directory. Subscribe now in test mode — your card will not be charged. All prices subject to applicable sales tax.
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── First-time onboarding ── */}
       {isApproved && requests.length === 0 && myApplications.length === 0 && !loadingReqs && (
@@ -2937,94 +3026,6 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
           <strong>Tip:</strong> Hosts can filter vendors by insurance status. Adding a certificate of insurance to your profile increases your visibility and booking rate.
         </div>
       )}
-
-      {/* ── PENDING ITEMS ── */}
-      <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Pending</h3>
-
-      {/* Pending host invitations — grouped by event name for recurring */}
-      {requests.filter(r=>r.status==='pending').length > 0 && (
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>Host Requests</div>
-          <div style={{display:'flex',flexDirection:'column',gap:10}}>
-            {(() => {
-              const pending = requests.filter(r=>r.status==='pending');
-              // Group by event name to detect recurring series
-              const groups = {};
-              pending.forEach(r => { const key = r.event_name; if (!groups[key]) groups[key] = []; groups[key].push(r); });
-              return Object.entries(groups).map(([eventName, dateRequests]) => {
-                const isSeries = dateRequests.length > 1;
-                const first = dateRequests[0];
-                return (
-                  <div key={eventName} style={{background:'#fff',border:'2px solid #ffd966',borderRadius:10,padding:'14px 16px'}}>
-                    <div style={{fontWeight:700,fontSize:14,color:'#1a1410',marginBottom:2}}>{eventName}</div>
-                    <div style={{fontSize:12,color:'#7a6a5a',marginBottom:4}}>{first.host_name} · Zip {first.event_zip}</div>
-                    {isSeries && <div style={{fontSize:11,color:'#c8a850',fontWeight:700,marginBottom:8}}>🔄 Recurring Series — {dateRequests.length} dates</div>}
-                    {first.notes && <div style={{fontSize:12,color:'#a89a8a',marginBottom:8,fontStyle:'italic'}}>"{first.notes}"</div>}
-                    {/* Individual dates with accept/decline per date */}
-                    <div style={{display:'flex',flexDirection:'column',gap:6,marginBottom:10}}>
-                      {dateRequests.sort((a,b)=>(a.event_date||'').localeCompare(b.event_date||'')).map(r => (
-                        <div key={r.id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 12px',flexWrap:'wrap',gap:6}}>
-                          <div style={{fontSize:13,fontWeight:600,color:'#1a1410'}}>{fmtDate(r.event_date)}</div>
-                          <div style={{display:'flex',gap:4}}>
-                            <button onClick={()=>respond(r.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
-                            <button onClick={()=>respond(r.id,'declined')} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:4,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {/* Bulk actions for series */}
-                    <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
-                      {isSeries && (
-                        <>
-                          <button onClick={async()=>{if(!window.confirm(`Accept all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'accepted');}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept All Dates</button>
-                          <button onClick={async()=>{if(!window.confirm(`Decline all ${dateRequests.length} dates?`))return;for(const r of dateRequests)await respond(r.id,'declined');}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline All</button>
-                        </>
-                      )}
-                      <button onClick={()=>messageHost(first)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message Host</button>
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* Pending applications */}
-      {myApplications.filter(a=>a.status==='pending').length > 0 && (
-        <div style={{marginBottom:16}}>
-          <div style={{fontSize:12,fontWeight:700,color:'#c8a850',letterSpacing:1,textTransform:'uppercase',marginBottom:8}}>My Applications — Awaiting Response</div>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>
-            {myApplications.filter(a=>a.status==='pending').map(a => (
-              <div key={a.id} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}}>
-                <div>
-                  <div style={{fontWeight:700,fontSize:14,color:'#1a1410'}}>{a.event_name || a.event_type || 'Event'}</div>
-                  <div style={{fontSize:12,color:'#7a6a5a'}}>{fmtDate(a.event_date)} · {getCityFromZip(a.event_zip) ? getCityFromZip(a.event_zip)+' · ' : ''}Zip {a.event_zip || '—'} · {a.host_name || 'Host'}</div>
-                  {a.sent_at && <div style={{fontSize:11,color:'#a89a8a',marginTop:2}}>Applied {new Date(a.sent_at).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>}
-                </div>
-                <div style={{display:'flex',gap:6,alignItems:'center'}}>
-                  <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Pending Review</span>
-                  <button onClick={async()=>{if(!window.confirm('Withdraw your application for this event?'))return;await supabase.from('booking_requests').update({status:'withdrawn'}).eq('id',a.id);setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'withdrawn'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has withdrawn their application for ${a.event_name}.`})}).catch(()=>{});}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* No pending items */}
-      {requests.filter(r=>r.status==='pending').length === 0 && myApplications.filter(a=>a.status==='pending').length === 0 && !loadingReqs && (
-        <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px',marginBottom:16,textAlign:'center'}}>
-          <div style={{fontSize:13,color:'#7a6a5a'}}>No pending items. <button onClick={()=>setTab('opportunities')} style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:13,fontFamily:'inherit'}}>Browse events</button> to find new opportunities.</div>
-        </div>
-      )}
-
-      {/* Quick actions */}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
-        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Messages</button>
-        <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Browse Events</button>
-        <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{flex:'1 1 100px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'10px 14px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>My Calendar</button>
-      </div>
 
       {/* ── CONFIRMED ── */}
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:12}}>Confirmed</h3>
