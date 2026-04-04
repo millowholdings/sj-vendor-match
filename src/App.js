@@ -4044,7 +4044,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <div style={{background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'8px 14px',fontSize:14,fontWeight:700}}>{v.matchScore}% match</div>
+              <div style={{background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'8px 14px',fontSize:14,fontWeight:700}}>{matchPct !== null && matchPct !== undefined ? matchPct : v.matchScore}% match</div>
             </div>
           </div>
 
@@ -4462,7 +4462,8 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   const [hostZip, setHostZip] = useState(hostEvent?.eventZip || '');
   const approvedEvents = (userEvents||[]).filter(e => e.status === 'approved' || e.status === 'concierge_active');
   const switchEvent = (e) => {
-    setHostEvent({ eventName:e.event_name, eventType:e.event_type, eventZip:e.zip, date:e.date, startTime:e.start_time, endTime:e.end_time, contactName:e.contact_name, email:e.contact_email, vendorCategories:e.categories_needed||[], vendorCount:e.spots, budget:e.booth_fee, notes:e.notes, eventId:e.id });
+    const svcNeeded = (() => { try { return typeof e.services_needed === 'string' ? JSON.parse(e.services_needed) : (e.services_needed || []); } catch { return []; } })();
+    setHostEvent({ eventName:e.event_name, eventType:e.event_type, eventZip:e.zip, date:e.date, startTime:e.start_time, endTime:e.end_time, contactName:e.contact_name, email:e.contact_email, vendorCategories:e.categories_needed||[], servicesNeeded:svcNeeded, vendorCount:e.spots, budget:e.booth_fee, notes:e.notes, eventId:e.id });
     setHostZip(e.zip || '');
   };
   const [contacted, setContacted] = useState([]);
@@ -4494,17 +4495,16 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
   // Calculate match percentage — how well does this vendor fit this event?
   // A vendor is 100% match if ALL of their categories are needed by the event.
   // A vendor is a partial match if some of their categories are needed.
-  const neededCats = hostEvent?.vendorCategories || [];
+  // neededCats includes both market vendor categories AND service categories from servicesNeeded
+  const neededMarketCats = hostEvent?.vendorCategories || [];
+  const neededServiceCats = (hostEvent?.servicesNeeded || []).map(s => s.type).filter(Boolean);
+  const neededCats = [...neededMarketCats, ...neededServiceCats];
   const calcMatch = (v) => {
     if (neededCats.length === 0) return null;
     const vendorCats = [...(v.allCategories || [v.category]).filter(Boolean), ...(v.serviceCategories || [])];
     if (vendorCats.length === 0) return 0;
     const matched = vendorCats.filter(c => neededCats.includes(c)).length;
-    const pct = Math.round((matched / vendorCats.length) * 100);
-    if (v.isServiceProvider || (v.serviceCategories && v.serviceCategories.length > 0)) {
-      console.log('[calcMatch SERVICE]', v.name, '| vendorCats:', vendorCats, '| neededCats:', neededCats, '| matched:', matched, '/', vendorCats.length, '| pct:', pct, '| allCategories:', v.allCategories, '| category:', v.category, '| serviceCategories:', v.serviceCategories, '| vendorType:', v.vendorType);
-    }
-    return pct;
+    return Math.round((matched / vendorCats.length) * 100);
   };
 
   return (
@@ -7856,7 +7856,7 @@ function AppInner() {
         {tab==="tos"           && <TosPage setTab={setTab} />}
         {(tab==="my-calendar" || tab==="calendar" || tab==="host-calendar") && <MyCalendarPage authUser={authUser} vendorProfile={vendorProfile} userEvents={userEvents} setTab={setTab} />}
         {tab==="vendor-dashboard" && authUser && vendorProfile && <VendorDashboard user={authUser} vendorProfile={vendorProfile} setVendorProfile={setVendorProfile} allVendorProfiles={allVendorProfiles} bookingRequests={bookingRequests} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} conversations={conversations} setConversations={setConversations} setActiveConvoId={setActiveConvoId} unreadCount={unreadCount} opps={opps} />}
-        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setAllEvents={setAllEvents} setOpps={setOpps} setHostEventFromDashboard={(e)=>{setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
+        {tab==="host-dashboard"   && authUser && <HostDashboard user={authUser} userEvents={userEvents} setUserEvents={setUserEvents} setTab={setTab} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} unreadCount={unreadCount} conversations={conversations} openMessage={openMessage} setAllEvents={setAllEvents} setOpps={setOpps} setHostEventFromDashboard={(e)=>{const svcNeeded=(()=>{try{return typeof e.services_needed==='string'?JSON.parse(e.services_needed):(e.services_needed||[]);}catch{return[];}})();setHostEvent({eventName:e.event_name,eventType:e.event_type,eventZip:e.zip,date:e.date,startTime:e.start_time,endTime:e.end_time,contactName:e.contact_name,email:e.contact_email,vendorCategories:e.categories_needed||[],servicesNeeded:svcNeeded,vendorCount:e.spots,budget:e.booth_fee,notes:e.notes,eventId:e.id});}} />}
         {tab==="event-goer-dashboard" && authUser && eventGoerProfile && <EventGoerDashboard profile={eventGoerProfile} opps={opps} setShowContactModal={setShowContactModal} setShowFeedbackModal={setShowFeedbackModal} />}
       </div>
       {/* Site Footer */}
