@@ -3109,6 +3109,14 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [declineReason, setDeclineReason] = useState('');
   const [cancelEventModal, setCancelEventModal] = useState(null); // {event, seriesEvents}
   const [expandedVendorList, setExpandedVendorList] = useState(null); // e.g. "eventId_confirmed"
+  const [profileModalVendor, setProfileModalVendor] = useState(null); // vendor object for VendorProfileModal
+
+  const openVendorProfile = async (vendorId) => {
+    if (!vendorId) return;
+    const { data } = await supabase.from('vendors').select('*').eq('id', vendorId).single();
+    if (data) setProfileModalVendor(dbVendorToApp(data));
+    else alert('Could not load vendor profile.');
+  };
 
   // Delete one or more events and all related data
   const deleteEvents = async (eventsToDelete, reason) => {
@@ -3364,6 +3372,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
                   <button onClick={async()=>{const reason=window.prompt(`Decline ${a.vendor_name}? Enter an optional message (sent to vendor):`);if(reason===null)return;await supabase.from('booking_requests').update({status:'declined',vendor_message:reason||'Declined by host',responded_at:new Date().toISOString()}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'declined'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`Your application for ${a.event_name} was declined.${reason?' Message from host: '+reason:''} Keep browsing events on South Jersey Vendor Market!`})}).catch(()=>{});}}}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
                   {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
+                  {a.vendor_id && <button onClick={()=>openVendorProfile(a.vendor_id)} style={{background:'#fff',color:'#1a1410',border:'1px solid #c8a850',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>View Profile</button>}
                 </div>
               </div>
             ))}
@@ -3801,6 +3810,9 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
 
       {/* Cancel Recurring Event Modal */}
       {cancelEventModal && <CancelSeriesModal cancelEventModal={cancelEventModal} setCancelEventModal={setCancelEventModal} applications={applications} deleteEvents={deleteEvents} />}
+
+      {/* Vendor Profile Modal */}
+      {profileModalVendor && <VendorProfileModal v={profileModalVendor} onClose={()=>setProfileModalVendor(null)} openMessage={openMessage} setTab={setTab} />}
     </div>
   );
 }
