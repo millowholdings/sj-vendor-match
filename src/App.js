@@ -5671,7 +5671,7 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
         if (existing?.[0]) continue; // skip already applied dates
       }
       const payload = {
-        id: Date.now() + Math.random(),
+        id: Date.now() + Math.floor(Math.random() * 10000),
         session_id: 'vendor-application',
         vendor_id: form.vendorId || null, vendor_name: form.vendorName,
         vendor_emoji: '', vendor_category: form.category || '',
