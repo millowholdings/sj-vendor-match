@@ -7041,7 +7041,6 @@ function AppInner() {
       }
     }
 
-    openMessage(vendor);
   };
 
   const openMessage = async (vendor, inquiryType, inquiryMessage) => {
