@@ -3402,19 +3402,6 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </div>
       )}
 
-      {/* Approval notification banners */}
-      {userEvents.filter(e => e.status === 'approved').length > 0 && userEvents.some(e => e.status === 'approved' && !localStorage.getItem(`sjvm_seen_approved_${e.id}`)) && (
-        <div style={{background:'#d4f4e0',border:'1px solid #b8e8c8',borderRadius:10,padding:'14px 20px',marginBottom:16}}>
-          <div style={{fontWeight:700,fontSize:14,color:'#1a6b3a',marginBottom:4}}>Your event{userEvents.filter(e => e.status === 'approved').length > 1 ? 's are' : ' is'} approved and live!</div>
-          <div style={{fontSize:13,color:'#2d7a50',marginBottom:8}}>Start finding and inviting vendors to your events.</div>
-          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-            {userEvents.filter(e => e.status === 'approved' && !localStorage.getItem(`sjvm_seen_approved_${e.id}`)).map(e => (
-              <button key={e.id} onClick={()=>{localStorage.setItem(`sjvm_seen_approved_${e.id}`,'1');if(setHostEventFromDashboard)setHostEventFromDashboard(e);setTab('matches');window.scrollTo({top:0});}} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Find Vendors for {e.event_name}</button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:16}}>My Events</h3>
       {userEvents.length === 0 ? (
         <div className="empty-state"><div className="big">📅</div><p>No events posted yet. <button style={{background:'none',border:'none',color:'#c8a84b',cursor:'pointer',textDecoration:'underline',fontSize:'inherit',fontFamily:'inherit'}} onClick={()=>setTab('host')}>Add your first event</button></p></div>
@@ -3604,34 +3591,6 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         </div>
       )}
 
-      {/* ── Quick Actions ── */}
-      <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:24}}>
-        <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Messages</button>
-        {userEvents.some(e=>e.status==='approved') && <button onClick={()=>{setTab('matches');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Browse Vendors</button>}
-        <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>My Calendar</button>
-        <button onClick={()=>{setTab('host');window.scrollTo({top:0});}} style={{flex:'1 1 120px',background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:8,padding:'12px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textAlign:'center'}}>Add Another Event</button>
-      </div>
-
-      {/* ── My Calendar ── */}
-      <UnifiedDashboardCalendar authUser={user} vendorProfile={null} userEvents={userEvents} setTab={setTab} />
-
-      {/* Contact & Feedback */}
-      <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
-        <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your events?</div>
-        <div style={{display:'flex',gap:8}}>
-          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
-          <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
-        </div>
-      </div>
-
-      {/* Account management */}
-      <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
-        <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
-        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          <button onClick={async()=>{if(!window.confirm('Delete your host account? This removes ALL events, vendor applications, messages, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;for(const evt of userEvents){await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).catch(()=>{});await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});}await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
-        </div>
-      </div>
-
       {/* ── Confirmed Vendor Lineup ── */}
       {applications.filter(a=>a.status==='accepted').length > 0 && (
         <div style={{background:'#fff',border:'2px solid #b8e8c8',borderRadius:10,padding:'16px 20px',marginBottom:24}}>
@@ -3652,6 +3611,26 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           })}
         </div>
       )}
+
+      {/* ── My Calendar ── */}
+      <UnifiedDashboardCalendar authUser={user} vendorProfile={null} userEvents={userEvents} setTab={setTab} />
+
+      {/* Contact & Feedback */}
+      <div style={{background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:10,padding:'16px 20px',marginBottom:24,display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
+        <div style={{fontSize:13,color:'#7a6a5a'}}>Need help? Have questions about your events?</div>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>setShowFeedbackModal(true)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Give Feedback</button>
+          <button onClick={()=>setShowContactModal(true)} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:6,padding:'8px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Contact Us</button>
+        </div>
+      </div>
+
+      {/* Account management */}
+      <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
+        <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
+        <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+          <button onClick={async()=>{if(!window.confirm('Delete your host account? This removes ALL events, vendor applications, messages, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;for(const evt of userEvents){await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).catch(()=>{});await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});}await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+        </div>
+      </div>
 
       <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,marginBottom:8}}>Vendor Applications & Responses</h3>
       <div style={{fontSize:12,color:'#7a6a5a',marginBottom:16,lineHeight:1.5}}>Before accepting a vendor, confirm their insurance coverage, business licenses, and any details important to your event. All contracts and payments are handled directly between you and the vendor.</div>
