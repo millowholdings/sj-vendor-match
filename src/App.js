@@ -4467,6 +4467,7 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
 function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, setInquiryModal, setEventMessageModal }) {
+  console.log('[MatchesPage LOAD]', { hostEvent, vendorCount: vendors?.length, userEventsCount: userEvents?.length, hasAuth: !!authUser, bookingRequestsCount: bookingRequests?.length });
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterVendorType, setFilterVendorType] = useState('');
