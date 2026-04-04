@@ -1477,6 +1477,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
                 </div>
               </div>
 
+              <p style={{fontSize:12,color:'#a89a8a',margin:'8px 0 0',lineHeight:1.5,gridColumn:'1/-1'}}>Once your recurring series is created, you can cancel individual dates from your dashboard without cancelling the entire series.</p>
             </div>
           </div>
         )}
