@@ -5703,22 +5703,36 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
       setSubmitting(false);
       return;
     }
-    // Email the host about the vendor application
-    try {
-      await fetch('/api/send-booking-email', {
+    // Email the host: "A vendor has applied to your event"
+    if (opp.contactEmail) {
+      fetch('/api/send-message-notification', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vendorEmail: opp.contactEmail,
-          vendorName: opp.contactName,
-          hostName: form.vendorName,
-          hostEmail: form.email,
-          eventName: opp.eventName, eventType: opp.eventType,
-          eventDate: opp.date, startTime: opp.startTime, endTime: opp.endTime,
-          eventZip: opp.zip, notes: `Vendor Application from ${form.vendorName} (${form.contactName})\n\nEmail: ${form.email}${form.phone ? '\nPhone: '+form.phone : ''}${form.category ? '\nCategory: '+form.category : ''}${form.message ? '\n\nMessage: '+form.message : ''}`,
-          responseToken,
+          recipientEmail: opp.contactEmail,
+          recipientName: opp.contactName,
+          senderName: form.vendorName,
+          senderType: 'vendor',
+          recipientType: 'host',
+          eventName: opp.eventName,
+          messagePreview: `${form.vendorName} (${form.category || 'Vendor'}) has applied to ${opp.eventName} on ${opp.date}. Log in to your Host Dashboard to review, accept, or decline.`,
         }),
-      });
-    } catch (emailErr) { console.error('Failed to send application email:', emailErr); }
+      }).catch(err => console.error('Failed to send host notification:', err));
+    }
+    // Email the vendor: confirm application was submitted
+    if (form.email) {
+      fetch('/api/send-message-notification', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientEmail: form.email,
+          recipientName: form.contactName || form.vendorName,
+          senderName: opp.contactName || 'Event Host',
+          senderType: 'host',
+          recipientType: 'vendor',
+          eventName: opp.eventName,
+          messagePreview: `Your application to ${opp.eventName} on ${opp.date} has been submitted! The host will review and respond. You'll receive an email when they accept or decline.`,
+        }),
+      }).catch(err => console.error('Failed to send vendor confirmation:', err));
+    }
     setSubmitted(true);
     setSubmitting(false);
   };
