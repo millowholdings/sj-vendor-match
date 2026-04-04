@@ -5664,6 +5664,7 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
       seriesDates.forEach(s => { if (selectedDates.includes(s.id)) eventsToApply.push(s); });
     }
     let anyError = false;
+    const responseToken = crypto.randomUUID();
     for (const evt of eventsToApply) {
       // Check if already applied
       if (form.vendorId) {
@@ -5682,6 +5683,7 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
         address: '', attendance: '', vendor_count: String(evt.spots || ''),
         budget: evt.boothFee || '', notes: form.message || null,
         status: 'pending', sent_at: new Date().toISOString(),
+        response_token: responseToken,
       };
       console.log('[VENDOR APPLY] Inserting payload for', evt.eventName, evt.date, ':', JSON.parse(JSON.stringify(payload)));
       let { data: insertData, error } = await supabase.from('booking_requests').insert(payload).select();
