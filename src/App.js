@@ -4500,7 +4500,11 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
     const vendorCats = [...(v.allCategories || [v.category]).filter(Boolean), ...(v.serviceCategories || [])];
     if (vendorCats.length === 0) return 0;
     const matched = vendorCats.filter(c => neededCats.includes(c)).length;
-    return Math.round((matched / vendorCats.length) * 100);
+    const pct = Math.round((matched / vendorCats.length) * 100);
+    if (v.isServiceProvider || (v.serviceCategories && v.serviceCategories.length > 0)) {
+      console.log('[calcMatch SERVICE]', v.name, '| vendorCats:', vendorCats, '| neededCats:', neededCats, '| matched:', matched, '/', vendorCats.length, '| pct:', pct, '| allCategories:', v.allCategories, '| category:', v.category, '| serviceCategories:', v.serviceCategories, '| vendorType:', v.vendorType);
+    }
+    return pct;
   };
 
   return (
