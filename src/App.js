@@ -3105,6 +3105,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
   const [loadingVendor, setLoadingVendor] = useState(false);
   const [declineReason, setDeclineReason] = useState('');
   const [cancelEventModal, setCancelEventModal] = useState(null); // {event, seriesEvents}
+  const [expandedVendorList, setExpandedVendorList] = useState(null); // e.g. "eventId_confirmed"
 
   // Delete one or more events and all related data
   const deleteEvents = async (eventsToDelete, reason) => {
@@ -3471,18 +3472,47 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
               )}
               {/* Vendor activity for this event */}
               {e.status === 'approved' && (
-                <div style={{marginTop:8,display:'flex',flexWrap:'wrap',gap:6}}>
+                <div style={{marginTop:8}}>
                   {(() => {
                     const eventApps = applications.filter(a=>a.event_name===e.event_name);
-                    const pending = eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application');
+                    const applied = eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application');
                     const invitesPending = eventApps.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application');
-                    const accepted = eventApps.filter(a=>a.status==='accepted');
-                    return (<>
-                      {pending.length > 0 && <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{pending.length} application{pending.length!==1?'s':''} pending</span>}
-                      {invitesPending.length > 0 && <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{invitesPending.length} invite{invitesPending.length!==1?'s':''} sent</span>}
-                      {accepted.length > 0 && <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>{accepted.length} confirmed</span>}
-                      {pending.length === 0 && invitesPending.length === 0 && accepted.length === 0 && <span style={{background:'#f5f0ea',color:'#a89a8a',padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600}}>No vendor activity yet</span>}
-                    </>);
+                    const confirmed = eventApps.filter(a=>a.status==='accepted');
+                    const cats = [
+                      {key:'confirmed',label:'Confirmed',items:confirmed,bg:'#d4f4e0',color:'#1a6b3a',border:'#b8e8c8'},
+                      {key:'invites',label:'Pending Invites',items:invitesPending,bg:'#e8f4fd',color:'#1a4a6b',border:'#b8d8f0'},
+                      {key:'applied',label:'Applied',items:applied,bg:'#fdf4dc',color:'#7a5a10',border:'#ffd966'},
+                    ];
+                    return (
+                      <div style={{display:'flex',flexWrap:'wrap',gap:6}}>
+                        {cats.map(c=>(
+                          <span key={c.key} onClick={c.items.length>0?()=>setExpandedVendorList(prev=>prev===e.id+'_'+c.key?null:e.id+'_'+c.key):undefined}
+                            style={{background:c.bg,color:c.color,border:'1px solid '+c.border,padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:600,cursor:c.items.length>0?'pointer':'default',opacity:c.items.length===0?0.6:1}}>
+                            {c.label}: {c.items.length}
+                          </span>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {(() => {
+                    const eventApps = applications.filter(a=>a.event_name===e.event_name);
+                    const lists = {
+                      [e.id+'_confirmed']: eventApps.filter(a=>a.status==='accepted'),
+                      [e.id+'_invites']: eventApps.filter(a=>a.status==='pending'&&a.session_id!=='vendor-application'),
+                      [e.id+'_applied']: eventApps.filter(a=>a.status==='pending'&&a.session_id==='vendor-application'),
+                    };
+                    const items = lists[expandedVendorList];
+                    if (!items || items.length === 0) return null;
+                    return (
+                      <div style={{marginTop:6,background:'#fdf9f5',border:'1px solid #e8ddd0',borderRadius:8,padding:'8px 12px'}}>
+                        {items.map(a=>(
+                          <div key={a.id} style={{fontSize:12,color:'#1a1410',padding:'3px 0',display:'flex',justifyContent:'space-between'}}>
+                            <span>{a.vendor_name||'Unknown vendor'}</span>
+                            <span style={{fontSize:11,color:'#a89a8a'}}>{a.vendor_category||''}{a.event_date?' · '+fmtDate(a.event_date):''}</span>
+                          </div>
+                        ))}
+                      </div>
+                    );
                   })()}
                 </div>
               )}
