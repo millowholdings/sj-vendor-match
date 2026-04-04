@@ -6386,11 +6386,22 @@ function VendorResponsePage({ token }) {
 
   useEffect(() => {
     async function loadRequest() {
-      const { data, error: fetchErr } = await supabase
-        .from('booking_requests').select('*').eq('response_token', token).single();
-      if (fetchErr || !data) { setError('This booking request link is invalid or has expired.'); setLoading(false); return; }
-      setRequest(data);
-      setLoading(false);
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('booking_requests').select('*').eq('response_token', token).single();
+        console.log('[VendorResponse] token:', token, 'data:', data, 'error:', fetchErr);
+        if (fetchErr || !data) {
+          setError(`This booking request link is invalid or has expired.${fetchErr ? ' (' + fetchErr.message + ')' : ''}`);
+          setLoading(false);
+          return;
+        }
+        setRequest(data);
+        setLoading(false);
+      } catch (err) {
+        console.error('[VendorResponse] Unexpected error:', err);
+        setError('Something went wrong loading this booking request. Please try again.');
+        setLoading(false);
+      }
     }
     loadRequest();
   }, [token]);
