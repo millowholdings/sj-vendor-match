@@ -5683,12 +5683,16 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
         budget: evt.boothFee || '', notes: form.message || null,
         status: 'pending', sent_at: new Date().toISOString(),
       };
-      let { error } = await supabase.from('booking_requests').insert(payload);
+      console.log('[VENDOR APPLY] Inserting payload for', evt.eventName, evt.date, ':', JSON.parse(JSON.stringify(payload)));
+      let { data: insertData, error } = await supabase.from('booking_requests').insert(payload).select();
+      console.log('[VENDOR APPLY] Supabase response:', { data: insertData, error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null });
       if (error && (error.code === '42703' || error.message?.includes('column'))) {
         const { response_token: _rt, ...fallback } = payload;
-        ({ error } = await supabase.from('booking_requests').insert(fallback));
+        console.log('[VENDOR APPLY] Retrying without response_token:', JSON.parse(JSON.stringify(fallback)));
+        ({ data: insertData, error } = await supabase.from('booking_requests').insert(fallback).select());
+        console.log('[VENDOR APPLY] Retry response:', { data: insertData, error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null });
       }
-      if (error) { console.error('Application error for', evt.date, ':', error.message); anyError = true; }
+      if (error) { console.error('[VENDOR APPLY] FAILED for', evt.date, ':', error.message, error.code, error.details, error.hint); anyError = true; }
     }
     const error = anyError;
     if (error) {
