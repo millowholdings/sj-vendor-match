@@ -4235,7 +4235,7 @@ function InviteDatePickerModal({ vendor, series, hostEvent, sendBookingRequest, 
 }
 
 // ─── Vendor Card ──────────────────────────────────────────────────────────────
-function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal, setEventMessageModal }) {
+function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, matchPct, setInquiryModal, setEventMessageModal, userEvents }) {
   const [showProfile, setShowProfile] = useState(false);
   const [inviteDatePicker, setInviteDatePicker] = useState(null); // {vendor, series}
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
@@ -4457,7 +4457,7 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
         ? <div className="empty-state"><div className="big">🔍</div><p>No approved vendors match your categories yet — check back as more sign up!</p></div>
         : <div className="vendor-grid">
             {matched.map(v => (
-              <VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} />
+              <VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} userEvents={[]} />
             ))}
           </div>
       }
@@ -4598,7 +4598,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
 
       {inRange.length===0
         ? <div className="empty-state"><div className="big">🔍</div><p>No vendors match your filters.</p></div>
-        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} setInquiryModal={setInquiryModal} setEventMessageModal={setEventMessageModal} />)}</div>
+        : <div className="vendor-grid">{inRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist={hasZip} openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} matchPct={calcMatch(v)} setInquiryModal={setInquiryModal} setEventMessageModal={setEventMessageModal} userEvents={userEvents} />)}</div>
       }
 
       {hasZip && outRange.length>0 && (
@@ -4608,7 +4608,7 @@ function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingReque
             <p style={{ fontSize:14, color:'#a89a8a' }}>These vendors are beyond their stated travel radius for zip {hostZip}.</p>
           </div>
           <div className="vendor-grid" style={{ opacity:0.5 }}>
-            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} />)}
+            {outRange.map(v=><VendorCard key={v.id} v={v} contacted={contacted} setContacted={setContacted} showDist outOfRange openMessage={openMessage} sendBookingRequest={sendBookingRequest} bookingRequests={bookingRequests} setBookingRequests={setBookingRequests} hostEvent={hostEvent} setTab={setTab} vendorCalendars={vendorCalendars} setVendorCalendars={setVendorCalendars} authUser={authUser} setShowAuthModal={setShowAuthModal} userEvents={userEvents} />)}
           </div>
         </>
       )}
