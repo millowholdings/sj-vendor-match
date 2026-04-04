@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
   const resend = new Resend(resendKey);
   const fromAddr = 'hello@southjerseyvendormarket.com';
   const roleLabel = senderType === 'vendor' ? 'vendor' : 'host';

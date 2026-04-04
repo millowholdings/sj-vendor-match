@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing vendorEmail or responseToken' });
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://sj-vendor-match.vercel.app';
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://southjerseyvendormarket.com';
   const respondUrl = `${baseUrl}?respond=${responseToken}`;
 
   const fmtDate = (d) => {
