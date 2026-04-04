@@ -3386,7 +3386,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                 <div style={{display:'flex',gap:6,alignItems:'center',flexWrap:'wrap'}}>
                   <span style={{background:'#e8f4fd',color:'#1a4a6b',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Awaiting Response</span>
                   {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
-                  <button onClick={async()=>{if(!window.confirm(`Remove invite for ${a.vendor_name}?`))return;await supabase.from('booking_requests').delete().eq('id',a.id);setApplications(prev=>prev.filter(x=>x.id!==a.id));}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove Invite</button>
+                  <button onClick={async()=>{if(!window.confirm(`Remove invite for ${a.vendor_name}?`))return;const delId=a.id;const{error:delErr}=await supabase.from('booking_requests').delete().eq('id',delId);if(delErr){console.error('Remove invite failed:',delErr);alert('Failed to remove invite. Please try again.');return;}setApplications(prev=>prev.filter(x=>String(x.id)!==String(delId)));}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove Invite</button>
                 </div>
               </div>
             ))}
@@ -4172,7 +4172,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
               </div>
             )}
             {req && req.status==='pending' && (
-              <button onClick={async()=>{if(!window.confirm('Withdraw this invite?'))return;await supabase.from('booking_requests').delete().eq('id',req.id);onClose();}}
+              <button onClick={async()=>{if(!window.confirm('Withdraw this invite?'))return;const{error:delErr}=await supabase.from('booking_requests').delete().eq('id',req.id);if(delErr){console.error('Withdraw invite failed:',delErr);alert('Failed to withdraw invite. Please try again.');return;}onClose();}}
                 style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:8,padding:'10px 20px',fontSize:13,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw Invite</button>
             )}
             {openMessage && (
@@ -4354,7 +4354,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
             )
           )}
           {req && req.status==='pending' && (
-            <button className="contact-btn" style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',fontSize:11,fontWeight:600}} onClick={async(e)=>{e.stopPropagation();if(!window.confirm('Withdraw this invite?'))return;await supabase.from('booking_requests').delete().eq('id',req.id);setBookingRequests(prev=>prev.filter(x=>x.id!==req.id));}}>Withdraw Invite</button>
+            <button className="contact-btn" style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',fontSize:11,fontWeight:600}} onClick={async(e)=>{e.stopPropagation();if(!window.confirm('Withdraw this invite?'))return;const delId=req.id;const{error:delErr}=await supabase.from('booking_requests').delete().eq('id',delId);if(delErr){console.error('Withdraw invite failed:',delErr);alert('Failed to withdraw invite. Please try again.');return;}setBookingRequests(prev=>prev.filter(x=>String(x.id)!==String(delId)));}}>Withdraw Invite</button>
           )}
           {openMessage && authUser && (
             <button className="contact-btn" style={{background:'#1a1410',color:'#e8c97a',fontWeight:700,fontSize:13}} onClick={()=>hostEvent ? (setEventMessageModal && setEventMessageModal({vendor:v, eventName: hostEvent.eventName + (hostEvent.date ? ' — ' + fmtDate(hostEvent.date) : '')})) : (setInquiryModal && setInquiryModal({vendor:v}))}>
