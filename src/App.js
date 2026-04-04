@@ -2308,6 +2308,8 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
   const [saving, setSaving] = useState(false);
   const [showProfilePanel, setShowProfilePanel] = useState(false);
   const [showSubPanel, setShowSubPanel] = useState(false);
+  const profilePanelRef = React.useRef(null);
+  const subPanelRef = React.useRef(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [editPhotos, setEditPhotos] = useState([]);       // new File objects to add
   const [existingPhotos, setExistingPhotos] = useState([]); // existing URLs
@@ -2545,8 +2547,8 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
 
       {/* ── Dashboard nav buttons ── */}
       <div style={{display:'flex',gap:8,flexWrap:'wrap',marginBottom:20}}>
-        <button onClick={()=>{setShowProfilePanel(!showProfilePanel);setShowSubPanel(false);}} style={{background:showProfilePanel?'#c8a850':'#1a1410',color:showProfilePanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>My Profile</button>
-        <button onClick={()=>{setShowSubPanel(!showSubPanel);setShowProfilePanel(false);}} style={{background:showSubPanel?'#c8a850':'#1a1410',color:showSubPanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Subscription</button>
+        <button onClick={()=>{const opening=!showProfilePanel;setShowProfilePanel(opening);setShowSubPanel(false);if(opening)setTimeout(()=>profilePanelRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),50);}} style={{background:showProfilePanel?'#c8a850':'#1a1410',color:showProfilePanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>My Profile</button>
+        <button onClick={()=>{const opening=!showSubPanel;setShowSubPanel(opening);setShowProfilePanel(false);if(opening)setTimeout(()=>subPanelRef.current?.scrollIntoView({behavior:'smooth',block:'start'}),50);}} style={{background:showSubPanel?'#c8a850':'#1a1410',color:showSubPanel?'#1a1410':'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Subscription</button>
         <button onClick={()=>{setTab('messages');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Messages{unreadCount>0?` (${unreadCount})`:''}</button>
         <button onClick={()=>{setTab('opportunities');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Browse Events</button>
         <button onClick={()=>{setTab('my-calendar');window.scrollTo({top:0});}} style={{background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'8px 16px',fontSize:13,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>My Calendar</button>
@@ -2743,7 +2745,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
         </div>
       )}
 
-      {showProfilePanel && <div style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
+      {showProfilePanel && <div ref={profilePanelRef} style={{background:'#fff',border:'1px solid #e8ddd0',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}}>
           <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:0}}>My Profile</h3>
           <button onClick={()=>{if(editing){setEditing(false);}else{setEditForm(initEditForm());setExistingPhotos(m.photoUrls||[]);setEditPhotos([]);setNewCoi(null);setNewLookbook(null);setEditing(true);}}} style={{background:'none',border:'1px solid #c8a850',color:'#c8a850',borderRadius:6,padding:'6px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>{editing?'Cancel':'Edit Profile'}</button>
@@ -2941,7 +2943,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       </div>}
 
       {/* Subscription Card */}
-      {showSubPanel && <div style={{background:'#fff',border: subStatus === 'active' ? '2px solid #b8e8c8' : '2px solid #e8c97a',borderRadius:12,padding:24,marginBottom:24}}>
+      {showSubPanel && <div ref={subPanelRef} style={{background:'#fff',border: subStatus === 'active' ? '2px solid #b8e8c8' : '2px solid #e8c97a',borderRadius:12,padding:24,marginBottom:24}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:12}}>
           <div>
             <h3 style={{fontFamily:'Playfair Display,serif',fontSize:20,margin:'0 0 4px'}}>Subscription</h3>
