@@ -3994,7 +3994,7 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
 }
 
 // ─── Vendor Profile Modal ─────────────────────────────────────────────────────
-function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, hostEvent, bookingRequests, openMessage, setTab }) {
+function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, hostEvent, bookingRequests, openMessage, setTab, matchPct }) {
   const req = bookingRequests && bookingRequests.find(r => r.vendorId === v.id && (!hostEvent?.eventId || r.eventId === hostEvent.eventId || r.eventName === hostEvent?.eventName));
   const accepted = bookingAccepted || req?.status === 'accepted';
   const cats = v.allCategories || [v.category];
@@ -4068,7 +4068,7 @@ function VendorProfileModal({ v, onClose, bookingAccepted, sendBookingRequest, h
               </div>
             </div>
             <div style={{display:'flex',alignItems:'center',gap:6}}>
-              <div style={{background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'8px 14px',fontSize:14,fontWeight:700}}>{matchPct !== null && matchPct !== undefined ? matchPct : v.matchScore}% match</div>
+              {matchPct != null && <div style={{background:'#1a1410',color:'#e8c97a',borderRadius:8,padding:'8px 14px',fontSize:14,fontWeight:700}}>{matchPct}% match</div>}
             </div>
           </div>
 
@@ -4392,7 +4392,7 @@ function VendorCard({ v, contacted, setContacted, showDist, outOfRange, openMess
     {showProfile && (
       <VendorProfileModal v={v} onClose={()=>setShowProfile(false)}
         sendBookingRequest={sendBookingRequest} hostEvent={hostEvent}
-        bookingRequests={bookingRequests} openMessage={openMessage} setTab={setTab} />
+        bookingRequests={bookingRequests} openMessage={openMessage} setTab={setTab} matchPct={matchPct} />
     )}
     {inviteDatePicker && (
       <InviteDatePickerModal
