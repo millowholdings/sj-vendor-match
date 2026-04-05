@@ -1760,7 +1760,7 @@ function EventGoerSignupModal({ onClose, onSuccess, defaultEmail, defaultName })
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const set = (k,v) => setForm(f=>({...f,[k]:v}));
-  const allTypes = EVENT_TYPES.filter(t=>t!=='Other');
+  const allTypes = EVENT_TYPES.filter(t=>t!=='Other'&&t!=='Private Party');
   const allSelected = allTypes.every(t=>form.eventTypes.includes(t));
   const toggleType = (t) => setForm(f=>({...f, eventTypes: f.eventTypes.includes(t) ? f.eventTypes.filter(x=>x!==t) : [...f.eventTypes, t]}));
   const toggleAll = () => setForm(f=>({...f, eventTypes: allSelected ? [] : [...allTypes]}));
