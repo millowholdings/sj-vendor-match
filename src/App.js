@@ -5677,13 +5677,15 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
       seriesDates.forEach(s => { if (selectedDates.includes(s.id)) eventsToApply.push(s); });
     }
     let anyError = false;
-    const responseToken = crypto.randomUUID();
+    let firstToken = null;
     for (const evt of eventsToApply) {
       // Check if already applied
       if (form.vendorId) {
         const { data: existing } = await supabase.from('booking_requests').select('id').eq('vendor_id', form.vendorId).eq('event_name', evt.eventName).eq('event_date', evt.date).limit(1);
         if (existing?.[0]) continue; // skip already applied dates
       }
+      const responseToken = crypto.randomUUID();
+      if (!firstToken) firstToken = responseToken;
       const payload = {
         id: Date.now() + Math.floor(Math.random() * 10000),
         session_id: 'vendor-application',
