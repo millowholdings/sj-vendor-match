@@ -4892,7 +4892,8 @@ function PendingVendorCard({ v, onApprove, onReject }) {
 }
 
 // ─── Admin Page ───────────────────────────────────────────────────────────────
-const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD || 'sjvm-admin-2026';
+const ADMIN_PW = process.env.REACT_APP_ADMIN_PASSWORD;
+if (!ADMIN_PW) console.error('REACT_APP_ADMIN_PASSWORD is not set — admin login will not work until this environment variable is configured.');
 
 function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{}, vendorSubs=[], vendors=[], setVendors=()=>{}, pendingVendors=[], setPendingVendors=()=>{}, isAdmin=false, eventGoers=[], setEventGoers=()=>{} }) {
   const [unlocked, setUnlocked] = useState(() => isAdmin || sessionStorage.getItem('sjvm_admin') === '1');
