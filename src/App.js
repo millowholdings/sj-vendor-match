@@ -2508,7 +2508,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
     if (req?.host_email) {
       fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ recipientEmail: req.host_email, recipientName: req.host_name, senderName: vendorProfile?.name || 'A vendor', senderType: 'vendor', recipientType: 'host', eventName: req.event_name, messagePreview: `${vendorProfile?.name || 'A vendor'} has ${status} your invite for ${req.event_name} on ${fmtDate(req.event_date)}.` }),
-      }).catch(() => {});
+      }).catch(err => console.error('Booking response notification failed:', err));
     }
   };
 
@@ -2631,7 +2631,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
                 </div>
                 <div style={{display:'flex',gap:6,alignItems:'center'}}>
                   <span style={{background:'#fdf4dc',color:'#7a5a10',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Pending Review</span>
-                  <button onClick={async()=>{if(!window.confirm('Withdraw your application for this event?'))return;await supabase.from('booking_requests').update({status:'withdrawn'}).eq('id',a.id);setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'withdrawn'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has withdrawn their application for ${a.event_name}.`})}).catch(()=>{});}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw</button>
+                  <button onClick={async()=>{if(!window.confirm('Withdraw your application for this event?'))return;await supabase.from('booking_requests').update({status:'withdrawn'}).eq('id',a.id);setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'withdrawn'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has withdrawn their application for ${a.event_name}.`})}).catch(err=>console.error('Withdraw notification failed:',err));}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Withdraw</button>
                 </div>
               </div>
             ))}
@@ -3044,7 +3044,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
               <div style={{display:'flex',gap:6,alignItems:'center'}}>
                 <span style={{background:'#d4f4e0',color:'#1a6b3a',padding:'4px 12px',borderRadius:10,fontSize:11,fontWeight:700}}>Confirmed</span>
                 <button onClick={()=>messageHost(a)} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
-                <button onClick={async()=>{const reason=window.prompt('Reason for cancelling this booking (sent to host):');if(reason===null)return;await supabase.from('booking_requests').update({status:'cancelled',vendor_message:reason||'Vendor cancelled'}).eq('id',a.id);setRequests(prev=>prev.map(x=>x.id===a.id?{...x,status:'cancelled'}:x));setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'cancelled'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has cancelled their booking for ${a.event_name}.${reason?' Reason: '+reason:''}`})}).catch(()=>{});}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Booking</button>
+                <button onClick={async()=>{const reason=window.prompt('Reason for cancelling this booking (sent to host):');if(reason===null)return;await supabase.from('booking_requests').update({status:'cancelled',vendor_message:reason||'Vendor cancelled'}).eq('id',a.id);setRequests(prev=>prev.map(x=>x.id===a.id?{...x,status:'cancelled'}:x));setMyApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'cancelled'}:x));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:a.host_email||'',recipientName:a.host_name,senderName:vendorProfile?.name||'A vendor',senderType:'vendor',eventName:a.event_name,messagePreview:`${vendorProfile?.name||'A vendor'} has cancelled their booking for ${a.event_name}.${reason?' Reason: '+reason:''}`})}).catch(err=>console.error('Cancel booking notification failed:',err));}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Cancel Booking</button>
               </div>
             </div>
           ))}
@@ -3086,7 +3086,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
           {allVendorProfiles && allVendorProfiles.length > 1 && (
             <button onClick={async()=>{if(!window.confirm(`Remove "${vendorProfile?.name}" listing? This deletes this vendor profile only, not your account.`))return;await supabase.from('vendors').delete().eq('id',vendorProfile?.id);setVendorProfile(allVendorProfiles.find(p=>p.id!==vendorProfile?.id)||null);window.location.reload();}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove This Listing</button>
           )}
-          <button onClick={async()=>{if(!window.confirm('Delete your entire account? This removes ALL vendor profiles, messages, bookings, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;await supabase.from('booking_requests').delete().or(`vendor_id.eq.${vendorProfile?.id},host_email.eq.${user.email}`).catch(()=>{});await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('vendors').delete().eq('user_id',user.id).catch(()=>{});await supabase.from('events').delete().eq('user_id',user.id).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+          <button onClick={async()=>{if(!window.confirm('Delete your entire account? This removes ALL vendor profiles, messages, bookings, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;await supabase.from('booking_requests').delete().or(`vendor_id.eq.${vendorProfile?.id},host_email.eq.${user.email}`).catch(err=>console.error('Delete booking_requests failed:',err));await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(err=>console.error('Delete messages failed:',err));await supabase.from('vendors').delete().eq('user_id',user.id).catch(err=>console.error('Delete vendors failed:',err));await supabase.from('events').delete().eq('user_id',user.id).catch(err=>console.error('Delete events failed:',err));await supabase.from('event_goers').delete().eq('email',user.email).catch(err=>console.error('Delete event_goers failed:',err));await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
         </div>
       </div>
     </div>
@@ -3127,7 +3127,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
         if (a.vendor_id) {
           const {data:vr} = await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);
           if (vr?.[0]?.contact_email) {
-            fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:evt.contact_name||user.email,senderType:'host',eventName:evt.event_name,messagePreview:`${evt.event_name} on ${fmtDate(evt.date)} has been cancelled.${reason?' Reason: '+reason:''}`})}).catch(()=>{});
+            fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:evt.contact_name||user.email,senderType:'host',eventName:evt.event_name,messagePreview:`${evt.event_name} on ${fmtDate(evt.date)} has been cancelled.${reason?' Reason: '+reason:''}`})}).catch(err=>console.error('Event cancellation notification failed:',err));
           }
         }
       }
@@ -3152,7 +3152,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       if(setOpps)setOpps(prev=>prev.filter(x=>!deleteIds.has(x.id)));
       setApplications(prev=>prev.filter(a=>!eventsToDelete.some(e=>e.event_name===a.event_name&&e.date===a.event_date)));
       // Email host
-      fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:eventsToDelete[0]?.contact_email||user.email,recipientName:eventsToDelete[0]?.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:eventsToDelete[0]?.event_name,messagePreview:`${eventsToDelete.length} event date${eventsToDelete.length!==1?'s':''} cancelled and removed.`})}).catch(()=>{});
+      fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:eventsToDelete[0]?.contact_email||user.email,recipientName:eventsToDelete[0]?.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:eventsToDelete[0]?.event_name,messagePreview:`${eventsToDelete.length} event date${eventsToDelete.length!==1?'s':''} cancelled and removed.`})}).catch(err=>console.error('Event deletion confirmation failed:',err));
     } catch (err) {
       console.error('Event cancellation failed:', err);
       alert('Something went wrong cancelling this event. Please try again.');
@@ -3219,7 +3219,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       // Notify admin (fire and forget)
       fetch('/api/send-contact', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name:'Admin Alert', email:'system@sjvm.app', subject:`Event Updated: ${eventForm.event_name}`, message:`Host ${user.email} updated their event. Status set to pending review.` }),
-      }).catch(()=>{});
+      }).catch(err=>console.error('Admin event update notification failed:',err));
 
       setEditingEvent(null); setSavingEvent(false);
       alert('Changes saved! Your event has been submitted for admin review.');
@@ -3300,7 +3300,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
             eventName: app?.event_name, eventDate: app?.event_date,
             status, vendorMessage: reason || '',
           }),
-        }).catch(() => {});
+        }).catch(err => console.error('Booking response email failed:', err));
       }
       // If accepted, load vendor profile to reveal contact info
       if (status === 'accepted' && app && app.vendor_id && !reviewVendor) {
@@ -3314,7 +3314,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
           const acceptedCount = applications.filter(a => a.event_name === app.event_name && (a.status === 'accepted' || (a.id === reqId && status === 'accepted'))).length;
           if (acceptedCount >= evt.spots) {
             // Mark event as fully booked
-            await supabase.from('events').update({ vendor_status: 'fully_booked' }).eq('id', evt.id).catch(()=>{});
+            await supabase.from('events').update({ vendor_status: 'fully_booked' }).eq('id', evt.id).catch(err=>console.error('Mark fully booked failed:',err));
             if (setUserEvents) setUserEvents(prev => prev.map(e => e.id === evt.id ? { ...e, vendor_status: 'fully_booked' } : e));
             if (setAllEvents) setAllEvents(prev => prev.map(e => e.id === evt.id ? { ...e, vendorStatus: 'fully_booked' } : e));
             // Notify unaccepted vendors that event is full
@@ -3325,7 +3325,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                 if (vr?.[0]?.contact_email) {
                   fetch('/api/send-message-notification', { method:'POST', headers:{'Content-Type':'application/json'},
                     body: JSON.stringify({ recipientEmail: vr[0].contact_email, recipientName: vr[0].contact_name, senderName: 'South Jersey Vendor Market', senderType: 'host', eventName: app.event_name, messagePreview: `${app.event_name} is now fully booked. All vendor spots have been filled. Keep browsing events on South Jersey Vendor Market — new opportunities are posted regularly!` }),
-                  }).catch(()=>{});
+                  }).catch(err=>console.error('Fully booked vendor notification failed:',err));
                 }
               }
             }
@@ -3370,7 +3370,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                 </div>
                 <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
                   <button onClick={()=>respond(a.id,'accepted')} style={{background:'#1a6b3a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Accept</button>
-                  <button onClick={async()=>{const reason=window.prompt(`Decline ${a.vendor_name}? Enter an optional message (sent to vendor):`);if(reason===null)return;await supabase.from('booking_requests').update({status:'declined',vendor_message:reason||'Declined by host',responded_at:new Date().toISOString()}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'declined'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`Your application for ${a.event_name} was declined.${reason?' Message from host: '+reason:''} Keep browsing events on South Jersey Vendor Market!`})}).catch(()=>{});}}}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
+                  <button onClick={async()=>{const reason=window.prompt(`Decline ${a.vendor_name}? Enter an optional message (sent to vendor):`);if(reason===null)return;await supabase.from('booking_requests').update({status:'declined',vendor_message:reason||'Declined by host',responded_at:new Date().toISOString()}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'declined'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`Your application for ${a.event_name} was declined.${reason?' Message from host: '+reason:''} Keep browsing events on South Jersey Vendor Market!`})}).catch(err=>console.error('Decline notification failed:',err));}}}} style={{background:'#8b1a1a',color:'#fff',border:'none',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Decline</button>
                   {openMessage && a.vendor_id && <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>}
                   {a.vendor_id && <button onClick={()=>openVendorProfile(a.vendor_id)} style={{background:'#fff',color:'#1a1410',border:'1px solid #c8a850',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>View Profile</button>}
                 </div>
@@ -3438,12 +3438,12 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                   {e.vendor_status === 'fully_booked' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#1a1410',color:'#e8c97a',whiteSpace:'nowrap'}}>Fully Booked</span>}
                   {e.vendor_status === 'closed' && <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#f5f0ea',color:'#7a6a5a',whiteSpace:'nowrap'}}>Applications Closed</span>}
                   {e.status==='approved' && e.vendor_discovery !== 'closed' && (
-                    <button onClick={async()=>{if(!window.confirm('Close applications? Vendors will no longer see or apply to this event.'))return;const{error}=await supabase.from('events').update({vendor_discovery:'closed'}).eq('id',e.id);if(error)console.error('Close failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'closed'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'closed'}:x));if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:e.event_name,messagePreview:`Applications for ${e.event_name} have been closed. Vendors can no longer apply. You can reopen applications anytime from your dashboard.`})}).catch(()=>{});}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close Applications</button>
+                    <button onClick={async()=>{if(!window.confirm('Close applications? Vendors will no longer see or apply to this event.'))return;const{error}=await supabase.from('events').update({vendor_discovery:'closed'}).eq('id',e.id);if(error)console.error('Close failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'closed'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'closed'}:x));if(setOpps)setOpps(prev=>prev.filter(x=>x.id!==e.id));fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:e.event_name,messagePreview:`Applications for ${e.event_name} have been closed. Vendors can no longer apply. You can reopen applications anytime from your dashboard.`})}).catch(err=>console.error('Close applications notification failed:',err));}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Close Applications</button>
                   )}
                   {e.status==='approved' && e.vendor_discovery === 'closed' && (
                     <>
                       <span style={{padding:'3px 10px',borderRadius:12,fontSize:11,fontWeight:700,background:'#f5f0ea',color:'#7a6a5a',whiteSpace:'nowrap'}}>Applications Closed</span>
-                      <button onClick={async()=>{const{error}=await supabase.from('events').update({vendor_discovery:'both'}).eq('id',e.id);if(error)console.error('Reopen failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'both'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'both'}:x));if(setOpps)setOpps(prev=>[dbEventToApp({...e,vendor_discovery:'both'}),...prev]);fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:e.event_name,messagePreview:`Applications for ${e.event_name} have been reopened. Vendors can now see and apply to your event.`})}).catch(()=>{});}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
+                      <button onClick={async()=>{const{error}=await supabase.from('events').update({vendor_discovery:'both'}).eq('id',e.id);if(error)console.error('Reopen failed:',error.message);if(setUserEvents)setUserEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendor_discovery:'both'}:x));if(setAllEvents)setAllEvents(prev=>prev.map(x=>x.id===e.id?{...x,vendorDiscovery:'both'}:x));if(setOpps)setOpps(prev=>[dbEventToApp({...e,vendor_discovery:'both'}),...prev]);fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:e.contact_email||user.email,recipientName:e.contact_name,senderName:'South Jersey Vendor Market',senderType:'host',eventName:e.event_name,messagePreview:`Applications for ${e.event_name} have been reopened. Vendors can now see and apply to your event.`})}).catch(err=>console.error('Reopen applications notification failed:',err));}} style={{background:'#d4f4e0',color:'#1a6b3a',border:'none',borderRadius:6,padding:'3px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Reopen Applications</button>
                     </>
                   )}
                   <button onClick={()=>{
@@ -3636,7 +3636,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
       <div style={{borderTop:'1px solid #e8ddd0',paddingTop:20,marginBottom:24}}>
         <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-          <button onClick={async()=>{if(!window.confirm('Delete your host account? This removes ALL events, vendor applications, messages, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;for(const evt of userEvents){await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).catch(()=>{});await supabase.from('events').delete().eq('id',evt.id).catch(()=>{});}await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(()=>{});await supabase.from('event_goers').delete().eq('email',user.email).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+          <button onClick={async()=>{if(!window.confirm('Delete your host account? This removes ALL events, vendor applications, messages, and your login. This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure? This is permanent.'))return;for(const evt of userEvents){await supabase.from('booking_requests').delete().eq('event_name',evt.event_name).catch(err=>console.error('Delete host booking_requests failed:',err));await supabase.from('events').delete().eq('id',evt.id).catch(err=>console.error('Delete host event failed:',err));}await supabase.from('messages').delete().or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`).catch(err=>console.error('Delete host messages failed:',err));await supabase.from('event_goers').delete().eq('email',user.email).catch(err=>console.error('Delete host event_goers failed:',err));await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
         </div>
       </div>
 
@@ -3675,7 +3675,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     <span style={{background:a.status==='accepted'?'#d4f4e0':'#fdecea',color:a.status==='accepted'?'#1a6b3a':'#8b1a1a',padding:'4px 10px',borderRadius:10,fontSize:11,fontWeight:600}}>{a.status}</span>
                   )}
                   {a.status === 'accepted' && (
-                    <button onClick={async()=>{const reason=window.prompt('Reason for removing this vendor (sent to vendor):');if(reason===null)return;await supabase.from('booking_requests').update({status:'removed',vendor_message:reason||'Removed by host'}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'removed'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`You have been removed from ${a.event_name}.${reason?' Reason: '+reason:''} Browse other events on South Jersey Vendor Market.`})}).catch(()=>{});}}}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove Vendor</button>
+                    <button onClick={async()=>{const reason=window.prompt('Reason for removing this vendor (sent to vendor):');if(reason===null)return;await supabase.from('booking_requests').update({status:'removed',vendor_message:reason||'Removed by host'}).eq('id',a.id);setApplications(prev=>prev.map(x=>x.id===a.id?{...x,status:'removed'}:x));if(a.vendor_id){const{data:vr}=await supabase.from('vendors').select('contact_email,contact_name').eq('id',a.vendor_id).limit(1);if(vr?.[0]?.contact_email){fetch('/api/send-message-notification',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({recipientEmail:vr[0].contact_email,recipientName:vr[0].contact_name,senderName:user.email,senderType:'host',eventName:a.event_name,messagePreview:`You have been removed from ${a.event_name}.${reason?' Reason: '+reason:''} Browse other events on South Jersey Vendor Market.`})}).catch(err=>console.error('Remove vendor notification failed:',err));}}}} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:6,padding:'4px 10px',fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Remove Vendor</button>
                   )}
                   {openMessage && a.vendor_id && (
                     <button onClick={()=>openMessage({id:a.vendor_id,name:a.vendor_name,emoji:'',category:a.vendor_category})} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Message</button>
@@ -3985,7 +3985,7 @@ function EventGoerDashboard({ profile, opps, setShowContactModal, setShowFeedbac
         <div style={{fontSize:12,fontWeight:700,color:'#a89a8a',letterSpacing:1,textTransform:'uppercase',marginBottom:12}}>Account Management</div>
         <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
           <button onClick={async()=>{if(!window.confirm('Stop receiving event alerts? You can always sign up again later.'))return;await supabase.from('event_goers').update({active:false,email_frequency:'none'}).eq('id',profile.id);alert('Event alerts cancelled. You will no longer receive emails.');window.location.reload();}} style={{background:'#f5f0ea',color:'#7a6a5a',border:'1px solid #e0d5c5',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Stop Event Alerts</button>
-          <button onClick={async()=>{if(!window.confirm('Delete your account and all data? This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure?'))return;await supabase.from('event_goers').delete().eq('id',profile.id).catch(()=>{});await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
+          <button onClick={async()=>{if(!window.confirm('Delete your account and all data? This cannot be undone.'))return;if(!window.confirm('Are you absolutely sure?'))return;await supabase.from('event_goers').delete().eq('id',profile.id).catch(err=>console.error('Delete event goer failed:',err));await supabase.auth.signOut();window.location.reload();}} style={{background:'none',border:'1px solid #e0d5c5',color:'#8b1a1a',borderRadius:6,padding:'8px 16px',fontSize:12,fontWeight:600,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Delete Entire Account</button>
         </div>
       </div>
     </div>
@@ -5872,7 +5872,7 @@ function UpcomingMarketsPage({ opps, setTab, setShowAuthModal, setShowEventGoerS
   const [savedEvents, setSavedEvents] = useState(() => { try { return JSON.parse(localStorage.getItem('sjvm_saved_events')||'[]'); } catch { return []; } });
   const [filterSaved, setFilterSaved] = useState('');
   const toggleSave = (id) => { setSavedEvents(s => { const next = s.includes(id) ? s.filter(x=>x!==id) : [...s,id]; localStorage.setItem('sjvm_saved_events',JSON.stringify(next)); return next; }); };
-  const shareEvent = (opp) => { const url = window.location.origin; const text = `${opp.eventName} — ${fmtDate(opp.date)} in ${getCityFromZip(opp.zip)||'South Jersey'}`; if (navigator.share) navigator.share({title:opp.eventName,text,url}).catch(()=>{}); else { navigator.clipboard.writeText(`${text}\n${url}`).then(()=>alert('Event link copied!')).catch(()=>{}); } };
+  const shareEvent = (opp) => { const url = window.location.origin; const text = `${opp.eventName} — ${fmtDate(opp.date)} in ${getCityFromZip(opp.zip)||'South Jersey'}`; if (navigator.share) navigator.share({title:opp.eventName,text,url}).catch(err=>console.error('Share failed:',err)); else { navigator.clipboard.writeText(`${text}\n${url}`).then(()=>alert('Event link copied!')).catch(err=>console.error('Clipboard copy failed:',err)); } };
   const [vendorsByEvent, setVendorsByEvent] = useState({});
   const [loadingVendors, setLoadingVendors] = useState({});
   const todayStr = new Date().toISOString().split('T')[0];
@@ -6660,7 +6660,7 @@ function AppInner() {
       if (byEmail) {
         for (const v of byEmail) {
           if (!profiles.some(p => p.id === v.id)) {
-            if (!v.user_id) supabase.from('vendors').update({ user_id: authUser.id }).eq('id', v.id).then(() => {});
+            if (!v.user_id) supabase.from('vendors').update({ user_id: authUser.id }).eq('id', v.id).then(()=>{}).catch(err=>console.error('Link vendor user_id failed:',err));
             profiles.push(v);
           }
         }
@@ -6676,7 +6676,7 @@ function AppInner() {
       if (evtsByEmail) {
         for (const e of evtsByEmail) {
           if (!allEvts.some(x => x.id === e.id)) {
-            if (!e.user_id) supabase.from('events').update({ user_id: authUser.id }).eq('id', e.id).then(() => {});
+            if (!e.user_id) supabase.from('events').update({ user_id: authUser.id }).eq('id', e.id).then(()=>{}).catch(err=>console.error('Link event user_id failed:',err));
             allEvts.push(e);
           }
         }
@@ -6974,7 +6974,7 @@ function AppInner() {
         supabase.from('messages').insert(inserts).then(() => {
           localStorage.removeItem(lsKey);
           loadMessages();
-        }).catch(() => {});
+        }).catch(err => console.error('Offline message sync failed:', err));
       }
     } catch {}
   }, [authUser]);
@@ -8086,7 +8086,7 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
       .eq('recipient_id', authUser.id)
       .eq('is_read', false)
       .then(() => { if (loadMessages) loadMessages(); })
-      .catch(() => {});
+      .catch(err => console.error('Mark messages as read failed:', err));
   }, [activeConvoId, authUser]); // eslint-disable-line
 
   const addMessage = async (text, attachments) => {
