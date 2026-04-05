@@ -773,7 +773,7 @@ const DEFAULT_VENDOR_FORM = {
   isServiceProvider:false, serviceType:'', serviceRateMin:'', serviceRateMax:'', serviceRateType:'fixed', minBookingDuration:'1 hour', serviceDescription:''
 };
 
-function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
+function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal, openSignup }) {
   const [formStep, setFormStep] = useState(1);
   const STEPS = [{n:1,label:'Business Info'},{n:2,label:'Categories'},{n:3,label:'Photos & Links'},{n:4,label:'Review & Submit'}];
   const [tosAgreed, setTosAgreed] = useState(false);
@@ -839,7 +839,7 @@ function VendorForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <>
           <div style={{display:'flex',gap:10,marginBottom:20}}>
             <button onClick={()=>{if(typeof setShowAuthModal==='function')setShowAuthModal(true);}} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Log In</button>
-            <button onClick={()=>{}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
+            <button onClick={()=>{if(typeof openSignup==='function')openSignup('vendor');}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email Address *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
@@ -1239,7 +1239,7 @@ const DEFAULT_HOST_FORM = {
   vendorDiscovery:'both', password:''
 };
 
-function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
+function HostForm({ onSubmit, setTab, authUser, setShowAuthModal, openSignup }) {
   const [tosAgreed, setTosAgreed] = useState(false);
   const [showTos, setShowTos] = useState(false);
   const [hostSubmitting, setHostSubmitting] = useState(false);
@@ -1305,7 +1305,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal }) {
         <>
           <div style={{display:'flex',gap:10,marginBottom:20}}>
             <button onClick={()=>{if(setShowAuthModal)setShowAuthModal(true);}} style={{flex:1,background:'#1a1410',color:'#e8c97a',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Log In</button>
-            <button onClick={()=>{}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
+            <button onClick={()=>{if(typeof openSignup==='function')openSignup('host');}} style={{flex:1,background:'#e8c97a',color:'#1a1410',border:'none',borderRadius:8,padding:'14px 0',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'DM Sans,sans-serif'}}>Create Account</button>
           </div>
           <div className="form-grid" style={{marginBottom:24}}>
             <div className="form-group"><label>Email *</label><input type="email" placeholder="you@email.com" value={form.email} onChange={e=>set('email',e.target.value)} /></div>
@@ -7863,7 +7863,7 @@ function AppInner() {
         <strong>Adding another listing?</strong> This will create a separate profile under your account. Each listing gets its own categories, photos, and pricing — perfect if you offer different products or services.
       </div>
     )}
-    <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
+    <VendorForm onSubmit={handleVendorSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} openSignup={openSignup} />
               </>
             )}
           </div>
@@ -7888,7 +7888,7 @@ function AppInner() {
               <>
                 <div className="section-title">Add an Event</div>
                 <p className="section-sub">Tell us about your event and we'll find the perfect vendors for you.</p>
-                <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} />
+                <HostForm onSubmit={handleHostSubmit} setTab={setTab} authUser={authUser} setShowAuthModal={setShowAuthModal} openSignup={openSignup} />
               </>
             )}
           </div>
