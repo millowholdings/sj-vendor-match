@@ -168,7 +168,7 @@ module.exports = async function handler(req, res) {
   }
 
   // ─── Send to Event Guests ─────────────────────────────────────────────────
-  const { data: goers } = await supabase.from('event_guests').select('*').eq('active', true);
+  const { data: goers } = await supabase.from('event_goers').select('*').eq('active', true);
 
   // Determine if this is a biweekly week (even week number)
   const weekNum = Math.floor((Date.now() - new Date('2026-01-01').getTime()) / (7*24*60*60*1000));
