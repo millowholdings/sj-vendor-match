@@ -2878,7 +2878,10 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
             {/* COI */}
             <div style={{marginBottom:10}}>
               <label style={{fontSize:13,fontWeight:600,display:'block',marginBottom:4}}>Certificate of Insurance</label>
-              {m.coiUrl && !newCoi && <div style={{fontSize:12,marginBottom:4}}><a href={m.coiUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a6b3a'}}>📄 Current COI uploaded</a></div>}
+              {m.coiUrl && !newCoi && <div style={{fontSize:12,marginBottom:4,display:'flex',alignItems:'center',gap:8}}>
+                <a href={m.coiUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a6b3a'}}>📄 Current COI uploaded</a>
+                <button onClick={async()=>{if(!window.confirm('Delete your Certificate of Insurance?'))return;const vid=vendorProfile?.id;const{error:dbErr}=await supabase.from('vendors').update({metadata:{...m,coiUrl:null}}).eq('id',vid);if(dbErr){alert('Failed to delete COI. Please try again.');console.error('Delete COI failed:',dbErr);return;}if(setVendorProfile)setVendorProfile(prev=>({...prev,metadata:{...(prev?.metadata||{}),coiUrl:null}}));}} style={{background:'none',border:'none',color:'#8b1a1a',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}}>Delete</button>
+              </div>}
               {newCoi && <div style={{fontSize:12,color:'#c8a850',marginBottom:4}}>New file: {newCoi.name}</div>}
               <label style={{display:'inline-block',background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,cursor:'pointer',color:'#7a6a5a'}}>
                 {m.coiUrl ? 'Replace COI' : 'Upload COI'}
@@ -2888,7 +2891,10 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
             {/* Lookbook */}
             <div style={{marginBottom:16}}>
               <label style={{fontSize:13,fontWeight:600,display:'block',marginBottom:4}}>Price Menu / Lookbook</label>
-              {m.lookbookUrl && !newLookbook && <div style={{fontSize:12,marginBottom:4}}><a href={m.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>📋 Current lookbook uploaded</a></div>}
+              {m.lookbookUrl && !newLookbook && <div style={{fontSize:12,marginBottom:4,display:'flex',alignItems:'center',gap:8}}>
+                <a href={m.lookbookUrl} target="_blank" rel="noopener noreferrer" style={{color:'#1a4a6b'}}>📋 Current lookbook uploaded</a>
+                <button onClick={async()=>{if(!window.confirm('Delete your Price Menu / Lookbook?'))return;const vid=vendorProfile?.id;const{error:dbErr}=await supabase.from('vendors').update({metadata:{...m,lookbookUrl:null}}).eq('id',vid);if(dbErr){alert('Failed to delete lookbook. Please try again.');console.error('Delete lookbook failed:',dbErr);return;}if(setVendorProfile)setVendorProfile(prev=>({...prev,metadata:{...(prev?.metadata||{}),lookbookUrl:null}}));}} style={{background:'none',border:'none',color:'#8b1a1a',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',textDecoration:'underline',padding:0}}>Delete</button>
+              </div>}
               {newLookbook && <div style={{fontSize:12,color:'#c8a850',marginBottom:4}}>New file: {newLookbook.name}</div>}
               <label style={{display:'inline-block',background:'#f5f0ea',border:'1px solid #e8ddd0',borderRadius:6,padding:'6px 14px',fontSize:12,cursor:'pointer',color:'#7a6a5a'}}>
                 {m.lookbookUrl ? 'Replace Lookbook' : 'Upload Lookbook'}
