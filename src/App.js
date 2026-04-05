@@ -5071,9 +5071,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
       if (error) { alert('Failed: ' + error.message); setSavingAdminEdit(false); return; }
       setVendors(prev => prev.map(x => x.id===id ? {...x, name:adminEditForm.name, contactEmail:adminEditForm.contact_email, contactName:adminEditForm.contact_name, homeZip:adminEditForm.home_zip, category:adminEditForm.category} : x));
     } else if (type === 'event') {
-      const { error } = await supabase.from('events').update({ event_name: adminEditForm.event_name, date: adminEditForm.date, zip: adminEditForm.zip, event_type: adminEditForm.event_type, booth_fee: adminEditForm.booth_fee || null }).eq('id', id);
+      const { error } = await supabase.from('events').update({ event_name: adminEditForm.event_name, date: adminEditForm.date, zip: adminEditForm.zip, event_type: adminEditForm.event_type, booth_fee: adminEditForm.booth_fee || null, vendor_notes: adminEditForm.vendor_notes || null, event_goer_notes: adminEditForm.event_goer_notes || null }).eq('id', id);
       if (error) { alert('Failed: ' + error.message); setSavingAdminEdit(false); return; }
-      const updater = e => e.id===id ? {...e, eventName:adminEditForm.event_name, date:adminEditForm.date, zip:adminEditForm.zip, eventType:adminEditForm.event_type, boothFee:adminEditForm.booth_fee} : e;
+      const updater = e => e.id===id ? {...e, eventName:adminEditForm.event_name, date:adminEditForm.date, zip:adminEditForm.zip, eventType:adminEditForm.event_type, boothFee:adminEditForm.booth_fee, vendorNotes:adminEditForm.vendor_notes, eventGoerNotes:adminEditForm.event_goer_notes} : e;
       setAllEvents(prev => prev.map(updater));
       setOpps(prev => prev.map(updater));
     }
@@ -5370,7 +5370,7 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                   <td style={{fontSize:12}}>{o.boothFee||'Free'}</td>
                   <td>{eventStatusPill(o.status, o.vendorStatus)}</td>
                   <td style={{display:'flex',gap:4,flexWrap:'wrap'}}>
-                    <button onClick={()=>{setAdminEditForm({event_name:o.eventName,date:o.date,zip:o.zip,event_type:o.eventType,booth_fee:o.boothFee||''});setEditingAdminEntity({type:'event',id:o.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
+                    <button onClick={()=>{setAdminEditForm({event_name:o.eventName,date:o.date,zip:o.zip,event_type:o.eventType,booth_fee:o.boothFee||'',vendor_notes:o.vendorNotes||'',event_goer_notes:o.eventGoerNotes||''});setEditingAdminEntity({type:'event',id:o.id});}} style={{background:'#e8f4fd',color:'#1a4a6b',border:'1px solid #b8d8f0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Edit</button>
                     {o.contactEmail && <button onClick={()=>{setAdminMessageModal({to:o.contactEmail,name:o.contactName||o.eventName,type:'host'});setAdminMessageSubject('');setAdminMessageText('');}} style={{background:'#fff',color:'#1a1410',border:'1px solid #e8ddd0',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Msg</button>}
                     <button onClick={()=>setRemoveDialog({type:'event',id:o.id,name:o.eventName})} style={{background:'#fdecea',color:'#8b1a1a',border:'1px solid #f5c6c6',borderRadius:4,padding:'3px 8px',fontSize:11,cursor:'pointer',fontFamily:'DM Sans,sans-serif',fontWeight:600}}>Remove</button>
                   </td>
@@ -5597,6 +5597,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
                 <div className="form-group"><label>Date</label><input type="date" value={adminEditForm.date||''} onChange={e=>setAdminEditForm(f=>({...f,date:e.target.value}))} /></div>
                 <div className="form-group"><label>Zip Code</label><input value={adminEditForm.zip||''} onChange={e=>setAdminEditForm(f=>({...f,zip:e.target.value}))} maxLength={5} /></div>
                 <div className="form-group full"><label>Event Fee</label><input value={adminEditForm.booth_fee||''} onChange={e=>setAdminEditForm(f=>({...f,booth_fee:e.target.value}))} placeholder="e.g. $50/vendor" /></div>
+                <div className="form-group full"><label>Notes for Vendors</label><textarea value={adminEditForm.vendor_notes||''} onChange={e=>setAdminEditForm(f=>({...f,vendor_notes:e.target.value}))} placeholder="Load-in times, setup details, booth requirements..." rows={3} style={{width:'100%',borderRadius:8,border:'1px solid #e0d5c5',padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical',boxSizing:'border-box'}} /></div>
+                <div className="form-group full"><label>Notes for Event Guests</label><textarea value={adminEditForm.event_goer_notes||''} onChange={e=>setAdminEditForm(f=>({...f,event_goer_notes:e.target.value}))} placeholder="Parking info, what to expect, food options, rain-or-shine policy..." rows={3} style={{width:'100%',borderRadius:8,border:'1px solid #e0d5c5',padding:'8px 12px',fontSize:13,fontFamily:'DM Sans,sans-serif',resize:'vertical',boxSizing:'border-box'}} /></div>
               </>)}
             </div>
             <div style={{display:'flex',gap:10}}>
