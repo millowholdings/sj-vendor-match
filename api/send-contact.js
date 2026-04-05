@@ -1,6 +1,11 @@
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -45,12 +50,12 @@ module.exports = async function handler(req, res) {
 <div style="font-family:sans-serif;max-width:560px;margin:0 auto">
   <h2 style="color:#1a1410">New Contact Form Submission</h2>
   <table style="border-collapse:collapse;width:100%">
-    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold;width:80px">Name:</td><td style="padding:8px">${name || '—'}</td></tr>
-    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Email:</td><td style="padding:8px">${email}</td></tr>
-    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Subject:</td><td style="padding:8px">${subject || '—'}</td></tr>
+    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold;width:80px">Name:</td><td style="padding:8px">${escapeHtml(name) || '—'}</td></tr>
+    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Email:</td><td style="padding:8px">${escapeHtml(email)}</td></tr>
+    <tr><td style="padding:8px;color:#7a6a5a;font-weight:bold">Subject:</td><td style="padding:8px">${escapeHtml(subject) || '—'}</td></tr>
   </table>
-  <div style="margin-top:16px;padding:16px;background:#f5f0ea;border-radius:8px;white-space:pre-wrap">${message}</div>
-  <div style="margin-top:16px;font-size:12px;color:#a89a8a">Reply directly to this email to respond to ${name || 'the submitter'}.</div>
+  <div style="margin-top:16px;padding:16px;background:#f5f0ea;border-radius:8px;white-space:pre-wrap">${escapeHtml(message)}</div>
+  <div style="margin-top:16px;font-size:12px;color:#a89a8a">Reply directly to this email to respond to ${escapeHtml(name) || 'the submitter'}.</div>
 </div>`,
     });
     if (error) {

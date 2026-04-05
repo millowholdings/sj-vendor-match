@@ -1,6 +1,11 @@
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 // Track recent notifications to prevent spam (in-memory, resets on cold start)
 const recentNotifications = {};
 
@@ -46,19 +51,19 @@ module.exports = async function handler(req, res) {
   </div>
   <div style="padding:28px 32px;border:1px solid #e8ddd0;border-top:none;border-radius:0 0 12px 12px">
     <p style="font-size:15px;color:#1a1410;margin:0 0 16px;line-height:1.6">
-      Hi ${recipientName || 'there'},
+      Hi ${escapeHtml(recipientName) || 'there'},
     </p>
     <p style="font-size:15px;color:#1a1410;margin:0 0 16px;line-height:1.6">
-      You have a new message from <strong>${senderName || ('a ' + roleLabel)}</strong>.
+      You have a new message from <strong>${escapeHtml(senderName) || ('a ' + roleLabel)}</strong>.
     </p>
     ${eventName ? `
     <div style="background:#1a1410;border-radius:8px;padding:12px 16px;margin:0 0 16px">
       <div style="font-size:11px;color:#a89a8a;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Regarding Event</div>
-      <div style="font-size:16px;font-weight:700;color:#e8c97a">${eventName}</div>
+      <div style="font-size:16px;font-weight:700;color:#e8c97a">${escapeHtml(eventName)}</div>
     </div>` : ''}
     ${messagePreview ? `
     <div style="background:#fdf9f5;border-left:3px solid #e8c97a;padding:12px 16px;border-radius:0 8px 8px 0;margin:0 0 20px;font-size:14px;color:#4a3a28;line-height:1.5">
-      "${messagePreview.length > 200 ? messagePreview.slice(0, 200) + '...' : messagePreview}"
+      "${escapeHtml(messagePreview.length > 200 ? messagePreview.slice(0, 200) + '...' : messagePreview)}"
     </div>` : ''}
     <a href="${siteUrl}/${recipientType === 'vendor' ? 'vendor-dashboard' : 'host-dashboard'}" style="display:inline-block;background:#c8a84b;color:#1a1410;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:700;font-size:15px">
       Log In to Your Dashboard

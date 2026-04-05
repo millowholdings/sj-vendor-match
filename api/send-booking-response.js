@@ -1,6 +1,11 @@
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -30,18 +35,18 @@ module.exports = async function handler(req, res) {
         <div style="font-size:18px;color:#e8c97a;font-weight:700">${accepted ? 'Booking Accepted!' : 'Booking Update'}</div>
       </div>
       <div style="padding:24px 28px">
-        <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${hostName || 'there'},</p>
+        <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${escapeHtml(hostName) || 'there'},</p>
         ${accepted ? `
         <div style="background:#d4f4e0;border:1px solid #b8e8c8;border-radius:8px;padding:16px;margin:16px 0;text-align:center">
-          <div style="font-size:16px;color:#1a6b3a;font-weight:700">✓ ${vendorName || 'A vendor'} accepted!</div>
-          <div style="font-size:13px;color:#2d7a50;margin-top:4px">${vendorCategory ? vendorCategory + ' · ' : ''}${eventName || 'Your event'}${eventDate ? ' · ' + eventDate : ''}</div>
+          <div style="font-size:16px;color:#1a6b3a;font-weight:700">✓ ${escapeHtml(vendorName) || 'A vendor'} accepted!</div>
+          <div style="font-size:13px;color:#2d7a50;margin-top:4px">${vendorCategory ? escapeHtml(vendorCategory) + ' · ' : ''}${escapeHtml(eventName) || 'Your event'}${eventDate ? ' · ' + escapeHtml(eventDate) : ''}</div>
         </div>
         <p style="font-size:14px;color:#1a1410;line-height:1.6">Their contact information is now available in your Messages. You can coordinate event details directly.</p>
         ` : `
         <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">
-          Unfortunately, <strong>${vendorName || 'a vendor'}</strong> has declined your booking request for <strong>${eventName || 'your event'}</strong>.
+          Unfortunately, <strong>${escapeHtml(vendorName) || 'a vendor'}</strong> has declined your booking request for <strong>${escapeHtml(eventName) || 'your event'}</strong>.
         </p>
-        ${vendorMessage ? `<div style="background:#fdf9f5;border:1px solid #e8ddd0;border-radius:8px;padding:12px;margin:16px 0;font-size:13px;color:#7a6a5a;font-style:italic">"${vendorMessage}"</div>` : ''}
+        ${vendorMessage ? `<div style="background:#fdf9f5;border:1px solid #e8ddd0;border-radius:8px;padding:12px;margin:16px 0;font-size:13px;color:#7a6a5a;font-style:italic">"${escapeHtml(vendorMessage)}"</div>` : ''}
         <p style="font-size:14px;color:#1a1410;line-height:1.6">Don't worry — there are plenty of great vendors on the platform. Browse the vendor directory to find another match.</p>
         `}
         <div style="text-align:center;margin:24px 0">

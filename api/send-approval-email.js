@@ -1,6 +1,11 @@
 const { Resend } = require('resend');
 const { createClient } = require('@supabase/supabase-js');
 
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -25,9 +30,9 @@ module.exports = async function handler(req, res) {
     : `${label} Update: ${entityLabel}`;
 
   const bodyHtml = approved ? `
-    <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${name || 'there'},</p>
+    <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${escapeHtml(name) || 'there'},</p>
     <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">
-      Great news! <strong>${entityLabel}</strong> has been approved and is now live on South Jersey Vendor Market.
+      Great news! <strong>${escapeHtml(entityLabel)}</strong> has been approved and is now live on South Jersey Vendor Market.
     </p>
     <div style="background:#d4f4e0;border:1px solid #b8e8c8;border-radius:8px;padding:16px;margin:20px 0;text-align:center">
       <div style="font-size:16px;color:#1a6b3a;font-weight:700">✓ You're Live!</div>
@@ -39,14 +44,14 @@ module.exports = async function handler(req, res) {
       </a>
     </div>
   ` : `
-    <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${name || 'there'},</p>
+    <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">Hi ${escapeHtml(name) || 'there'},</p>
     <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">
-      Thank you for submitting <strong>${entityLabel}</strong> to South Jersey Vendor Market. After review, we were unable to approve it at this time.
+      Thank you for submitting <strong>${escapeHtml(entityLabel)}</strong> to South Jersey Vendor Market. After review, we were unable to approve it at this time.
     </p>
     ${reason ? `
     <div style="background:#fdecea;border:1px solid #f5c6c6;border-radius:8px;padding:16px;margin:20px 0">
       <div style="font-size:12px;color:#8b1a1a;font-weight:700;margin-bottom:6px">REASON</div>
-      <div style="font-size:14px;color:#1a1410;line-height:1.5">${reason}</div>
+      <div style="font-size:14px;color:#1a1410;line-height:1.5">${escapeHtml(reason)}</div>
     </div>` : ''}
     <p style="font-size:14px;color:#1a1410;line-height:1.6;margin-bottom:16px">
       If you'd like to resubmit with updated information, you're welcome to try again.
