@@ -1697,7 +1697,7 @@ function HostForm({ onSubmit, setTab, authUser, setShowAuthModal, openSignup }) 
         {eventPhotos.length < 6 && (
           <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
             + Add Photos ({6 - eventPhotos.length} remaining)
-            <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
+            <input type="file" accept="image/*,.heic,.heif" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEventPhotos(p=>[...p,...files].slice(0,6));e.target.value='';}} />
           </label>
         )}
       </div>
@@ -2394,16 +2394,26 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       let lookbookUrl = m.lookbookUrl || null;
       const bucket = 'vendor-files';
       const safeName = (n) => n.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const getContentType = (file) => {
+        if (file.type && file.type !== 'application/octet-stream') return file.type;
+        const ext = file.name?.split('.').pop()?.toLowerCase();
+        const types = {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',pdf:'application/pdf'};
+        return types[ext] || 'application/octet-stream';
+      };
+      let uploadWarning = null;
       const upload = async (file, path) => {
         try {
-          const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
-          if (error) return null;
+          if (file.size > MAX_FILE_SIZE) { uploadWarning = `"${file.name}" is too large (${(file.size/1024/1024).toFixed(1)}MB). Please use an image under 10MB.`; return null; }
+          const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: getContentType(file) });
+          if (error) { console.error('Upload failed:', file.name, error); uploadWarning = `Upload failed for "${file.name}". Try a smaller image or JPG/PNG format.`; return null; }
           return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-        } catch { return null; }
+        } catch (err) { console.error('Upload error:', err); uploadWarning = 'Upload failed. Please try a smaller image or use JPG/PNG format.'; return null; }
       };
       if (editPhotos.length > 0) {
         const urls = await Promise.all(editPhotos.map((f,i) => upload(f, `${vid}/photos/${existingPhotos.length+i}-${safeName(f.name)}`)));
         photoUrls = [...photoUrls, ...urls.filter(Boolean)];
+        if (uploadWarning) alert(uploadWarning);
       }
       if (newCoi) { const u = await upload(newCoi, `${vid}/coi/${safeName(newCoi.name)}`); if (u) coiUrl = u; }
       if (newLookbook) { const u = await upload(newLookbook, `${vid}/lookbook/${safeName(newLookbook.name)}`); if (u) lookbookUrl = u; }
@@ -2871,7 +2881,7 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
               {existingPhotos.length + editPhotos.length < 6 && (
                 <label style={{display:'block',background:'#fdf9f5',border:'1.5px dashed #e8ddd0',borderRadius:8,padding:'10px',textAlign:'center',cursor:'pointer',fontSize:13,color:'#7a6a5a'}}>
                   + Add Photos ({6 - existingPhotos.length - editPhotos.length} remaining)
-                  <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEditPhotos(p=>[...p,...files].slice(0,6-existingPhotos.length));e.target.value='';}} />
+                  <input type="file" accept="image/*,.heic,.heif" multiple style={{display:'none'}} onChange={e=>{const files=Array.from(e.target.files);setEditPhotos(p=>[...p,...files].slice(0,6-existingPhotos.length));e.target.value='';}} />
                 </label>
               )}
             </div>
@@ -3766,7 +3776,7 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     {editExistingPhotos.length + editNewPhotos.length < 6 && (
                       <label style={{display:'block',background:'#fdf9f5',border:'1px dashed #e8ddd0',borderRadius:6,padding:'8px',textAlign:'center',cursor:'pointer',fontSize:12,color:'#7a6a5a'}}>
                         + Add Photos
-                        <input type="file" accept="image/*" multiple style={{display:'none'}} onChange={ev=>{const files=Array.from(ev.target.files);setEditNewPhotos(p=>[...p,...files].slice(0,6-editExistingPhotos.length));ev.target.value='';}} />
+                        <input type="file" accept="image/*,.heic,.heif" multiple style={{display:'none'}} onChange={ev=>{const files=Array.from(ev.target.files);setEditNewPhotos(p=>[...p,...files].slice(0,6-editExistingPhotos.length));ev.target.value='';}} />
                       </label>
                     )}
                   </div>
@@ -7332,8 +7342,15 @@ function AppInner() {
       const bucket = 'vendor-files';
       const vid = newVendor.id;
       const safeName = (name) => name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 100);
+      const getContentType = (file) => {
+        if (file.type && file.type !== 'application/octet-stream') return file.type;
+        const ext = file.name?.split('.').pop()?.toLowerCase();
+        const types = {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif',pdf:'application/pdf'};
+        return types[ext] || 'application/octet-stream';
+      };
       const uploadFile = async (file, path) => {
-        const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: file.type });
+        if (file.size > 10 * 1024 * 1024) { console.error('File too large:', file.name, (file.size/1024/1024).toFixed(1)+'MB'); return null; }
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, file, { upsert: true, contentType: getContentType(file) });
         if (upErr) { console.error('File upload error:', upErr); return null; }
         return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
       };
@@ -7505,11 +7522,12 @@ function AppInner() {
       for (let i = 0; i < Math.min(files.eventPhotos.length, 6); i++) {
         const f = files.eventPhotos[i];
         const path = `events/${eid}/photos/${i}-${safeName(f.name)}`;
-        const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: f.type });
+        const evtContentType = (f.type && f.type !== 'application/octet-stream') ? f.type : (() => { const ext = f.name?.split('.').pop()?.toLowerCase(); return {jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',gif:'image/gif',webp:'image/webp',heic:'image/heic',heif:'image/heif'}[ext] || 'application/octet-stream'; })();
+        const { error: upErr } = await supabase.storage.from(bucket).upload(path, f, { upsert: true, contentType: evtContentType });
         if (upErr) {
           console.error('Event photo upload error:', upErr);
           // Try alternate bucket name
-          const { error: upErr2 } = await supabase.storage.from('event-photos').upload(path, f, { upsert: true, contentType: f.type });
+          const { error: upErr2 } = await supabase.storage.from('event-photos').upload(path, f, { upsert: true, contentType: evtContentType });
           if (upErr2) { console.error('Alternate bucket also failed:', upErr2); continue; }
           photoUrls.push(supabase.storage.from('event-photos').getPublicUrl(path).data.publicUrl);
         } else {
