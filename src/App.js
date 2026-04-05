@@ -8236,27 +8236,6 @@ function MessagesPage({ conversations, setConversations, activeConvoId, setActiv
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 64px)', background:'#f5f0ea', overflow:'hidden' }}>
 
-      {/* Booking Requests Panel — vendors see Accept/Decline, hosts see informational summary */}
-      {(bookingRequests||[]).length > 0 && vendorProfile && (
-        <div style={{ background:'#1a1410', borderBottom:'2px solid #c8a84b', padding:'12px 20px', flexShrink:0, overflowX:'auto' }}>
-          <div style={{ fontSize:12, color:'#c8a84b', fontWeight:700, letterSpacing:1, textTransform:'uppercase', marginBottom:8 }}>
-            Booking Requests {pendingRequests.length > 0 && <span style={{background:'#c8a84b',color:'#1a1410',borderRadius:10,padding:'1px 7px',marginLeft:6}}>{pendingRequests.length} pending</span>}
-          </div>
-          <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-            {(bookingRequests||[]).map(req => (
-              <BookingRequestCard key={req.id} req={req} respondToBooking={respondToBooking} />
-            ))}
-          </div>
-        </div>
-      )}
-      {pendingRequests.length > 0 && !vendorProfile && (
-        <div style={{ background:'#1a1410', borderBottom:'2px solid #c8a84b', padding:'12px 20px', flexShrink:0 }}>
-          <div style={{ fontSize:12, color:'#c8a84b', fontWeight:700, letterSpacing:1, textTransform:'uppercase' }}>
-            {pendingRequests.length} invite{pendingRequests.length!==1?'s':''} awaiting vendor response
-          </div>
-        </div>
-      )}
-
       <div className="msg-layout" style={{ display:'flex', flex:1, overflow:'hidden' }}>
 
       {/* Sidebar */}
