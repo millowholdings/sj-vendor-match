@@ -33,16 +33,15 @@ module.exports = async function handler(req, res) {
   const stripe = new Stripe(stripeKey);
   const supabase = createClient(supabaseUrl, supabaseKey);
 
+  if (!webhookSecret) {
+    return res.status(500).json({ error: 'Webhook secret not configured' });
+  }
+
   let event;
   try {
     const rawBody = await getRawBody(req);
-    if (webhookSecret) {
-      const sig = req.headers['stripe-signature'];
-      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    } else {
-      // In test mode without webhook secret, parse directly
-      event = JSON.parse(rawBody.toString());
-    }
+    const sig = req.headers['stripe-signature'];
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature verification failed:', err.message);
     return res.status(400).json({ error: 'Webhook signature verification failed' });
