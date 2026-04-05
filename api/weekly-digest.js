@@ -73,9 +73,7 @@ module.exports = async function handler(req, res) {
   }
 
   const cronSecret = process.env.CRON_SECRET;
-  if (req.query.test === 'sjvm2026') {
-    // test bypass — remove before go-live
-  } else if (cronSecret && req.headers.authorization !== `Bearer ${cronSecret}`) {
+  if (cronSecret && req.headers.authorization !== `Bearer ${cronSecret}`) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
