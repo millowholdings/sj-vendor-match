@@ -3450,7 +3450,6 @@ function HostDashboard({ user, userEvents, setTab, setShowContactModal, setShowF
                     // Detect recurring series: match by event_name (multiple events with same name = series)
                     const sameNameEvents = userEvents.filter(ue=>ue.event_name===e.event_name).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
                     const seriesEvents = sameNameEvents.length > 1 ? sameNameEvents : null;
-                    console.log('[Cancel Event] source:', e.source, '| sameNameEvents:', sameNameEvents.length, '| seriesDetected:', !!seriesEvents, '| events:', sameNameEvents.map(s=>({id:s.id,date:s.date,source:s.source})));
                     if (seriesEvents) {
                       setCancelEventModal({event:e, seriesEvents});
                     } else {
@@ -4479,7 +4478,6 @@ function HostSuccessMatches({ hostEvent, hostConfirm, vendors, openMessage, send
 
 // ─── Matches Page ─────────────────────────────────────────────────────────────
 function MatchesPage({ vendors=[], openMessage, sendBookingRequest, bookingRequests, setBookingRequests, hostEvent, setHostEvent, userEvents, setTab, vendorCalendars, setVendorCalendars, authUser, setShowAuthModal, setInquiryModal, setEventMessageModal }) {
-  console.log('[MatchesPage LOAD]', { hostEvent, vendorCount: vendors?.length, userEventsCount: userEvents?.length, hasAuth: !!authUser, bookingRequestsCount: bookingRequests?.length });
   const [filterCategory, setFilterCategory] = useState('');
   const [filterInsurance, setFilterInsurance] = useState('');
   const [filterVendorType, setFilterVendorType] = useState('');
@@ -5701,14 +5699,10 @@ function VendorApplyModal({ opp, allOpps, onClose }) {
         status: 'pending', sent_at: new Date().toISOString(),
         response_token: responseToken,
       };
-      console.log('[VENDOR APPLY] Inserting payload for', evt.eventName, evt.date, ':', JSON.parse(JSON.stringify(payload)));
-      let { data: insertData, error } = await supabase.from('booking_requests').insert(payload).select();
-      console.log('[VENDOR APPLY] Supabase response:', { data: insertData, error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null });
+      let { error } = await supabase.from('booking_requests').insert(payload);
       if (error && (error.code === '42703' || error.message?.includes('column'))) {
         const { response_token: _rt, ...fallback } = payload;
-        console.log('[VENDOR APPLY] Retrying without response_token:', JSON.parse(JSON.stringify(fallback)));
-        ({ data: insertData, error } = await supabase.from('booking_requests').insert(fallback).select());
-        console.log('[VENDOR APPLY] Retry response:', { data: insertData, error: error ? { message: error.message, code: error.code, details: error.details, hint: error.hint } : null });
+        ({ error } = await supabase.from('booking_requests').insert(fallback));
       }
       if (error) { console.error('[VENDOR APPLY] FAILED for', evt.date, ':', error.message, error.code, error.details, error.hint); anyError = true; }
     }
@@ -6392,7 +6386,6 @@ function VendorResponsePage({ token }) {
       try {
         const { data, error: fetchErr } = await supabase
           .from('booking_requests').select('*').eq('response_token', token).single();
-        console.log('[VendorResponse] token:', token, 'data:', data, 'error:', fetchErr);
         if (fetchErr || !data) {
           setError(`This booking request link is invalid or has expired.${fetchErr ? ' (' + fetchErr.message + ')' : ''}`);
           setLoading(false);
