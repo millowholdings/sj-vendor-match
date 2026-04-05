@@ -82,7 +82,7 @@ module.exports = async function handler(req, res) {
       const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY;
       if (supabaseUrl && supabaseKey) {
         const supabase = createClient(supabaseUrl, supabaseKey);
-        await supabase.from('email_log').insert({ to: recipientEmail, subject: `New message from ${senderName}`, type: 'message_notification' });
+        await supabase.from('email_log').insert({ to_email: recipientEmail, subject: `New message from ${senderName}`, email_type: 'message_notification' });
       }
     } catch (e) { /* email_log table may not exist */ }
 
