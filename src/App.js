@@ -6993,8 +6993,8 @@ function AppInner() {
 
   const sendBookingRequest = async (vendor, eventDetails) => {
     // Check if vendor already has a booking for this specific event date
-    const dupQuery = supabase.from('booking_requests').select('id,status').eq('vendor_id', vendor.id).eq('event_name', eventDetails.eventName);
-    if (eventDetails.date) dupQuery.eq('event_date', eventDetails.date);
+    let dupQuery = supabase.from('booking_requests').select('id,status').eq('vendor_id', vendor.id).eq('event_name', eventDetails.eventName);
+    if (eventDetails.date) dupQuery = dupQuery.eq('event_date', eventDetails.date);
     const { data: existingBooking } = await dupQuery.limit(1);
     if (existingBooking?.[0]) {
       alert(`${vendor.name} already has a ${existingBooking[0].status} application for ${eventDetails.eventName}${eventDetails.date ? ' on ' + eventDetails.date : ''}.`);
