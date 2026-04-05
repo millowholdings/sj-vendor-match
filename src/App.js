@@ -2442,13 +2442,14 @@ function VendorDashboard({ user, vendorProfile, allVendorProfiles, bookingReques
       fetch('/api/send-vendor-notification', { method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ businessName:editForm.name+' (PROFILE UPDATE)', contactName:editForm.contact_name, vendorEmail:'tiffany@southjerseyvendormarket.com', category:vp.category||editForm.serviceCategories?.[0]||'—', vendorType:editForm.isServiceProvider?'service':'market' }),
       }).catch(e=>console.error('API call failed:',e));
-      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).catch(e=>console.error('API call failed:',e));
+      supabase.from('change_log').insert({ entity_type:'vendor', entity_id:vid, entity_name:editForm.name, changed_by:user.email, changes:{summary:'profile updated'}, significant:true }).then(({error:logErr})=>{if(logErr)console.error('change_log insert failed:',logErr);}).catch(e=>console.error('change_log insert failed:',e));
       supabase.from('vendors').select('*').eq('id', vid).single()
-        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); }).catch(e=>console.error('API call failed:',e));
+        .then(({ data: updated }) => { if (updated && setVendorProfile) setVendorProfile(updated); }).catch(e=>console.error('Vendor profile refresh failed:',e));
     } catch (err) {
       clearTimeout(forceComplete);
       setSaving(false);
-      alert('Something went wrong: ' + (err.message||'Unknown error') + '\n\nPlease try again.');
+      console.error('Profile save error:', err);
+      alert('Unable to save profile. Please try again.');
     }
   };
   const [subMessage, setSubMessage] = useState(() => {
@@ -5072,7 +5073,8 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
   const saveAdminNote = async (entityType, entityId, entityName) => {
     const note = adminNoteText[`${entityType}_${entityId}`] || '';
     if (!note.trim()) return;
-    await supabase.from('change_log').insert({ entity_type:entityType, entity_id:entityId, entity_name:entityName, changed_by:'admin', changes:{admin_note:note}, significant:false });
+    const { error: logErr } = await supabase.from('change_log').insert({ entity_type:entityType, entity_id:entityId, entity_name:entityName, changed_by:'admin', changes:{admin_note:note}, significant:false });
+    if (logErr) console.error('change_log insert failed:', logErr);
     if (entityType==='vendor') await supabase.from('vendors').update({ metadata: { ...(vendors.find(v=>v.id===entityId)||pendingVendors.find(v=>v.id===entityId))?.metadata, admin_notes: note } }).eq('id', entityId);
     if (entityType==='event') await supabase.from('events').update({ admin_notes: note }).eq('id', entityId);
     setAdminNoteText(n=>({...n,[`${entityType}_${entityId}`]:''}));
