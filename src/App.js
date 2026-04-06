@@ -5350,7 +5350,9 @@ function AdminPage({ opps=[], setOpps=()=>{}, allEvents=[], setAllEvents=()=>{},
           contact_phone:     opp.contactPhone,
           fb_link:           opp.fbLink,
           deadline:          opp.deadline   || null,
-          notes:             opp.notes,
+          notes:             opp.vendorNotes || opp.notes,
+          vendor_notes:      opp.vendorNotes || null,
+          event_goer_notes:  opp.eventGoerNotes || null,
           source:            opp.source     || "Admin",
           photo_url:         opp.photoUrl   || null,
           status:            'approved',
@@ -6329,7 +6331,7 @@ function OpportunitiesPage({ opps, authUser, vendorProfile, allVendorProfiles, s
 
 // ─── Admin Post Form ──────────────────────────────────────────────────────────
 function AdminPostForm({ onPost }) {
-  const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", source:"Facebook Group", photoUrl:"" };
+  const blank = { eventName:"", eventType:"", zip:"", date:"", startTime:"", endTime:"", boothFee:"", spots:"", categoriesNeeded:[], contactName:"", contactEmail:"", contactPhone:"", fbLink:"", deadline:"", notes:"", vendorNotes:"", eventGoerNotes:"", source:"Facebook Group", photoUrl:"" };
   const [form, setForm] = useState(blank);
   const [posted, setPosted] = useState(false);
   const [posting, setPosting] = useState(false);
@@ -6372,7 +6374,8 @@ function AdminPostForm({ onPost }) {
         <div className="form-group full">
           <CheckboxGroup label="Vendor Categories Needed" options={CATEGORIES} selected={form.categoriesNeeded} onChange={v=>set("categoriesNeeded",v)} />
         </div>
-        <div className="form-group full"><label>Notes for Vendors</label><textarea placeholder="Tables provided? Tents required? Electric available? Insured vendors only?" value={form.notes} onChange={e=>set("notes",e.target.value)} /></div>
+        <div className="form-group full"><label>Notes for Vendors</label><textarea placeholder="Tables provided? Tents required? Electric available? Insured vendors only?" value={form.vendorNotes} onChange={e=>set("vendorNotes",e.target.value)} /></div>
+        <div className="form-group full"><label>Notes for Event Guests</label><textarea placeholder="Free admission, open to the public, family friendly, parking info..." value={form.eventGoerNotes} onChange={e=>set("eventGoerNotes",e.target.value)} /></div>
       </div>
       <div className="form-group full" style={{ marginTop:8 }}>
         <label>Event Photo URL (optional)</label>
